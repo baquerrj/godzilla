@@ -77,7 +77,9 @@ def run_migrations(
     Path(db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
     conn = sqlcipher.connect(db_path)
     try:
-        conn.execute("PRAGMA key = ?;", (db_key,))
+        # sqlcipher does not accept parameters in PRAGMA key; escape single quotes.
+        escaped_key = db_key.replace("'", "''")
+        conn.execute(f"PRAGMA key = '{escaped_key}';")
         conn.execute("PRAGMA foreign_keys = ON;")
         current = _current_version(conn)
 

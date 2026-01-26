@@ -25,6 +25,7 @@ ENV/
 env/
 .nox/
 .venv*
+.godenv
 
 # Node
 node_modules/

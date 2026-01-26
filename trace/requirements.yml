@@ -6,6 +6,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SYS-002
   title: Single-user scope
   parent_requirement_id: SYS-001
@@ -14,6 +15,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SYS-003
   title: Secure-by-design baseline
   parent_requirement_id: SYS-001
@@ -23,6 +25,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-001
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
@@ -31,6 +34,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-002
   title: Token exchange and storage
   parent_requirement_id: SYS-003
@@ -39,6 +43,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-003
   title: Account metadata retrieval
   parent_requirement_id: FUNC-ACCT-001
@@ -47,6 +52,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-004
   title: Connection state tracking
   parent_requirement_id: FUNC-ACCT-003
@@ -55,6 +61,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-005
   title: Manual refresh
   parent_requirement_id: FUNC-ACCT-004
@@ -63,6 +70,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-006
   title: Scheduled refresh (optional deployment)
   parent_requirement_id: FUNC-ACCT-004
@@ -71,6 +79,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-007
   title: Error handling and messaging
   parent_requirement_id: SYS-003
@@ -79,6 +88,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-008
   title: Unlink institution
   parent_requirement_id: SYS-003
@@ -87,6 +97,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-009
   title: Identity owner display
   parent_requirement_id: FUNC-ACCT-003
@@ -95,6 +106,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-001
   title: Incremental transaction sync
   parent_requirement_id: FUNC-ACCT-004
@@ -103,6 +115,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-002
   title: Idempotent ingestion
   parent_requirement_id: FUNC-SYNC-001
@@ -111,6 +124,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-003
   title: Pending vs posted handling
   parent_requirement_id: FUNC-SYNC-001
@@ -119,6 +133,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-004
   title: Provider provenance
   parent_requirement_id: SYS-001
@@ -128,6 +143,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-005
   title: Offline edits
   parent_requirement_id: FUNC-SYNC-004
@@ -137,6 +153,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-006
   title: Conflict detection
   parent_requirement_id: FUNC-SYNC-005
@@ -146,6 +163,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SYNC-007
   title: Conflict resolution queue
   parent_requirement_id: FUNC-SYNC-006
@@ -155,6 +173,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-001
   title: Transaction list
   parent_requirement_id: SYS-001
@@ -163,6 +182,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-002
   title: Search and filters
   parent_requirement_id: FUNC-TXN-001
@@ -171,6 +191,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-003
   title: Transaction detail view
   parent_requirement_id: FUNC-TXN-001
@@ -179,6 +200,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-004
   title: Category override
   parent_requirement_id: FUNC-SYNC-004
@@ -187,6 +209,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-005
   title: Notes and tags
   parent_requirement_id: FUNC-TXN-002
@@ -195,6 +218,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-006
   title: Mark transfer
   parent_requirement_id: FUNC-BUD-004
@@ -203,6 +227,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-007
   title: Exclude from budget
   parent_requirement_id: FUNC-BUD-004
@@ -211,6 +236,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-008
   title: Split transactions
   parent_requirement_id: FUNC-TXN-003
@@ -219,6 +245,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-TXN-009
   title: Deduplication heuristic fallback
   parent_requirement_id: FUNC-SYNC-002
@@ -227,6 +254,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-CAT-001
   title: Category hierarchy
   parent_requirement_id: SYS-001
@@ -235,6 +263,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-CAT-002
   title: Category management
   parent_requirement_id: FUNC-CAT-001
@@ -243,6 +272,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-CAT-003
   title: Provider category mapping
   parent_requirement_id: FUNC-SYNC-004
@@ -251,6 +281,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-001
   title: Monthly budgets
   parent_requirement_id: SYS-001
@@ -259,6 +290,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-002
   title: Budget performance
   parent_requirement_id: FUNC-BUD-001
@@ -267,6 +299,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-003
   title: Overspend highlighting
   parent_requirement_id: FUNC-BUD-002
@@ -275,6 +308,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-004
   title: Budget inclusion rules
   parent_requirement_id: FUNC-TXN-006
@@ -283,6 +317,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-001
   title: Monthly overview dashboard
   parent_requirement_id: SYS-001
@@ -291,6 +326,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-002
   title: Drill-down from metrics
   parent_requirement_id: FUNC-TXN-002
@@ -299,6 +335,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-003
   title: Cash flow report
   parent_requirement_id: FUNC-REP-001
@@ -307,6 +344,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-004
   title: Category trend report
   parent_requirement_id: FUNC-REP-002
@@ -315,6 +353,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-005
   title: Net worth time series
   parent_requirement_id: SYS-001
@@ -323,6 +362,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-006
   title: Balance snapshotting
   parent_requirement_id: FUNC-ACCT-005
@@ -331,6 +371,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-007
   title: Inclusion rules consistency
   parent_requirement_id: FUNC-BUD-004
@@ -339,6 +380,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-REP-008
   title: Date navigation
   parent_requirement_id: FUNC-REP-001
@@ -347,6 +389,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-EXP-001
   title: Transaction export CSV
   parent_requirement_id: FUNC-TXN-002
@@ -355,6 +398,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-EXP-002
   title: Category and budget export
   parent_requirement_id: SYS-001
@@ -363,6 +407,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-EXP-003
   title: Export privacy controls
   parent_requirement_id: SYS-003
@@ -371,6 +416,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-001
   title: Encrypted backup creation
   parent_requirement_id: SYS-003
@@ -379,6 +425,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-002
   title: Backup integrity check
   parent_requirement_id: FUNC-BKP-001
@@ -387,6 +434,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-003
   title: Restore workflow
   parent_requirement_id: FUNC-SYNC-004
@@ -395,6 +443,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-004
   title: Wipe local data
   parent_requirement_id: SYS-003
@@ -403,6 +452,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-005
   title: Backup scheduling (optional)
   parent_requirement_id: FUNC-BKP-001
@@ -411,6 +461,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-001
   title: Timezone and currency
   parent_requirement_id: SYS-001
@@ -419,6 +470,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-002
   title: Retention settings
   parent_requirement_id: SYS-003
@@ -427,6 +479,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-003
   title: Auto-lock and timeout
   parent_requirement_id: SEC-ACC-003
@@ -435,6 +488,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-004
   title: Sync configuration
   parent_requirement_id: FUNC-ACCT-006
@@ -443,6 +497,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-005
   title: Export defaults
   parent_requirement_id: FUNC-EXP-003
@@ -451,6 +506,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-001
   title: Event audit log
   parent_requirement_id: SYS-003
@@ -460,6 +516,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-002
   title: Log redaction
   parent_requirement_id: SYS-003
@@ -469,6 +526,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-003
   title: Log retention
   parent_requirement_id: FUNC-SET-002
@@ -477,6 +535,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-004
   title: Audit export (optional)
   parent_requirement_id: FUNC-AUD-002
@@ -485,15 +544,19 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-CRY-001
   title: Encryption at rest
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - python_core/app/db/migrations.py:run_migrations
+  test_refs:
+  - python_core/tests/test_migrations.py:MigrationRunnerTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-CRY-002
   title: Key storage
   parent_requirement_id: SYS-003
@@ -502,6 +565,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-CRY-003
   title: Encrypted backups
   parent_requirement_id: FUNC-BKP-001
@@ -510,6 +574,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-CRY-004
   title: Secret rotation and revocation
   parent_requirement_id: SYS-003
@@ -518,6 +583,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-ACC-001
   title: App access gate
   parent_requirement_id: SYS-003
@@ -527,6 +593,7 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-ACC-002
   title: Session timeout
   parent_requirement_id: SEC-ACC-001
@@ -535,6 +602,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-ACC-003
   title: Unlock configuration
   parent_requirement_id: SEC-ACC-001
@@ -543,6 +611,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-ACC-004
   title: Authorization boundaries
   parent_requirement_id: SYS-003
@@ -551,6 +620,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-NET-001
   title: TLS enforcement
   parent_requirement_id: SYS-003
@@ -559,6 +629,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
@@ -567,6 +638,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-NET-003
   title: Rate limiting and backoff
   parent_requirement_id: FUNC-ACCT-007
@@ -575,6 +647,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-001
   title: No secrets in client
   parent_requirement_id: SYS-003
@@ -583,6 +656,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-002
   title: Logging policy
   parent_requirement_id: FUNC-AUD-002
@@ -591,6 +665,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-003
   title: Input validation
   parent_requirement_id: SYS-003
@@ -599,6 +674,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-004
   title: Dependency hygiene
   parent_requirement_id: SYS-003
@@ -607,6 +683,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-005
   title: Data minimization
   parent_requirement_id: FUNC-SET-002
@@ -615,6 +692,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-006
   title: Data deletion
   parent_requirement_id: FUNC-BKP-004
@@ -623,6 +701,7 @@
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: SEC-DATA-007
   title: Provenance integrity
   parent_requirement_id: FUNC-SYNC-004
@@ -632,3 +711,4 @@
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
+  - docs/design/database-schema.md
