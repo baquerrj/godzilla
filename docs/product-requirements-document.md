@@ -97,7 +97,9 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-SYNC-002  | Idempotent ingestion         | The system shall be idempotent: re-running the same sync shall not create duplicate transactions.                                                          | Replay same provider payload; confirm transaction counts unchanged.                                  | | FUNC-SYNC-001                                          |
 | FUNC-SYNC-003  | Pending vs posted handling   | The system shall represent pending and posted transactions and shall reconcile pending-to-posted transitions without double counting.                      | Use mocked pending+posted sequence; confirm final single posted record with correct status handling. |       | FUNC-SYNC-001                                          |
 | FUNC-SYNC-004  | Provider provenance          | The system shall store the source of each field (provider vs user override) and shall preserve raw provider values for audit/debug (subject to retention). | Edit category/name; confirm raw provider values preserved and UI shows override indicator.           |              | SYS-001                                                |
-| FUNC-SYNC-005  | Offline conflict resolution  | The system shall allow offline edits to any user-editable fields and, on next sync, detect conflicts with incoming provider data; conflicts shall be queued in a dedicated conflict resolution view for user selection without overwriting local edits until resolved. | Edit offline; simulate conflicting sync; confirm conflict queued and resolved via conflict view. |  | FUNC-SYNC-004                                          |
+| FUNC-SYNC-005  | Offline edits                | The system shall allow offline edits to any user-editable fields for already-synced data.                                                                           | Edit offline; confirm changes persist and are visible without a network connection.              |  | FUNC-SYNC-004                                          |
+| FUNC-SYNC-006  | Conflict detection           | The system shall detect conflicts between offline edits and incoming provider data during sync.                                                                     | Edit offline; sync conflicting data; verify conflict flagged.                                    |  | FUNC-SYNC-005                                          |
+| FUNC-SYNC-007  | Conflict resolution queue    | The system shall queue detected conflicts in a dedicated conflict resolution view for user selection before applying incoming changes.                                | Trigger conflict; confirm it appears in conflict view and can be resolved.                      |  | FUNC-SYNC-006                                          |
 
 #### 9.4 Transactions
 
@@ -240,6 +242,12 @@ Audit logs are local/system logs intended to record significant events without l
 * Global search and filter-first transaction exploration.
 * Consistent month navigation across budget and reports.
 * Conflict resolution queue for offline sync conflicts.
+
+#### Conflicts (MVP)
+
+* A dedicated conflicts queue groups unresolved items for batch review.
+* Each conflict view shows local vs provider values and the last updated timestamps.
+* Users can resolve conflicts by choosing local or provider values per field.
 
 ### 12. Non-functional Requirements (MVP)
 
