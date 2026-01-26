@@ -12,7 +12,9 @@ The MVP is a single-process desktop application with a local data store (SQLite)
 - Shell: Tauri v2 (Rust) with a React UI.
 - Core service: Python FastAPI sidecar, bundled via Tauri `externalBin` sidecar support.
 - Transport: HTTPS on localhost between the Tauri host and the Python service.
-- Data store: SQLite with SQLCipher via an actively maintained binding (prefer `sqlcipher3` / `sqlcipher3-binary`).
+- Certificate strategy: per-install certificate generated at first run and pinned in the Tauri host.
+- Data store: SQLite with SQLCipher via `sqlcipher3-binary` (self-contained wheels).
+- Packaging: Python sidecar packaged with PyInstaller.
 
 ### High-level component diagram
 ```mermaid

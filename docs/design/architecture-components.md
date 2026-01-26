@@ -94,8 +94,9 @@ Repositories:
 
 ## Stack-specific notes (MVP)
 - Tauri v2 bundles the Python FastAPI sidecar via `externalBin`.
-- FastAPI runs on loopback with HTTPS; Tauri host performs certificate pinning for API calls.
-- SQLite is encrypted using SQLCipher via an actively maintained Python binding (prefer `sqlcipher3` / `sqlcipher3-binary`).
+- FastAPI runs on loopback with HTTPS; a per-install certificate is generated and pinned in the Tauri host.
+- SQLite is encrypted using SQLCipher via `sqlcipher3-binary` (self-contained wheels).
+- Python sidecar is packaged with PyInstaller.
 
 ## Data contracts and invariants
 
