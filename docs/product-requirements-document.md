@@ -15,7 +15,6 @@ A personal budgeting and net-worth app for a single user that aggregates financi
 ### 3. Non-goals
 
 * Multi-user support (family sharing), subscription billing, or public distribution.
-* Monetization/subscriptions and public distribution.
 * Trading/investment execution or deep investment analytics.
 * Full accounting software features (invoicing, double-entry bookkeeping).
 
@@ -37,15 +36,20 @@ Single user.
 
 ### 6. Assumptions and Constraints
 
-* Accounts are linked via Plaid (Link flow) and updated via Plaid sync endpoints.
+* Deployment target for MVP is a local-only desktop app; self-hosted server + client comes after MVP.
+* Database is SQLite.
+* Full-database encryption is required; no OS keychain requirement.
+* Access control is app-level PIN only; primary OS target is Linux.
+* Accounts are linked via Plaid (Link flow) and updated via Plaid sync endpoints; Plaid products used are Transactions (up to 24 months), Balance, and Identity.
 * Single-user, but with strong access control and secret handling.
-* Prefer minimal operational burden: local-first or self-hosted with low maintenance.
 * Must support common account types: checking, savings, credit cards, loans, investments (balances at minimum).
-* App may operate offline for viewing/editing already-synced data (sync requires network).
+* App may operate offline for viewing/editing already-synced data (sync requires network); conflicts are queued in a dedicated conflict resolution view.
+* Raw provider payloads and diagnostic logs are retained by default (configurable).
+* Backups are password-based and stored locally.
 
 ### 7. MVP Scope
 
-In MVP: linking accounts, syncing transactions, categorization, transaction management, monthly and per-category budgeting, dashboards/reports, exports, encrypted backup/restore, settings, audit logging, secure storage/redaction.
+In MVP: linking accounts, syncing transactions, categorization, transaction management, offline edits with conflict resolution, monthly and per-category budgeting, dashboards/reports, exports, encrypted backup/restore, settings, audit logging, secure storage/redaction.
 Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budgets, investment analytics.
 
 ### 8. User Stories (MVP)
@@ -54,13 +58,14 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 * As a user, I can refresh/sync transactions and see newly imported items.
 * As a user, I can categorize transactions and the app remembers/copies my choices.
 * As a user, I can mark transactions as transfer, exclude from budget, or split a transaction.
+* As a user, I can resolve sync conflicts from offline edits in a dedicated conflicts view.
 * As a user, I can create monthly budgets per category and see remaining amounts.
 * As a user, I can view monthly cash flow (income, expenses, savings).
 * As a user, I can view net worth over time from account balances.
 * As a user, I can search, filter, and export transactions (CSV).
 * As a user, I can back up and restore the app database securely.
 
-### 9. Requirements ()
+### 9. Requirements
 
 #### 9.1 System requirements
 
@@ -82,6 +87,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-ACCT-006  | Scheduled refresh (optional deployment) | If deployed with a scheduler, the system shall support scheduled sync at a configurable interval and shall surface the most recent run result.                        | Configure schedule; verify periodic runs and status surfaced.                                                                         |             | FUNC-ACCT-004                                          |
 | FUNC-ACCT-007  | Error handling and messaging            | The system shall handle Plaid and network errors (rate limit, downtime, invalid credentials) and shall present actionable messages without exposing secrets.          | Inject API errors; verify user message; ensure logs contain no tokens/PII beyond policy.                                              |  | SYS-003                                                |
 | FUNC-ACCT-008  | Unlink institution                      | The system shall allow the user to unlink an institution and shall revoke/delete associated tokens and cached raw payloads per retention settings.                    | Unlink item; confirm tokens removed; accounts/transactions handled per policy; sync no longer runs for that item.                     | | SYS-003                                                |
+| FUNC-ACCT-009  | Identity owner display                  | The system shall retrieve and persist account owner names from Plaid Identity (when available) and shall display account owner names in the account UI.              | Link item with Identity; confirm owner names stored and shown in UI.                                                                  |  | FUNC-ACCT-003                                          |
 
 #### 9.3 Sync and ingestion
 
@@ -91,6 +97,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-SYNC-002  | Idempotent ingestion         | The system shall be idempotent: re-running the same sync shall not create duplicate transactions.                                                          | Replay same provider payload; confirm transaction counts unchanged.                                  | | FUNC-SYNC-001                                          |
 | FUNC-SYNC-003  | Pending vs posted handling   | The system shall represent pending and posted transactions and shall reconcile pending-to-posted transitions without double counting.                      | Use mocked pending+posted sequence; confirm final single posted record with correct status handling. |       | FUNC-SYNC-001                                          |
 | FUNC-SYNC-004  | Provider provenance          | The system shall store the source of each field (provider vs user override) and shall preserve raw provider values for audit/debug (subject to retention). | Edit category/name; confirm raw provider values preserved and UI shows override indicator.           |              | SYS-001                                                |
+| FUNC-SYNC-005  | Offline conflict resolution  | The system shall allow offline edits to any user-editable fields and, on next sync, detect conflicts with incoming provider data; conflicts shall be queued in a dedicated conflict resolution view for user selection without overwriting local edits until resolved. | Edit offline; simulate conflicting sync; confirm conflict queued and resolved via conflict view. |  | FUNC-SYNC-004                                          |
 
 #### 9.4 Transactions
 
@@ -147,7 +154,7 @@ Exports enable analysis outside the app; backups enable recovery and portability
 | FUNC-EXP-001   | Transaction export CSV       | The system shall export transactions to CSV, including user overrides (category, notes/tags, flags, split lines) and shall allow exporting the current filtered view. | Apply filters; export; validate file contents, headers, and row counts match filtered results.             |        | FUNC-TXN-002                                           |
 | FUNC-EXP-002   | Category and budget export   | The system shall export categories and monthly budgets to CSV or JSON.                                                                                                | Export; validate schema and values against fixture.                                                        |       | SYS-001                                                |
 | FUNC-EXP-003   | Export privacy controls      | The system shall provide export options to exclude sensitive raw provider payload fields and shall default to excluding raw payloads.                                 | Export with defaults; inspect file for absence of raw payload columns; toggle option and verify inclusion. |       | SYS-003                                                |
-| FUNC-BKP-001   | Encrypted backup creation    | The system shall create an encrypted backup of the application database and settings, protected by a user-supplied passphrase or OS-stored key.                       | Create backup; verify file is encrypted (not readable as plaintext) and is restorable.                     |    | SYS-003                                                |
+| FUNC-BKP-001   | Encrypted backup creation    | The system shall create an encrypted backup of the application database and settings, protected by a user-supplied passphrase.                                        | Create backup; verify file is encrypted (not readable as plaintext) and is restorable.                     |    | SYS-003                                                |
 | FUNC-BKP-002   | Backup integrity check       | The system shall include an integrity check (e.g., authenticated encryption or MAC) and shall detect tampering/corruption during restore.                             | Corrupt backup bytes; confirm restore fails with explicit integrity error.                                 |                 | FUNC-BKP-001                                           |
 | FUNC-BKP-003   | Restore workflow             | The system shall restore from an encrypted backup into a clean state and shall preserve user overrides and provenance markers.                                        | Restore into fresh install; compare key counts and sampled records; verify override flags.                 | | FUNC-SYNC-004                                          |
 | FUNC-BKP-004   | Wipe local data              | The system shall provide a “wipe all local data” action that securely deletes local database files and removes secrets from secure storage.                           | Trigger wipe; confirm db deleted; confirm secrets removed; app returns to initial state.                   |                | SYS-003                                                |
@@ -180,18 +187,18 @@ Audit logs are local/system logs intended to record significant events without l
 
 | requirement ID | requirement title              | requirement body (including "shall" statements)                                                                                                                   | verification plan                                                                                | unit test                                     | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------ |
-| SEC-CRY-001    | Encryption at rest             | The system shall encrypt financial data at rest (database and/or sensitive fields) using modern, vetted cryptography.                                             | Inspect storage; verify encrypted DB or encrypted sensitive fields; review crypto configuration. |       | SYS-003                                                |
-| SEC-CRY-002    | Key storage                    | The system shall store encryption keys in an OS credential store or server-side secret store and shall not hardcode keys in source code or configs.               | Code review and runtime inspection; verify key retrieval from secure store.                      |           | SYS-003                                                |
-| SEC-CRY-003    | Encrypted backups              | The system shall encrypt backups with authenticated encryption and shall require a passphrase/key for restore.                                                    | Attempt to read backup; confirm unreadable; restore requires key and validates integrity.        |       | FUNC-BKP-001                                           |
+| SEC-CRY-001    | Encryption at rest             | The system shall encrypt financial data at rest using full-database encryption with modern, vetted cryptography.                                                   | Inspect storage; verify encrypted DB and review crypto configuration.                           |       | SYS-003                                                |
+| SEC-CRY-002    | Key storage                    | The system shall store encryption keys in a secure local key store (app-managed or OS credential store where available) and shall not hardcode keys in source code or configs. | Code review and runtime inspection; verify key retrieval from secure storage.                   |           | SYS-003                                                |
+| SEC-CRY-003    | Encrypted backups              | The system shall encrypt backups with authenticated encryption and shall require a passphrase for restore.                                                        | Attempt to read backup; confirm unreadable; restore requires passphrase and validates integrity. |       | FUNC-BKP-001                                           |
 | SEC-CRY-004    | Secret rotation and revocation | The system shall support revoking Plaid access by deleting item tokens and shall support regenerating application encryption keys with a re-encryption procedure. | Unlink and confirm token invalidation; rotate keys and confirm data still decrypts.              | | SYS-003                                                |
 
 #### 9.12 Access Control and Session Security
 
 | requirement ID | requirement title        | requirement body (including "shall" statements)                                                                                                                             | verification plan                                                          | unit test                                      | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
-| SEC-ACC-001    | App access gate          | The system shall require an application access gate (OS account restriction, biometric/PIN, or local secret) before displaying financial data.                              | Launch app; confirms locked by default; unlock required.                   | | SYS-003                                                |
+| SEC-ACC-001    | App access gate          | The system shall require an application PIN access gate before displaying financial data.                                                                               | Launch app; confirms locked by default; unlock required.                   | | SYS-003                                                |
 | SEC-ACC-002    | Session timeout          | The system shall lock the app after a configurable period of inactivity and shall clear sensitive UI state on lock.                                                         | Idle beyond timeout; confirm lock; verify sensitive views not visible.     |  | SEC-ACC-001                                            |
-| SEC-ACC-003    | Unlock configuration     | The system shall allow configuring unlock mechanism (where supported) and shall store unlock secrets only in secure storage.                                                | Change unlock method; verify persistence and secure storage.               |    | SEC-ACC-001                                            |
+| SEC-ACC-003    | Unlock configuration     | The system shall allow configuring the application PIN and shall store unlock secrets only in secure storage.                                                           | Change PIN; verify persistence and secure storage.                          |    | SEC-ACC-001                                            |
 | SEC-ACC-004    | Authorization boundaries | If a client-server architecture is used, the system shall enforce authorization on all API endpoints and shall not trust client-provided identifiers for access to secrets. | Attempt unauthorized API calls; verify 401/403; verify server-side checks. |             | SYS-003                                                |
 
 #### 9.13 Transport and Network Security
@@ -218,7 +225,7 @@ Audit logs are local/system logs intended to record significant events without l
 
 * Institution
 * PlaidItem (institution connection)
-* Account (belongs to item; type/subtype; mask; balances)
+* Account (belongs to item; type/subtype; mask; balances; owner names when available)
 * Transaction (provider ids; posted/pending; category; user overrides; flags; splits; provenance)
 * Category (hierarchy; active flag)
 * Budget (month; category; amount)
@@ -232,6 +239,7 @@ Audit logs are local/system logs intended to record significant events without l
 * Clear indicators for overridden fields.
 * Global search and filter-first transaction exploration.
 * Consistent month navigation across budget and reports.
+* Conflict resolution queue for offline sync conflicts.
 
 ### 12. Non-functional Requirements (MVP)
 
@@ -243,7 +251,7 @@ Performance and reliability
 
 Maintainability
 
-* Requirements traced to unit tests and verification plans (tables in Section 8–13).
+* Requirements traced to unit tests and verification plans (tables in Section 9).
 * Centralized configuration for retention, logging, encryption, and sync behavior.
 
 Portability
@@ -252,11 +260,8 @@ Portability
 
 ### 13. Open Questions (to finalize implementation details)
 
-* Deployment mode: local-only (desktop) vs self-hosted server + client.
-* Database choice: SQLite (local) vs Postgres (self-hosted).
-* Encryption approach: full DB encryption vs field-level encryption (and which fields).
-* Unlock mechanism: OS-native biometrics/PIN vs app-level PIN only.
-* Plaid products: transactions only vs transactions + investments/holdings + liabilities (balances).
+* Post-MVP: server + client architecture details and hosting model.
+* Post-MVP: database choice for server deployment (if needed).
 
 ### 14. Milestones (Suggested)
 
@@ -264,5 +269,5 @@ Portability
 * M2: Transaction list/detail + categorization overrides + inclusion rules + search/filters
 * M3: Budgets + monthly view + overspend drill-down
 * M4: Dashboards/reports + net worth snapshots
-* M5: Export + encsrypted backup/restore + wipe + settings + audit logging hardening
+* M5: Export + encrypted backup/restore + wipe + settings + audit logging hardening
 * M6: Security review pass (redaction, TLS, dependency scanning, retention enforcement)
