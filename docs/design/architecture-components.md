@@ -10,8 +10,9 @@ Requirements: SYS-001, SYS-002, SYS-003, FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT
 ## Component map
 | Component | Responsibilities | Inputs | Outputs | Primary requirements |
 | --- | --- | --- | --- | --- |
-| Desktop UI | Views, forms, conflict queue, navigation | User actions | Commands, queries | SYS-001, FUNC-TXN-001, FUNC-BUD-001, FUNC-REP-001, FUNC-SYNC-007, SEC-ACC-001 |
-| Application Core | Orchestration, policies, inclusion rules, provenance | UI commands | State updates, service calls | SYS-001, FUNC-BUD-004, FUNC-SYNC-004, SEC-DATA-007 |
+| Desktop UI (React) | Views, forms, conflict queue, navigation | User actions | Commands, queries | SYS-001, FUNC-TXN-001, FUNC-BUD-001, FUNC-REP-001, FUNC-SYNC-007, SEC-ACC-001 |
+| Tauri Host (Rust) | UI bridge, HTTPS client with cert pinning, sidecar lifecycle | UI commands | HTTPS calls, results | SEC-NET-001, SEC-NET-002 |
+| Python Core (FastAPI) | Application API, orchestration | HTTPS requests | Domain outputs | SYS-001, FUNC-BUD-004, FUNC-SYNC-004, SEC-DATA-007 |
 | Sync Engine | Incremental sync, idempotency, pending->posted, cursor | Sync trigger, Plaid deltas | Upserts, conflicts | FUNC-SYNC-001..007 |
 | Conflict Service | Conflict detection, queue, resolution | Local edits, provider updates | Conflict records, resolutions | FUNC-SYNC-006, FUNC-SYNC-007 |
 | Data Store | Repositories, transactions, settings, retention | Reads/writes | Durable data | SEC-CRY-001, FUNC-SET-002 |
@@ -46,7 +47,12 @@ Queries:
 - `getConflicts()`
 - `getSettings()`
 
+Transport (stack decision):
+- UI invokes Tauri commands, which call the local FastAPI service over HTTPS on localhost.
+- The Tauri host pins the FastAPI certificate to enforce encrypted local transport.
+
 ### Application Core to Services
+- Implemented as Python FastAPI handlers and domain services behind the local HTTPS API.
 - Uses transaction-scoped units of work for sync ingestion and conflict creation.
 - Enforces inclusion rules (transfers/excluded) consistently across budgets and reports.
 - Ensures provenance markers are set for user overrides and preserved across sync.
@@ -85,6 +91,11 @@ Repositories:
 - `Crypto`: encrypt/decrypt DB, backup, and sensitive blobs with authenticated encryption.
 - `Secrets`: get/set/delete tokens and encryption keys in secure storage.
 - `Redaction`: redact structured logs and sensitive fields by default.
+
+## Stack-specific notes (MVP)
+- Tauri v2 bundles the Python FastAPI sidecar via `externalBin`.
+- FastAPI runs on loopback with HTTPS; Tauri host performs certificate pinning for API calls.
+- SQLite is encrypted using SQLCipher via an actively maintained Python binding (prefer `sqlcipher3` / `sqlcipher3-binary`).
 
 ## Data contracts and invariants
 

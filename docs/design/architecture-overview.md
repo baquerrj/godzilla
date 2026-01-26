@@ -8,14 +8,22 @@ Build a local-only desktop budgeting application that aggregates financial accou
 ## Architecture overview
 The MVP is a single-process desktop application with a local data store (SQLite) protected by full-database encryption. The app integrates with Plaid for linking and sync, supports offline edits with conflict detection and a conflict resolution queue, and centralizes security controls (PIN access gate, secrets, crypto, redaction). Optional scheduling is supported when a scheduler is present.
 
+## Implementation stack (MVP)
+- Shell: Tauri v2 (Rust) with a React UI.
+- Core service: Python FastAPI sidecar, bundled via Tauri `externalBin` sidecar support.
+- Transport: HTTPS on localhost between the Tauri host and the Python service.
+- Data store: SQLite with SQLCipher via an actively maintained binding (prefer `sqlcipher3` / `sqlcipher3-binary`).
+
 ### High-level component diagram
 ```mermaid
 flowchart LR
   UI[Desktop UI] -->|commands, views| APP[Application Core]
+  APP --> BRIDGE[Tauri Host - Rust]
+  BRIDGE -->|HTTPS localhost| PY[Python Core - FastAPI]
   APP -->|queries, writes| STORE[Data Store]
   STORE -->|encrypted file| SQLITE[SQLite DB]
 
-  APP --> SYNC[Sync Engine]
+  PY --> SYNC[Sync Engine]
   SYNC --> PLAID[Plaid API]
 
   APP --> REPORTS[Budgets and Reports]
@@ -123,6 +131,7 @@ sequenceDiagram
 - PIN gate and session timeout protect access (SEC-ACC-001, SEC-ACC-002, SEC-ACC-003).
 - Logs are structured and redacted; raw payloads excluded by default (FUNC-AUD-002, SEC-DATA-002).
 - Retention and pruning apply to raw payloads and logs (FUNC-SET-002, FUNC-AUD-003).
+- HTTPS is enforced for local service communication (loopback only) with certificate pinning in the Tauri host (SEC-NET-001, SEC-NET-002).
 - TLS and rate limiting required for Plaid communications (SEC-NET-001, SEC-NET-003).
 
 ## Tradeoffs and alternatives
