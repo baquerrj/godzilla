@@ -1,4 +1,37 @@
-## Product Requirements Document (PRD): Personal Budgeting App (Monarch-like, single-user)
+## Contents
+
+* [Product Requirements Document (PRD): Personal Budgeting App (Monarch-like, single-user)](#product-requirements-document-prd-personal-budgeting-app-monarch-like-single-user)
+  * * [1. Summary](#1-summary)
+    * [2. Goals](#2-goals)
+    * [3. Non-goals](#3-non-goals)
+    * [4. Target User and Primary Use Cases](#4-target-user-and-primary-use-cases)
+    * [5. Success Metrics (Personal)](#5-success-metrics-personal)
+    * [6. Assumptions and Constraints](#6-assumptions-and-constraints)
+    * [7. MVP Scope](#7-mvp-scope)
+    * [8. User Stories (MVP)](#8-user-stories-mvp)
+    * [9. Requirements](#9-requirements)
+      * [9.1 System requirements](#91-system-requirements)
+      * [9.2 Account linking and institution management (Plaid)](#92-account-linking-and-institution-management-plaid)
+      * [9.3 Sync and ingestion](#93-sync-and-ingestion)
+      * [9.4 Transactions](#94-transactions)
+      * [9.5 Categories](#95-categories)
+      * [9.6 Budgets](#96-budgets)
+        * [9.7 Dashboards and Reports](#97-dashboards-and-reports)
+      * [9.8 Export, Backup, and Restore](#98-export-backup-and-restore)
+      * [9.9 Settings](#99-settings)
+      * [9.10 Audit Logging](#910-audit-logging)
+      * [9.11 Secrets Management and Cryptography](#911-secrets-management-and-cryptography)
+      * [9.12 Access Control and Session Security](#912-access-control-and-session-security)
+      * [9.13 Transport and Network Security](#913-transport-and-network-security)
+      * [9.14 Secure Coding, Data Handling, and Privacy Controls](#914-secure-coding-data-handling-and-privacy-controls)
+    * [10. Data Model (Conceptual, MVP)](#10-data-model-conceptual-mvp)
+    * [11. UX Requirements (MVP)](#11-ux-requirements-mvp)
+      * [Conflicts (MVP)](#conflicts-mvp)
+    * [12. Non-functional Requirements (MVP)](#12-non-functional-requirements-mvp)
+    * [13. Open Questions (to finalize implementation details)](#13-open-questions-to-finalize-implementation-details)
+    * [14. Milestones (Suggested)](#14-milestones-suggested)
+
+# Product Requirements Document (PRD): Personal Budgeting App (Monarch-like, single-user)
 
 ### 1. Summary
 
