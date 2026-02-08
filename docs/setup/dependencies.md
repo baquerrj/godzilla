@@ -108,6 +108,10 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
 - Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
 - Tests: `nox -s tests` (or `python3 -m pytest`)
 - Build wheel: `nox -s build` (or `python3 -m build --wheel`)
+- Console scripts (after editable install):
+  - `link-sandbox-item --institution-id ins_109508 --products transactions,identity`
+  - `migrations` (requires `GODZILLA_DB_PATH` and `GODZILLA_DB_KEY`)
+  - `sync-plaid-item --item-id <item_id> --institution-id ins_109508`
 
 ## 8) Verification checklist
 - `rustc --version`

@@ -15,8 +15,8 @@ dependencies = [
 
 [project.scripts]
 link-sandbox-item = "godzilla_core.scripts.link_sandbox_item:main"
-migrations = "godzilla_core.scripts.migrations:main"
-sync-sandbox-items = "godzilla_core.scripts.sync_sandbox_items:main"
+migrations = "godzilla_core.db.migrations:main"
+sync-plaid-item = "godzilla_core.scripts.sync_plaid_item:main"
 
 [project.optional-dependencies]
 dev = [
@@ -26,8 +26,7 @@ dev = [
 ]
 
 [tool.setuptools]
-package-dir = {"" = "godzilla_core"}
-packages = {find = {where = ["godzilla_core"], exclude = ["tests", "tests.*"]}}
+packages = {find = {where = ["."], exclude = ["godzilla_core/tests", "godzilla_core/tests.*"]}}
 
 [tool.ruff]
 line-length = 100
