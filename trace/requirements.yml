@@ -43,12 +43,15 @@
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
   code_refs:
+  - godzilla_core/api/app.py:plaid_link
   - godzilla_core/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
   - godzilla_core/scripts/link_sandbox_item.py:main
   test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -57,13 +60,16 @@
   title: Token exchange and storage
   parent_requirement_id: SYS-003
   code_refs:
+  - godzilla_core/api/app.py:plaid_link
   - godzilla_core/integrations/plaid_client.py:PlaidClient.exchange_public_token
   - godzilla_core/integrations/plaid_client.py:store_access_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
   - godzilla_core/scripts/link_sandbox_item.py:main
   test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -73,12 +79,15 @@
   title: Account metadata retrieval
   parent_requirement_id: FUNC-ACCT-001
   code_refs:
+  - godzilla_core/api/app.py:get_accounts
   - godzilla_core/integrations/plaid_client.py:PlaidClient.accounts_balance_get
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_upsert_account
   test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_account_metadata_upsert
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -86,18 +95,28 @@
 - requirement_id: FUNC-ACCT-004
   title: Connection state tracking
   parent_requirement_id: FUNC-ACCT-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_sync_state
+  - godzilla_core/integrations/plaid_sync.py:_set_item_last_sync
+  - godzilla_core/integrations/plaid_sync.py:_update_sync_state
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_sync_state_returns_item_status
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-ACCT-005
   title: Manual refresh
   parent_requirement_id: FUNC-ACCT-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:plaid_sync
+  - godzilla_core/scripts/sync_plaid_item.py:main
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -114,9 +133,13 @@
 - requirement_id: FUNC-ACCT-007
   title: Error handling and messaging
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:plaid_link
+  - godzilla_core/api/app.py:plaid_sync
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_error_response_redacts_logs
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -143,13 +166,16 @@
   title: Incremental transaction sync
   parent_requirement_id: FUNC-ACCT-004
   code_refs:
+  - godzilla_core/api/app.py:plaid_sync
   - godzilla_core/integrations/plaid_client.py:PlaidClient.transactions_sync
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_update_sync_state
   - godzilla_core/integrations/plaid_sync.py:_get_sync_cursor
   test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -220,9 +246,12 @@
 - requirement_id: FUNC-TXN-001
   title: Transaction list
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_transactions
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_transactions_supports_pagination_and_sorting
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -410,11 +439,14 @@
   title: Balance snapshotting
   parent_requirement_id: FUNC-ACCT-005
   code_refs:
+  - godzilla_core/api/app.py:get_balances
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_insert_balance_snapshot
   test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_balances_returns_snapshots
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_balance_snapshot_upserts_per_day
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -566,9 +598,14 @@
 - requirement_id: FUNC-AUD-002
   title: Log redaction
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_log_event
+  - godzilla_core/security/redaction.py:redact_sensitive
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_error_response_redacts_logs
+  - godzilla_core/tests/test_api_layer.py:test_redact_sensitive_redacts_nested_values
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
@@ -666,9 +703,12 @@
 - requirement_id: SEC-ACC-004
   title: Authorization boundaries
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:require_api_key
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_auth_required_for_endpoints
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -685,9 +725,13 @@
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/scripts/run_api_server.py:main
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_non_loopback_host
+  - godzilla_core/tests/test_api_layer.py:test_run_api_server_starts_with_loopback_host
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -715,18 +759,27 @@
 - requirement_id: SEC-DATA-002
   title: Logging policy
   parent_requirement_id: FUNC-AUD-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_log_event
+  - godzilla_core/security/redaction.py:redact_sensitive
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_error_response_redacts_logs
+  - godzilla_core/tests/test_api_layer.py:test_redact_sensitive_redacts_nested_values
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: SEC-DATA-003
   title: Input validation
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:PlaidLinkRequest
+  - godzilla_core/api/app.py:PlaidSyncRequest
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_input_validation_rejects_invalid_payloads
   doc_refs:
+  - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md

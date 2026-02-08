@@ -17,9 +17,11 @@ dependencies = [
 link-sandbox-item = "godzilla_core.scripts.link_sandbox_item:main"
 migrations = "godzilla_core.db.migrations:main"
 sync-plaid-item = "godzilla_core.scripts.sync_plaid_item:main"
+godzilla-api = "godzilla_core.scripts.run_api_server:main"
 
 [project.optional-dependencies]
 dev = [
+  "black>=24.0.0",
   "pytest>=8.0.0",
   "pytest-cov>=5.0.0",
   "ruff>=0.6.0",
@@ -34,7 +36,26 @@ target-version = "py312"
 src = ["godzilla_core"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "PL"]
+select = ["E", "F", "W", "B", "PL", "D", "I"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | build
+    | dist
+  )s
+)
+'''
 
 [tool.pytest.ini_options]
 testpaths = ["godzilla_core/tests"]

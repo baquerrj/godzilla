@@ -77,6 +77,7 @@ export GODZILLA_DB_PATH="$HOME/.local/share/godzilla/godzilla.db"
 export GODZILLA_DB_KEY="replace-with-strong-passphrase"
 export GODZILLA_SECRETS_PATH="$HOME/.local/share/godzilla/secrets.db"
 export GODZILLA_SECRETS_KEY="replace-with-strong-passphrase"
+export GODZILLA_API_TOKEN="replace-with-local-api-token"
 export GODZILLA_LOCAL_TZ="America/Denver"
 export PLAID_CLIENT_ID="replace-with-sandbox-client-id"
 export PLAID_SECRET="replace-with-sandbox-secret"
@@ -112,6 +113,7 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
   - `link-sandbox-item --institution-id ins_109508 --products transactions,identity`
   - `migrations` (requires `GODZILLA_DB_PATH` and `GODZILLA_DB_KEY`)
   - `sync-plaid-item --item-id <item_id> --institution-id ins_109508`
+  - `godzilla-api --host 127.0.0.1 --port 8787` (requires `GODZILLA_API_TOKEN`)
 
 ## 8) Verification checklist
 - `rustc --version`
