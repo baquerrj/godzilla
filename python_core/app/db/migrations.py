@@ -1,6 +1,6 @@
 """Migration runner for the encrypted SQLite database.
 
-REQ: SEC-CRY-001
+REQ: SEC-CRY-001, SYS-004
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from typing import Iterable, Optional
 
 from sqlcipher3 import dbapi2 as sqlcipher
 
+from app.util.time import local_timestamp_metadata
 
 class MigrationError(RuntimeError):
     pass
@@ -88,6 +89,15 @@ def run_migrations(
                 continue
             sql = migration.path.read_text()
             conn.executescript(sql)
+            if _current_version(conn) < migration.version:
+                applied_at_utc, applied_at_tz, applied_at_offset = local_timestamp_metadata()
+                conn.execute(
+                    "INSERT INTO schema_version ("
+                    "version, applied_at_utc, applied_at_tz, applied_at_offset_minutes"
+                    ") VALUES (?, ?, ?, ?)",
+                    (migration.version, applied_at_utc, applied_at_tz, applied_at_offset),
+                )
+                conn.commit()
             current = _current_version(conn)
             if current < migration.version:
                 raise MigrationError(

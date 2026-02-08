@@ -34,11 +34,17 @@ Add a Conflict record to the local database:
 - field_name
 - local_value
 - provider_value
-- local_updated_at
-- provider_updated_at
+- local_updated_at_utc
+- local_updated_at_tz
+- local_updated_at_offset_minutes
+- provider_updated_at_utc
+- provider_updated_at_tz
+- provider_updated_at_offset_minutes
 - status (open, resolved)
 - resolution_choice (local, provider)
-- resolved_at
+- resolved_at_utc
+- resolved_at_tz
+- resolved_at_offset_minutes
 - sync_cursor_or_event_id
 
 Notes:

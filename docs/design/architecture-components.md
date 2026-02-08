@@ -110,14 +110,21 @@ classDiagram
     +id (uuid)
     +name (string)
     +plaid_institution_id (string, provider id)
-    +created_at (timestamp)
+    +created_at_utc (timestamp)
+    +created_at_tz (string)
+    +created_at_offset_minutes (int)
   }
   class PlaidItem {
     +id (uuid)
     +institution_id (uuid, fk Institution.id)
     +access_token_ref (string, secret ref)
     +status (enum)
-    +last_sync_at (timestamp)
+    +last_sync_at_utc (timestamp)
+    +last_sync_at_tz (string)
+    +last_sync_at_offset_minutes (int)
+    +created_at_utc (timestamp)
+    +created_at_tz (string)
+    +created_at_offset_minutes (int)
   }
   class Account {
     +id (uuid)
@@ -128,6 +135,9 @@ classDiagram
     +mask (string)
     +balance (decimal)
     +owner_names (string[])
+    +created_at_utc (timestamp)
+    +created_at_tz (string)
+    +created_at_offset_minutes (int)
   }
   class Transaction {
     +id (uuid)
@@ -141,6 +151,12 @@ classDiagram
     +notes (string, nullable)
     +tags (string[])
     +splits (json[])
+    +created_at_utc (timestamp)
+    +created_at_tz (string)
+    +created_at_offset_minutes (int)
+    +updated_at_utc (timestamp)
+    +updated_at_tz (string)
+    +updated_at_offset_minutes (int)
   }
   class Category {
     +id (uuid)
@@ -167,17 +183,25 @@ classDiagram
     +field_name (string)
     +local_value (json)
     +provider_value (json)
-    +local_updated_at (timestamp)
-    +provider_updated_at (timestamp)
+    +local_updated_at_utc (timestamp)
+    +local_updated_at_tz (string)
+    +local_updated_at_offset_minutes (int)
+    +provider_updated_at_utc (timestamp)
+    +provider_updated_at_tz (string)
+    +provider_updated_at_offset_minutes (int)
     +status (enum)
     +resolution_choice (enum)
-    +resolved_at (timestamp, nullable)
+    +resolved_at_utc (timestamp, nullable)
+    +resolved_at_tz (string, nullable)
+    +resolved_at_offset_minutes (int, nullable)
     +sync_cursor_or_event_id (string or uuid)
   }
   class AuditLog {
     +id (uuid)
     +event_type (enum)
-    +timestamp (timestamp)
+    +timestamp_utc (timestamp)
+    +timestamp_tz (string)
+    +timestamp_offset_minutes (int)
     +redacted_payload (json)
   }
   class Settings {
@@ -188,6 +212,12 @@ classDiagram
     +sync_schedule (json)
     +backup_schedule (json)
     +pin_config (json)
+    +created_at_utc (timestamp)
+    +created_at_tz (string)
+    +created_at_offset_minutes (int)
+    +updated_at_utc (timestamp)
+    +updated_at_tz (string)
+    +updated_at_offset_minutes (int)
   }
 
   Institution "1" --> "many" PlaidItem
@@ -198,6 +228,8 @@ classDiagram
   Category "1" --> "many" Budget
   Category "1" --> "many" Category : parent/child
 ```
+
+Timestamp metadata: any timestamp field is stored as a UTC value plus `*_tz` (IANA timezone ID) and `*_offset_minutes` at the time of write.
 
 ### Provenance model
 - Each user-editable field maintains a source marker: `provider` or `user`.

@@ -1,32 +1,20 @@
 """Encrypted secrets store backed by SQLCipher.
 
-REQ: SEC-CRY-002
+REQ: SEC-CRY-002, SYS-004
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 import os
 from typing import Optional
 
 from sqlcipher3 import dbapi2 as sqlcipher
 
+from app.util.time import local_timestamp_metadata
 
 class SecretStoreError(RuntimeError):
     pass
-
-
-@dataclass(frozen=True)
-class SecretEntry:
-    key: str
-    value: str
-    updated_at: str
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _escape_key(db_key: str) -> str:
@@ -65,9 +53,23 @@ class SecretStore:
                 "CREATE TABLE IF NOT EXISTS secrets ("
                 "key TEXT PRIMARY KEY, "
                 "value TEXT NOT NULL, "
-                "updated_at TEXT NOT NULL"
+                "updated_at_utc TEXT NOT NULL, "
+                "updated_at_tz TEXT NOT NULL, "
+                "updated_at_offset_minutes INTEGER NOT NULL"
                 ")"
             )
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(secrets)")}
+            if "updated_at_utc" not in columns:
+                conn.execute("ALTER TABLE secrets ADD COLUMN updated_at_utc TEXT")
+                conn.execute("ALTER TABLE secrets ADD COLUMN updated_at_tz TEXT")
+                conn.execute("ALTER TABLE secrets ADD COLUMN updated_at_offset_minutes INTEGER")
+                if "updated_at" in columns:
+                    conn.execute(
+                        "UPDATE secrets SET "
+                        "updated_at_utc = updated_at, "
+                        "updated_at_tz = 'UTC', "
+                        "updated_at_offset_minutes = 0"
+                    )
             conn.commit()
         finally:
             conn.close()
@@ -80,13 +82,18 @@ class SecretStore:
 
         conn = _connect(self._db_path, self._db_key)
         try:
+            updated_at_utc, updated_at_tz, updated_at_offset = local_timestamp_metadata()
             conn.execute(
-                "INSERT INTO secrets (key, value, updated_at) "
-                "VALUES (?, ?, ?) "
+                "INSERT INTO secrets ("
+                "key, value, updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+                ") "
+                "VALUES (?, ?, ?, ?, ?) "
                 "ON CONFLICT(key) DO UPDATE SET "
                 "value=excluded.value, "
-                "updated_at=excluded.updated_at",
-                (key, value, _utc_now()),
+                "updated_at_utc=excluded.updated_at_utc, "
+                "updated_at_tz=excluded.updated_at_tz, "
+                "updated_at_offset_minutes=excluded.updated_at_offset_minutes",
+                (key, value, updated_at_utc, updated_at_tz, updated_at_offset),
             )
             conn.commit()
         finally:

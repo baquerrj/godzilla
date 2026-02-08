@@ -3,17 +3,18 @@ BEGIN TRANSACTION;
 
 CREATE TABLE schema_version (
   version INTEGER NOT NULL,
-  applied_at TEXT NOT NULL
+  applied_at_utc TEXT NOT NULL,
+  applied_at_tz TEXT NOT NULL,
+  applied_at_offset_minutes INTEGER NOT NULL
 );
-
-INSERT INTO schema_version (version, applied_at)
-VALUES (1, CURRENT_TIMESTAMP);
 
 CREATE TABLE institution (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   plaid_institution_id TEXT NOT NULL UNIQUE,
-  created_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE plaid_item (
@@ -21,8 +22,12 @@ CREATE TABLE plaid_item (
   institution_id TEXT NOT NULL REFERENCES institution(id) ON DELETE CASCADE,
   access_token_ref TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('linked', 'requires_reauth', 'error')),
-  last_sync_at TEXT,
-  created_at TEXT NOT NULL
+  last_sync_at_utc TEXT,
+  last_sync_at_tz TEXT,
+  last_sync_at_offset_minutes INTEGER,
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE account (
@@ -35,7 +40,9 @@ CREATE TABLE account (
   balance NUMERIC,
   currency TEXT NOT NULL,
   owner_names TEXT,
-  created_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE category (
@@ -59,8 +66,12 @@ CREATE TABLE transaction_record (
   is_transfer INTEGER NOT NULL DEFAULT 0 CHECK (is_transfer IN (0, 1)),
   is_excluded INTEGER NOT NULL DEFAULT 0 CHECK (is_excluded IN (0, 1)),
   notes TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE transaction_split (
@@ -105,7 +116,9 @@ CREATE TABLE transaction_override (
   source TEXT NOT NULL CHECK (source IN ('provider', 'user')),
   provider_value TEXT,
   user_value TEXT,
-  updated_at TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL,
   UNIQUE (transaction_id, field_name)
 );
 
@@ -113,7 +126,9 @@ CREATE TABLE provider_raw (
   id TEXT PRIMARY KEY,
   transaction_id TEXT NOT NULL REFERENCES transaction_record(id) ON DELETE CASCADE,
   raw_payload TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE conflict (
@@ -123,11 +138,17 @@ CREATE TABLE conflict (
   field_name TEXT NOT NULL,
   local_value TEXT NOT NULL,
   provider_value TEXT NOT NULL,
-  local_updated_at TEXT NOT NULL,
-  provider_updated_at TEXT NOT NULL,
+  local_updated_at_utc TEXT NOT NULL,
+  local_updated_at_tz TEXT NOT NULL,
+  local_updated_at_offset_minutes INTEGER NOT NULL,
+  provider_updated_at_utc TEXT NOT NULL,
+  provider_updated_at_tz TEXT NOT NULL,
+  provider_updated_at_offset_minutes INTEGER NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('open', 'resolved')),
   resolution_choice TEXT CHECK (resolution_choice IN ('local', 'provider')),
-  resolved_at TEXT,
+  resolved_at_utc TEXT,
+  resolved_at_tz TEXT,
+  resolved_at_offset_minutes INTEGER,
   sync_cursor_or_event_id TEXT
 );
 
@@ -135,14 +156,18 @@ CREATE TABLE conflict_resolution (
   id TEXT PRIMARY KEY,
   conflict_id TEXT NOT NULL REFERENCES conflict(conflict_id) ON DELETE CASCADE,
   resolved_by TEXT NOT NULL,
-  resolved_at TEXT NOT NULL,
+  resolved_at_utc TEXT NOT NULL,
+  resolved_at_tz TEXT NOT NULL,
+  resolved_at_offset_minutes INTEGER NOT NULL,
   choice TEXT NOT NULL CHECK (choice IN ('local', 'provider'))
 );
 
 CREATE TABLE audit_log (
   id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,
-  timestamp TEXT NOT NULL,
+  timestamp_utc TEXT NOT NULL,
+  timestamp_tz TEXT NOT NULL,
+  timestamp_offset_minutes INTEGER NOT NULL,
   redacted_payload TEXT NOT NULL
 );
 
@@ -150,36 +175,52 @@ CREATE TABLE settings (
   id TEXT PRIMARY KEY,
   timezone TEXT NOT NULL,
   currency TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE retention_policy (
   id TEXT PRIMARY KEY,
   retain_raw_payloads INTEGER NOT NULL DEFAULT 1 CHECK (retain_raw_payloads IN (0, 1)),
   retain_logs_days INTEGER NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE export_defaults (
   id TEXT PRIMARY KEY,
   include_raw_payloads INTEGER NOT NULL DEFAULT 0 CHECK (include_raw_payloads IN (0, 1)),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  created_at_utc TEXT NOT NULL,
+  created_at_tz TEXT NOT NULL,
+  created_at_offset_minutes INTEGER NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE pin_config (
   id TEXT PRIMARY KEY,
   pin_hash TEXT NOT NULL,
   pin_salt TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at_utc TEXT NOT NULL,
+  updated_at_tz TEXT NOT NULL,
+  updated_at_offset_minutes INTEGER NOT NULL
 );
 
 CREATE TABLE sync_state (
   id TEXT PRIMARY KEY,
   plaid_cursor TEXT,
-  last_sync_at TEXT,
+  last_sync_at_utc TEXT,
+  last_sync_at_tz TEXT,
+  last_sync_at_offset_minutes INTEGER,
   last_sync_status TEXT
 );
 

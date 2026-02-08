@@ -77,6 +77,7 @@ export GODZILLA_DB_PATH="$HOME/.local/share/godzilla/godzilla.db"
 export GODZILLA_DB_KEY="replace-with-strong-passphrase"
 export GODZILLA_SECRETS_PATH="$HOME/.local/share/godzilla/secrets.db"
 export GODZILLA_SECRETS_KEY="replace-with-strong-passphrase"
+export GODZILLA_LOCAL_TZ="America/Denver"
 ```
 
 ## 5) Local HTTPS for FastAPI

@@ -26,6 +26,19 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+- requirement_id: SYS-004
+  title: Timestamp metadata
+  code_refs:
+  - python_core/app/util/time.py:local_timestamp_metadata
+  - python_core/app/security/secrets.py:SecretStore.set_secret
+  - python_core/app/db/migrations.py:run_migrations
+  - migrations/0001_init.sql
+  test_refs:
+  - python_core/tests/test_secrets.py:SecretStoreTests
+  doc_refs:
+  - docs/design/architecture-components.md
+  - docs/design/database-schema.md
+  - docs/design/secrets-store.md
 - requirement_id: FUNC-ACCT-001
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
