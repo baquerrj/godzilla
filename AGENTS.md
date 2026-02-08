@@ -2,7 +2,7 @@
 
 This repository implements a single-user personal budgeting app. Development must strictly adhere to the Product Requirements Document (PRD) and maintain robust bidirectional traceability among requirements, production code, and tests.
 
-## 1) Non-negotiables
+## 1 Non-negotiables
 1. Requirements are the source of truth. Do not implement features outside the PRD unless explicitly authorized.
 2. Every change must maintain bidirectional traceability:
    - Requirements ↔ Production code
@@ -12,8 +12,9 @@ This repository implements a single-user personal budgeting app. Development mus
 4. Keep the codebase efficient and DRY: minimize redundancy; refactor into common modules when appropriate.
 5. Design documentation must exist and be updated with each change. Docs are Markdown; diagrams use Mermaid.
 6. All unit and component tests must pass locally/CI before submission.
+7. All linters must pass locally/CI before submission.
 
-## 2) Source documents and canonical IDs
+## 2 Source documents and canonical IDs
 - PRD: `product-requirements-document.md` (or the repo’s current PRD path).
 - Requirements are identified by stable IDs (e.g., `SYS-003`, `FUNC-ACCT-002`, `SEC-CRY-001`).
 - A requirement may have a parent requirement ID; derived requirements must preserve this relationship.
@@ -22,15 +23,15 @@ This repository implements a single-user personal budgeting app. Development mus
   - Decompose complex requirements into derived and corresponding system, sub-system, and component requirements
   - When a requirement starts describing chained or complex behavior, that is a sign that the requirement be decomposed into smaller chunks
 
-## 3) Traceability rules (strict)
+## 3 Traceability rules (strict)
 ### 3.1 Requirement-to-code
 - Every production module/class/function implementing requirement behavior MUST reference the corresponding requirement ID(s).
 - Use a consistent in-code tag format:
   - `REQ: <REQ-ID>` (single) or `REQ: <REQ-ID1>, <REQ-ID2>` (multiple)
 - Place tags in one of the following, in order of preference:
-  1) Module header comment
-  2) Public function/class docstring comment
-  3) Inline comment adjacent to the relevant logic (only when narrow-scope)
+  1. Module header comment
+  2. Public function/class docstring comment
+  3. Inline comment adjacent to the relevant logic (only when narrow-scope)
 
 ### 3.2 Requirement-to-tests
 - Every requirement MUST be covered by at least one automated test:
@@ -61,7 +62,7 @@ Rules:
 - Every change affecting a requirement MUST update the relevant entries.
 - New code without trace entries is not acceptable.
 
-## 4) Design documentation requirements
+## 4 Design documentation requirements
 ### 4.1 Always update or create design docs
 For any non-trivial change (new module, new workflow, new security control, new storage model):
 - Update existing design doc(s), or create a new doc under `docs/design/`.
@@ -84,7 +85,7 @@ Recommended design doc structure:
 Example tag in docs:
 - `Requirements: SYS-003, SEC-CRY-001, FUNC-BKP-001`
 
-## 5) Secure coding standards (best practices without losing efficiency)
+## 5 Secure coding standards (best practices without losing efficiency)
 ### 5.1 Secrets and tokens
 - Never log secrets (tokens, credentials, encryption keys, full account numbers).
 - Store provider secrets only server-side if applicable; no secrets embedded in any client artifacts.
@@ -111,7 +112,7 @@ Example tag in docs:
 - Pin dependencies and keep a lockfile.
 - Run vulnerability checks when available; do not introduce unnecessary dependencies.
 
-## 6) Code quality and DRY requirements
+## 6 Code quality and DRY requirements
 - Prefer small, composable modules; avoid copy/paste logic.
 - If functionality is used in 2+ places, refactor into shared utilities/modules.
 - Maintain clear boundaries:
@@ -119,7 +120,7 @@ Example tag in docs:
   - Infrastructure (Plaid integration, persistence, encryption, logging)
   - UI/API layer (presentation + input validation)
 
-## 7) Definition of Done (must satisfy before submission)
+## 7 Definition of Done (must satisfy before submission)
 1. Implementation matches the PRD requirements; no scope creep.
 2. Traceability updated:
    - In-code `REQ:` tags present
@@ -131,7 +132,7 @@ Example tag in docs:
 6. Lint/format/type checks (if configured) pass.
 7. Security checks (if configured) pass.
 
-## 8) Workflow for every task (agent checklist)
+## 8 Workflow for every task (agent checklist)
 1. Identify impacted requirement IDs in the PRD.
 2. Plan changes and update/create design doc first (or in parallel).
 3. Implement code with `REQ:` tags.
@@ -145,7 +146,7 @@ Example tag in docs:
    - Docs updated/created
    - Commands run and results
 
-## 9) Repository conventions (create if missing)
+## 9 Repository conventions (create if missing)
 If the following paths do not exist, create them:
 - `docs/design/`
 - `trace/`
