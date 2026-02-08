@@ -131,6 +131,10 @@ Example tag in docs:
 5. No secrets appear in logs; redaction verified by tests where applicable.
 6. Lint/format/type checks (if configured) pass.
 7. Security checks (if configured) pass.
+8. For Python:
+   - Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
+   - Tests: `nox -s tests` (or `python3 -m pytest`)
+   - Build wheel: `nox -s build` (or `python3 -m build --wheel`)
 
 ## 8 Workflow for every task (agent checklist)
 1. Identify impacted requirement IDs in the PRD.
