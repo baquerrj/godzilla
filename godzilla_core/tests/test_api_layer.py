@@ -28,6 +28,10 @@ pytestmark = pytest.mark.anyio
 
 
 def _seed_database(db_path: str, db_key: str) -> None:
+    """Seed an encrypted test database with deterministic API fixture data.
+
+    REQ: FUNC-ACCT-003, FUNC-ACCT-004, FUNC-REP-006, FUNC-TXN-001
+    """
     conn = sqlcipher.connect(db_path)
     conn.execute(f"PRAGMA key = '{db_key}';")
     conn.execute("PRAGMA foreign_keys = ON;")
@@ -167,6 +171,10 @@ def _seed_database(db_path: str, db_key: str) -> None:
 
 @pytest.fixture
 async def api_client() -> httpx.AsyncClient:
+    """Provide an authenticated ASGI client bound to a seeded encrypted DB.
+
+    REQ: FUNC-ACCT-003, FUNC-TXN-001, SEC-ACC-004
+    """
     env_backup = {
         "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
         "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
@@ -194,6 +202,10 @@ async def api_client() -> httpx.AsyncClient:
 
 
 def test_redact_sensitive_redacts_nested_values() -> None:
+    """Verify nested sensitive fields are redacted in log payloads.
+
+    REQ: FUNC-AUD-002, SEC-DATA-002
+    """
     payload = {
         "access_token": "secret-token",
         "nested": {
@@ -212,11 +224,19 @@ def test_redact_sensitive_redacts_nested_values() -> None:
 
 
 async def test_auth_required_for_endpoints(api_client: httpx.AsyncClient) -> None:
+    """Verify API endpoints reject requests without the API key header.
+
+    REQ: SEC-ACC-004
+    """
     response = await api_client.get("/accounts")
     assert response.status_code == 401
 
 
 async def test_input_validation_rejects_invalid_payloads(api_client: httpx.AsyncClient) -> None:
+    """Verify request body validation failures return 422 responses.
+
+    REQ: FUNC-ACCT-007
+    """
     bad_sync = await api_client.post(
         "/plaid/sync",
         json={"item_id": ""},
@@ -233,6 +253,10 @@ async def test_input_validation_rejects_invalid_payloads(api_client: httpx.Async
 
 
 async def test_get_accounts_returns_expected_payload(api_client: httpx.AsyncClient) -> None:
+    """Verify the accounts endpoint returns mapped account read models.
+
+    REQ: FUNC-ACCT-003
+    """
     response = await api_client.get("/accounts", headers={"X-API-Key": "test-api-token"})
     assert response.status_code == 200
     payload = response.json()
@@ -246,6 +270,10 @@ async def test_get_accounts_returns_expected_payload(api_client: httpx.AsyncClie
 async def test_get_transactions_supports_pagination_and_sorting(
     api_client: httpx.AsyncClient,
 ) -> None:
+    """Verify transaction listing supports sorting and pagination query params.
+
+    REQ: FUNC-TXN-001
+    """
     response = await api_client.get(
         "/transactions?sort_by=amount&sort_order=asc&limit=1&offset=0",
         headers={"X-API-Key": "test-api-token"},
@@ -259,6 +287,10 @@ async def test_get_transactions_supports_pagination_and_sorting(
 
 
 async def test_get_balances_returns_snapshots(api_client: httpx.AsyncClient) -> None:
+    """Verify balance snapshots are returned in descending date order.
+
+    REQ: FUNC-REP-006
+    """
     response = await api_client.get("/balances", headers={"X-API-Key": "test-api-token"})
     assert response.status_code == 200
     payload = response.json()
@@ -269,6 +301,10 @@ async def test_get_balances_returns_snapshots(api_client: httpx.AsyncClient) -> 
 
 
 async def test_get_sync_state_returns_item_status(api_client: httpx.AsyncClient) -> None:
+    """Verify sync state endpoint returns per-item status metadata.
+
+    REQ: FUNC-ACCT-004
+    """
     response = await api_client.get("/sync-state", headers={"X-API-Key": "test-api-token"})
     assert response.status_code == 200
     payload = response.json()
@@ -279,6 +315,10 @@ async def test_get_sync_state_returns_item_status(api_client: httpx.AsyncClient)
 
 
 async def test_plaid_link_endpoint_uses_link_helper(api_client: httpx.AsyncClient) -> None:
+    """Verify link endpoint delegates to Plaid helper and returns mapped response.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    """
     config = PlaidConfig(
         client_id="cid",
         secret="sec",
@@ -311,6 +351,10 @@ async def test_plaid_link_endpoint_uses_link_helper(api_client: httpx.AsyncClien
 
 
 async def test_plaid_link_error_response_redacts_logs(api_client: httpx.AsyncClient) -> None:
+    """Verify Plaid link errors redact sensitive values in structured logs.
+
+    REQ: FUNC-AUD-002, SEC-DATA-002
+    """
     config = PlaidConfig(
         client_id="cid",
         secret="sec",
@@ -342,6 +386,10 @@ async def test_plaid_link_error_response_redacts_logs(api_client: httpx.AsyncCli
 
 
 async def test_plaid_sync_endpoint_returns_sync_result(api_client: httpx.AsyncClient) -> None:
+    """Verify sync endpoint returns counters from the sync integration result.
+
+    REQ: FUNC-ACCT-005, FUNC-SYNC-001
+    """
     with patch(
         "godzilla_core.api.app.sync_item_transactions_and_balances",
         return_value=SyncResult(
@@ -371,12 +419,20 @@ async def test_plaid_sync_endpoint_returns_sync_result(api_client: httpx.AsyncCl
 
 
 def test_run_api_server_rejects_non_loopback_host() -> None:
+    """Verify server CLI rejects non-loopback bind host values.
+
+    REQ: SEC-NET-002
+    """
     with patch.object(sys, "argv", ["godzilla-api", "--host", "0.0.0.0"]):
         with pytest.raises(SystemExit, match="Host must be a loopback address"):
             run_api_server_main()
 
 
 def test_run_api_server_starts_with_loopback_host() -> None:
+    """Verify server CLI starts when host is a loopback address.
+
+    REQ: SEC-NET-002
+    """
     with (
         patch.object(
             sys,

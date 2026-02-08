@@ -7,12 +7,22 @@ import os
 import tempfile
 import unittest
 
-from godzilla_core.security.secrets import SecretStore
 from sqlcipher3 import dbapi2 as sqlcipher
+
+from godzilla_core.security.secrets import SecretStore
 
 
 class SecretStoreTests(unittest.TestCase):
+    """Component tests for encrypted secret storage operations.
+
+    REQ: SEC-CRY-002, SYS-004
+    """
+
     def test_set_get_delete_roundtrip(self) -> None:
+        """Verify secret lifecycle operations and timezone metadata persistence.
+
+        REQ: SEC-CRY-002, SYS-004
+        """
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "secrets.db")
             store = SecretStore(db_path=db_path, db_key="test-key")
@@ -26,8 +36,7 @@ class SecretStoreTests(unittest.TestCase):
                 conn = sqlcipher.connect(db_path)
                 conn.execute("PRAGMA key = 'test-key';")
                 row = conn.execute(
-                    "SELECT updated_at_tz, updated_at_offset_minutes "
-                    "FROM secrets WHERE key = ?",
+                    "SELECT updated_at_tz, updated_at_offset_minutes " "FROM secrets WHERE key = ?",
                     ("plaid_access_token",),
                 ).fetchone()
                 conn.close()

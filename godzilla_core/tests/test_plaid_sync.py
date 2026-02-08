@@ -22,7 +22,16 @@ from godzilla_core.util.time import local_date
 
 
 class PlaidSyncIngestionTests(unittest.TestCase):
+    """Component tests for Plaid sync ingestion behavior.
+
+    REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    """
+
     def setUp(self) -> None:
+        """Create an encrypted test database seeded with one linked account.
+
+        REQ: FUNC-SYNC-001
+        """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "test.db")
         self.db_key = "test-key"
@@ -84,10 +93,18 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.conn.commit()
 
     def tearDown(self) -> None:
+        """Release database resources allocated by each test.
+
+        REQ: FUNC-SYNC-001
+        """
         self.conn.close()
         self.tmp_dir.cleanup()
 
     def test_pending_to_posted_updates_record(self) -> None:
+        """Verify pending transactions are reconciled to posted transactions.
+
+        REQ: FUNC-SYNC-002
+        """
         pending_txn = {
             "transaction_id": "pending-1",
             "pending": True,
@@ -120,6 +137,10 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.assertEqual(rows[0][1], "posted")
 
     def test_idempotent_ingestion_does_not_duplicate(self) -> None:
+        """Verify repeated sync payloads update existing rows instead of duplicating.
+
+        REQ: FUNC-SYNC-002
+        """
         txn = {
             "transaction_id": "tx-1",
             "pending": False,
@@ -144,6 +165,10 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.assertEqual(rows[0][1], 11.0)
 
     def test_balance_snapshot_upserts_per_day(self) -> None:
+        """Verify balance snapshots upsert by account and local date.
+
+        REQ: FUNC-REP-006
+        """
         _insert_balance_snapshot(self.conn, self.account_id, 100.0)
         _insert_balance_snapshot(self.conn, self.account_id, 150.0)
 
@@ -156,6 +181,10 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.assertEqual(rows[0][0], 150.0)
 
     def test_account_metadata_upsert(self) -> None:
+        """Verify account metadata is inserted with provider details.
+
+        REQ: FUNC-ACCT-003
+        """
         payload = {
             "account_id": "acct-2",
             "name": "Savings",
@@ -182,6 +211,10 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.assertEqual(row[7], json.dumps(payload["owners"]))
 
     def test_cursor_persistence_roundtrip(self) -> None:
+        """Verify sync cursor persistence for incremental sync resumes.
+
+        REQ: FUNC-SYNC-001
+        """
         _update_sync_state(self.conn, "item-1", "cursor-1", "success")
         cursor = _get_sync_cursor(self.conn, "item-1")
         self.assertEqual(cursor, "cursor-1")

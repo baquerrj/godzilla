@@ -10,18 +10,20 @@ import json
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-def _ensure_app_importable() -> None:
-    repo_root = Path(__file__).resolve().parents[2]
-    if str(repo_root) not in sys.path:
-        sys.path.insert(0, str(repo_root))
+from godzilla_core.integrations.plaid_sync import (  # noqa: E402
+    sync_item_transactions_and_balances,
+)
 
 
 def main() -> int:
-    _ensure_app_importable()
+    """Run sync for one Plaid item and print a JSON summary.
 
-    from godzilla_core.integrations.plaid_sync import sync_item_transactions_and_balances
-
+    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+    """
     parser = argparse.ArgumentParser(
         description="Sync transactions and balances for a Plaid item",
     )

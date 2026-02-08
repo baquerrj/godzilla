@@ -10,25 +10,39 @@ import json
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-def _ensure_app_importable() -> None:
-    repo_root = Path(__file__).resolve().parents[2]
-    if str(repo_root) not in sys.path:
-        sys.path.insert(0, str(repo_root))
+from godzilla_core.integrations.plaid_client import (  # noqa: E402
+    PlaidClient,
+    PlaidConfig,
+    link_sandbox_item,
+)
+from godzilla_core.security.secrets import store_from_env  # noqa: E402
 
 
 def _parse_products(value: str | None) -> list[str] | None:
+    """Parse a comma-separated products argument.
+
+    REQ: FUNC-ACCT-001
+
+    Args:
+        value: Raw comma-separated product list.
+
+    Returns:
+        Normalized product names or `None` when not provided.
+    """
     if not value:
         return None
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def main() -> int:
-    _ensure_app_importable()
+    """Run sandbox link flow and persist the resulting access token.
 
-    from godzilla_core.integrations.plaid_client import PlaidClient, PlaidConfig, link_sandbox_item
-    from godzilla_core.security.secrets import store_from_env
-
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002, SEC-DATA-001
+    """
     parser = argparse.ArgumentParser(
         description="Create a Plaid sandbox item and store its access token",
     )

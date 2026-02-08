@@ -5,14 +5,13 @@ REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002, SEC-DATA-001
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import os
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional
-from urllib import request, error
+from urllib import error, request
 
 from godzilla_core.security.secrets import SecretStore
-
 
 _ENV_URLS = {
     "sandbox": "https://sandbox.plaid.com",
@@ -25,17 +24,36 @@ _DEFAULT_SANDBOX_INSTITUTION_ID = "ins_109508"
 
 
 class PlaidConfigError(RuntimeError):
+    """Raised when required Plaid environment configuration is missing.
+
+    REQ: FUNC-ACCT-001
+    """
+
     pass
 
 
 class PlaidApiError(RuntimeError):
+    """Raised when a Plaid API request fails.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+    """
+
     def __init__(self, message: str, status_code: Optional[int] = None) -> None:
+        """Initialize an API error with optional HTTP status code.
+
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        """
         super().__init__(message)
         self.status_code = status_code
 
 
 @dataclass(frozen=True)
 class PlaidConfig:
+    """Runtime Plaid configuration derived from environment variables.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-DATA-001
+    """
+
     client_id: str
     secret: str
     env: str
@@ -44,6 +62,10 @@ class PlaidConfig:
 
     @classmethod
     def from_env(cls) -> "PlaidConfig":
+        """Load Plaid configuration from process environment.
+
+        REQ: FUNC-ACCT-001
+        """
         client_id = os.environ.get("PLAID_CLIENT_ID")
         secret = os.environ.get("PLAID_SECRET")
         env = os.environ.get("PLAID_ENV", "sandbox")
@@ -66,11 +88,31 @@ class PlaidConfig:
 
 
 class PlaidClient:
+    """HTTP client wrapper for the Plaid API.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+    """
+
     def __init__(self, config: PlaidConfig, timeout_seconds: int = 15) -> None:
+        """Create a Plaid client with static config and request timeout.
+
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        """
         self._config = config
         self._timeout_seconds = timeout_seconds
 
     def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Send an authenticated POST request to a Plaid endpoint.
+
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+
+        Args:
+            path: Plaid API endpoint path.
+            payload: Request payload excluding client credentials.
+
+        Returns:
+            Parsed JSON response payload.
+        """
         url = f"{self._config.base_url}{path}"
         body = {
             **payload,
@@ -148,7 +190,6 @@ class PlaidClient:
         """
         payload = {"access_token": access_token}
         return self._post("/accounts/balance/get", payload)
-
 
 
 def store_access_token(secret_store: SecretStore, item_id: str, access_token: str) -> str:

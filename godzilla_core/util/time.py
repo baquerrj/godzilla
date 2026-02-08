@@ -5,11 +5,10 @@ REQ: SYS-004
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone
 from typing import Tuple
 from zoneinfo import ZoneInfo
-
 
 DEFAULT_LOCAL_TZ = "America/Denver"
 

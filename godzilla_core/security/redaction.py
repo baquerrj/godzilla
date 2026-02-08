@@ -26,6 +26,16 @@ _SENSITIVE_VALUE_PATTERNS = (
 
 
 def _is_sensitive_key(key: str) -> bool:
+    """Return whether a dictionary key should be treated as sensitive.
+
+    REQ: FUNC-AUD-002, SEC-DATA-002
+
+    Args:
+        key: Candidate key name.
+
+    Returns:
+        `True` when the key indicates sensitive content.
+    """
     normalized = key.strip().lower()
     return any(fragment in normalized for fragment in _SENSITIVE_SUBSTRINGS)
 

@@ -13,7 +13,10 @@ _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 def main() -> int:
-    """Run the API server on a loopback address only."""
+    """Run the API server on a loopback address only.
+
+    REQ: SEC-NET-002
+    """
     parser = argparse.ArgumentParser(description="Run the Godzilla API sidecar")
     parser.add_argument("--host", default="127.0.0.1", help="Loopback host address")
     parser.add_argument("--port", type=int, default=8787, help="Loopback port")

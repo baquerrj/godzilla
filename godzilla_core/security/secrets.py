@@ -5,28 +5,65 @@ REQ: SEC-CRY-002, SYS-004
 
 from __future__ import annotations
 
-from pathlib import Path
 import os
+from pathlib import Path
 from typing import Optional
 
 from sqlcipher3 import dbapi2 as sqlcipher
 
 from godzilla_core.util.time import local_timestamp_metadata
 
+
 class SecretStoreError(RuntimeError):
+    """Raised when environment-based secret store configuration is invalid.
+
+    REQ: SEC-CRY-002
+    """
+
     pass
 
 
 def _escape_key(db_key: str) -> str:
+    """Escape a SQLCipher key for use in PRAGMA statements.
+
+    REQ: SEC-CRY-002
+
+    Args:
+        db_key: Raw encryption key string.
+
+    Returns:
+        Escaped key string.
+    """
     return db_key.replace("'", "''")
 
 
 def _expand_path(path_value: str) -> Path:
+    """Expand environment variables and user-home references in a path.
+
+    REQ: SYS-004
+
+    Args:
+        path_value: Raw configured path value.
+
+    Returns:
+        Expanded filesystem path.
+    """
     expanded = os.path.expandvars(path_value)
     return Path(expanded).expanduser()
 
 
 def _connect(db_path: Path, db_key: str) -> sqlcipher.Connection:
+    """Create an encrypted SQLCipher connection for the secrets database.
+
+    REQ: SEC-CRY-002
+
+    Args:
+        db_path: Path to the secrets database file.
+        db_key: Encryption key.
+
+    Returns:
+        Open SQLCipher connection.
+    """
     conn = sqlcipher.connect(str(db_path))
     escaped_key = _escape_key(db_key)
     conn.execute(f"PRAGMA key = '{escaped_key}';")
@@ -35,7 +72,16 @@ def _connect(db_path: Path, db_key: str) -> sqlcipher.Connection:
 
 
 class SecretStore:
+    """Encrypted key-value store backed by SQLCipher.
+
+    REQ: SEC-CRY-002, SYS-004
+    """
+
     def __init__(self, db_path: str, db_key: str) -> None:
+        """Initialize the secret store and ensure schema exists.
+
+        REQ: SEC-CRY-002, SYS-004
+        """
         if not db_path:
             raise ValueError("db_path is required")
         if not db_key:
@@ -47,6 +93,10 @@ class SecretStore:
         self._init_db()
 
     def _init_db(self) -> None:
+        """Create and migrate the secrets table schema.
+
+        REQ: SEC-CRY-002
+        """
         conn = _connect(self._db_path, self._db_key)
         try:
             conn.execute(
@@ -75,6 +125,10 @@ class SecretStore:
             conn.close()
 
     def set_secret(self, key: str, value: str) -> None:
+        """Persist a secret value for the given key.
+
+        REQ: SEC-CRY-002
+        """
         if not key:
             raise ValueError("key is required")
         if value is None:
@@ -100,6 +154,10 @@ class SecretStore:
             conn.close()
 
     def get_secret(self, key: str) -> Optional[str]:
+        """Fetch a secret value by key.
+
+        REQ: SEC-CRY-002
+        """
         if not key:
             raise ValueError("key is required")
 
@@ -114,6 +172,10 @@ class SecretStore:
             conn.close()
 
     def delete_secret(self, key: str) -> None:
+        """Delete a secret by key.
+
+        REQ: SEC-CRY-002
+        """
         if not key:
             raise ValueError("key is required")
 

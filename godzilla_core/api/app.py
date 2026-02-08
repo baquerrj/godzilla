@@ -39,7 +39,10 @@ _SORT_FIELDS = {
 
 
 class PlaidLinkRequest(BaseModel):
-    """Request body for creating a sandbox Plaid item."""
+    """Request body for creating a sandbox Plaid item.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    """
 
     institution_id: str | None = Field(default=None, min_length=3, max_length=64)
     products: list[str] | None = Field(default=None, min_length=1, max_length=10)
@@ -47,6 +50,10 @@ class PlaidLinkRequest(BaseModel):
     @field_validator("products")
     @classmethod
     def _normalize_products(cls, value: list[str] | None) -> list[str] | None:
+        """Normalize and validate requested Plaid products.
+
+        REQ: FUNC-ACCT-001
+        """
         if value is None:
             return None
         normalized = [item.strip() for item in value if item.strip()]
@@ -56,7 +63,10 @@ class PlaidLinkRequest(BaseModel):
 
 
 class PlaidLinkResponse(BaseModel):
-    """Response payload for successful link creation."""
+    """Response payload for successful link creation.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    """
 
     item_id: str
     institution_id: str
@@ -64,14 +74,20 @@ class PlaidLinkResponse(BaseModel):
 
 
 class PlaidSyncRequest(BaseModel):
-    """Request body for triggering a manual sync."""
+    """Request body for triggering a manual sync.
+
+    REQ: FUNC-ACCT-005, FUNC-SYNC-001
+    """
 
     item_id: str = Field(min_length=1, max_length=128)
     institution_id: str | None = Field(default=None, min_length=3, max_length=64)
 
 
 class PlaidSyncResponse(BaseModel):
-    """Response payload describing sync changes."""
+    """Response payload describing sync changes.
+
+    REQ: FUNC-ACCT-005, FUNC-SYNC-001
+    """
 
     item_id: str
     added: int
@@ -82,7 +98,10 @@ class PlaidSyncResponse(BaseModel):
 
 
 class AccountResponse(BaseModel):
-    """Account read model for UI listing."""
+    """Account read model for UI listing.
+
+    REQ: FUNC-ACCT-003
+    """
 
     account_id: str
     provider_account_id: str
@@ -98,7 +117,10 @@ class AccountResponse(BaseModel):
 
 
 class TransactionResponse(BaseModel):
-    """Transaction read model for list views."""
+    """Transaction read model for list views.
+
+    REQ: FUNC-TXN-001
+    """
 
     transaction_id: str
     account_id: str
@@ -114,7 +136,10 @@ class TransactionResponse(BaseModel):
 
 
 class BalanceResponse(BaseModel):
-    """Balance snapshot read model."""
+    """Balance snapshot read model.
+
+    REQ: FUNC-REP-006
+    """
 
     snapshot_id: str
     account_id: str
@@ -125,7 +150,10 @@ class BalanceResponse(BaseModel):
 
 
 class SyncStateResponse(BaseModel):
-    """Per-item sync state read model."""
+    """Per-item sync state read model.
+
+    REQ: FUNC-ACCT-004
+    """
 
     item_id: str
     institution_id: str
@@ -138,17 +166,43 @@ class SyncStateResponse(BaseModel):
 
 
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
+    """Write a structured log event after redacting sensitive content.
+
+    REQ: FUNC-AUD-002, SEC-DATA-002
+
+    Args:
+        level: Logging level to emit.
+        event: Stable event name.
+        payload: Event payload before redaction.
+    """
     redacted_payload = redact_sensitive(payload)
     entry = {"event": event, **redacted_payload}
     logger.log(level, json.dumps(entry, sort_keys=True, default=str))
 
 
 def _expand_path(path_value: str) -> Path:
+    """Expand environment variables and user-home references in a path string.
+
+    REQ: SEC-DATA-003
+
+    Args:
+        path_value: Raw path value from environment.
+
+    Returns:
+        Expanded filesystem path.
+    """
     expanded = os.path.expandvars(path_value)
     return Path(expanded).expanduser()
 
 
 def _read_database_settings() -> tuple[str, str]:
+    """Read encrypted database settings from environment variables.
+
+    REQ: SEC-DATA-003
+
+    Returns:
+        Tuple of database path and encryption key.
+    """
     db_path = os.environ.get("GODZILLA_DB_PATH")
     db_key = os.environ.get("GODZILLA_DB_KEY")
     if not db_path or not db_key:
@@ -157,6 +211,13 @@ def _read_database_settings() -> tuple[str, str]:
 
 
 def _connect_encrypted_db() -> sqlcipher.Connection:
+    """Open an encrypted SQLCipher database connection.
+
+    REQ: SEC-DATA-003
+
+    Returns:
+        SQLCipher connection with foreign keys enabled.
+    """
     db_path, db_key = _read_database_settings()
     expanded = _expand_path(db_path)
     expanded.parent.mkdir(parents=True, exist_ok=True)
@@ -170,6 +231,13 @@ def _connect_encrypted_db() -> sqlcipher.Connection:
 
 @contextmanager
 def _db_connection() -> Iterator[sqlcipher.Connection]:
+    """Yield a managed encrypted database connection.
+
+    REQ: SEC-DATA-003
+
+    Yields:
+        Open SQLCipher connection.
+    """
     conn = _connect_encrypted_db()
     try:
         yield conn
@@ -178,6 +246,16 @@ def _db_connection() -> Iterator[sqlcipher.Connection]:
 
 
 def _parse_owner_names(value: str | None) -> list[Any]:
+    """Deserialize owner metadata JSON from persisted account rows.
+
+    REQ: FUNC-ACCT-003
+
+    Args:
+        value: Serialized owner payload string.
+
+    Returns:
+        Parsed owner payload list or an empty list when unset.
+    """
     if not value:
         return []
     return json.loads(value)
@@ -197,6 +275,14 @@ async def require_api_key(x_api_key: str | None = Header(default=None, alias="X-
 
 
 def _register_plaid_routes(app: FastAPI) -> None:
+    """Register Plaid endpoints on the FastAPI application.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-005, FUNC-SYNC-001, SEC-ACC-004
+
+    Args:
+        app: FastAPI app instance to attach routes to.
+    """
+
     @app.post(
         "/plaid/link",
         response_model=PlaidLinkResponse,
@@ -286,6 +372,14 @@ def _register_plaid_routes(app: FastAPI) -> None:
 
 
 def _register_read_routes(app: FastAPI) -> None:
+    """Register read/query endpoints on the FastAPI application.
+
+    REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-REP-006, FUNC-ACCT-004, SEC-ACC-004
+
+    Args:
+        app: FastAPI app instance to attach routes to.
+    """
+
     @app.get(
         "/accounts",
         response_model=list[AccountResponse],
@@ -471,7 +565,11 @@ def _register_read_routes(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    """Build and return the FastAPI application."""
+    """Build and return the FastAPI application.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
+    REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006, SEC-ACC-004
+    """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
     _register_plaid_routes(app)
     _register_read_routes(app)

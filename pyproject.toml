@@ -37,6 +37,13 @@ src = ["godzilla_core"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "PL", "D", "I"]
+ignore = ["D206"]
+
+[tool.ruff.lint.per-file-ignores]
+"godzilla_core/tests/*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.black]
 line-length = 100

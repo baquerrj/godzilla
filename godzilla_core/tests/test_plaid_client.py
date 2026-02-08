@@ -18,7 +18,16 @@ from godzilla_core.security.secrets import SecretStore
 
 
 class PlaidConfigTests(unittest.TestCase):
+    """Tests for Plaid environment configuration loading.
+
+    REQ: FUNC-ACCT-001
+    """
+
     def test_from_env_requires_credentials(self) -> None:
+        """Ensure missing credentials raise a configuration error.
+
+        REQ: FUNC-ACCT-001
+        """
         original_client_id = os.environ.pop("PLAID_CLIENT_ID", None)
         original_secret = os.environ.pop("PLAID_SECRET", None)
         try:
@@ -31,6 +40,10 @@ class PlaidConfigTests(unittest.TestCase):
                 os.environ["PLAID_SECRET"] = original_secret
 
     def test_from_env_defaults(self) -> None:
+        """Verify sandbox defaults are applied when optional values are unset.
+
+        REQ: FUNC-ACCT-001
+        """
         original = {
             "PLAID_CLIENT_ID": os.environ.get("PLAID_CLIENT_ID"),
             "PLAID_SECRET": os.environ.get("PLAID_SECRET"),
@@ -55,8 +68,17 @@ class PlaidConfigTests(unittest.TestCase):
 
 
 class PlaidSandboxFlowTests(unittest.TestCase):
+    """Tests for sandbox linking and token persistence helpers.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+    """
+
     @unittest.skip("SKIP: TODO(TASK-PLAID-SANDBOX) requires sandbox credentials and network")
     def test_link_sandbox_item(self) -> None:
+        """Track skipped end-to-end sandbox link coverage.
+
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002
+        """
         config = PlaidConfig.from_env()
         client = PlaidClient(config)
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -66,9 +88,12 @@ class PlaidSandboxFlowTests(unittest.TestCase):
             self.assertIn("item_id", result)
 
     def test_store_access_token_roundtrip(self) -> None:
+        """Ensure access tokens are encrypted and retrievable by derived key.
+
+        REQ: FUNC-ACCT-002, SEC-CRY-002
+        """
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = SecretStore(db_path=os.path.join(tmp_dir, "secrets.db"), db_key="test")
             key = store_access_token(store, "item123", "token123")
             self.assertEqual(key, "plaid_access_token:item123")
             self.assertEqual(store.get_secret(key), "token123")
-

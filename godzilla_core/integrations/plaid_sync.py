@@ -5,10 +5,10 @@ REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 from uuid import uuid4
@@ -22,6 +22,11 @@ from godzilla_core.util.time import local_date, local_timestamp_metadata
 
 @dataclass(frozen=True)
 class SyncResult:
+    """Summary of a completed sync run.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    """
+
     item_id: str
     added: int
     modified: int
@@ -31,19 +36,36 @@ class SyncResult:
 
 
 class SyncError(RuntimeError):
+    """Raised when sync preconditions or processing fail.
+
+    REQ: FUNC-SYNC-001
+    """
+
     pass
 
 
 def _escape_key(db_key: str) -> str:
+    """Escape a SQLCipher key for use in PRAGMA statements.
+
+    REQ: FUNC-SYNC-001
+    """
     return db_key.replace("'", "''")
 
 
 def _expand_path(path_value: str) -> Path:
+    """Expand environment variables and user-home references in a path.
+
+    REQ: FUNC-SYNC-001
+    """
     expanded = os.path.expandvars(path_value)
     return Path(expanded).expanduser()
 
 
 def _connect(db_path: str, db_key: str) -> sqlcipher.Connection:
+    """Create an encrypted SQLCipher connection for sync operations.
+
+    REQ: FUNC-SYNC-001
+    """
     path = _expand_path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlcipher.connect(str(path))
@@ -54,6 +76,10 @@ def _connect(db_path: str, db_key: str) -> sqlcipher.Connection:
 
 
 def _timestamp_meta(prefix: str) -> Dict[str, Any]:
+    """Build timestamp metadata field names and values.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    """
     utc, tz, offset = local_timestamp_metadata()
     return {
         f"{prefix}_utc": utc,
@@ -63,15 +89,21 @@ def _timestamp_meta(prefix: str) -> Dict[str, Any]:
 
 
 def _retention_enabled(conn: sqlcipher.Connection) -> bool:
-    row = conn.execute(
-        "SELECT retain_raw_payloads FROM retention_policy LIMIT 1"
-    ).fetchone()
+    """Return whether raw provider payload retention is enabled.
+
+    REQ: FUNC-SYNC-003
+    """
+    row = conn.execute("SELECT retain_raw_payloads FROM retention_policy LIMIT 1").fetchone()
     if row is None:
         return True
     return bool(row[0])
 
 
 def _get_institution_id(conn: sqlcipher.Connection, plaid_institution_id: str) -> Optional[str]:
+    """Lookup an internal institution ID by Plaid institution identifier.
+
+    REQ: FUNC-ACCT-003
+    """
     row = conn.execute(
         "SELECT id FROM institution WHERE plaid_institution_id = ?",
         (plaid_institution_id,),
@@ -83,6 +115,10 @@ def _get_plaid_institution_id_for_item(
     conn: sqlcipher.Connection,
     provider_item_id: str,
 ) -> Optional[str]:
+    """Resolve Plaid institution ID for an existing linked Plaid item.
+
+    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    """
     row = conn.execute(
         "SELECT institution.plaid_institution_id "
         "FROM plaid_item "
@@ -94,6 +130,10 @@ def _get_plaid_institution_id_for_item(
 
 
 def _upsert_institution(conn: sqlcipher.Connection, plaid_institution_id: str) -> str:
+    """Create or return an institution record for a Plaid institution ID.
+
+    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    """
     institution_id = _get_institution_id(conn, plaid_institution_id)
     if institution_id:
         return institution_id
@@ -117,6 +157,10 @@ def _upsert_institution(conn: sqlcipher.Connection, plaid_institution_id: str) -
 
 
 def _get_item_id(conn: sqlcipher.Connection, provider_item_id: str) -> Optional[str]:
+    """Lookup an internal item ID by provider item ID.
+
+    REQ: FUNC-SYNC-001
+    """
     row = conn.execute(
         "SELECT id FROM plaid_item WHERE provider_item_id = ?",
         (provider_item_id,),
@@ -131,6 +175,10 @@ def _upsert_item(
     access_token_ref: str,
     status: str,
 ) -> str:
+    """Create or update a linked Plaid item record.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    """
     item_id = _get_item_id(conn, provider_item_id)
     meta = _timestamp_meta("created_at")
 
@@ -168,6 +216,10 @@ def _upsert_item(
 
 
 def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
+    """Update a Plaid item's last sync timestamp metadata.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    """
     meta = _timestamp_meta("last_sync_at")
     conn.execute(
         "UPDATE plaid_item SET "
@@ -183,10 +235,16 @@ def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
 
 
 def _upsert_account(conn: sqlcipher.Connection, item_id: str, payload: Dict[str, Any]) -> str:
+    """Create or update an account record from provider payload.
+
+    REQ: FUNC-ACCT-003
+    """
     provider_account_id = payload["account_id"]
     name = payload.get("official_name") or payload.get("name") or provider_account_id
     balances = payload.get("balances", {})
-    currency = balances.get("iso_currency_code") or balances.get("unofficial_currency_code") or "USD"
+    currency = (
+        balances.get("iso_currency_code") or balances.get("unofficial_currency_code") or "USD"
+    )
     balance = balances.get("current")
 
     row = conn.execute(
@@ -241,7 +299,15 @@ def _upsert_account(conn: sqlcipher.Connection, item_id: str, payload: Dict[str,
     return existing_id
 
 
-def _insert_balance_snapshot(conn: sqlcipher.Connection, account_id: str, balance: Optional[float]) -> None:
+def _insert_balance_snapshot(
+    conn: sqlcipher.Connection,
+    account_id: str,
+    balance: Optional[float],
+) -> None:
+    """Insert or update the daily balance snapshot for an account.
+
+    REQ: FUNC-REP-006
+    """
     if balance is None:
         return
     snapshot_date = local_date()
@@ -254,6 +320,10 @@ def _insert_balance_snapshot(conn: sqlcipher.Connection, account_id: str, balanc
 
 
 def _fallback_transaction_id(account_id: str, payload: Dict[str, Any]) -> str:
+    """Generate a deterministic fallback transaction ID.
+
+    REQ: FUNC-SYNC-002
+    """
     key = "|".join(
         [
             account_id,
@@ -271,6 +341,10 @@ def _apply_transaction(
     payload: Dict[str, Any],
     retention_enabled: bool,
 ) -> None:
+    """Insert or update one transaction record from sync payload data.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    """
     provider_transaction_id = payload.get("transaction_id")
     pending_transaction_id = payload.get("pending_transaction_id")
     status = "pending" if payload.get("pending") else "posted"
@@ -384,9 +458,11 @@ def _apply_transaction(
         ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(id) DO UPDATE SET "
         "account_id = excluded.account_id, date = excluded.date, amount = excluded.amount, "
-        "currency = excluded.currency, status = excluded.status, merchant_name = excluded.merchant_name, "
+        "currency = excluded.currency, status = excluded.status, "
+        "merchant_name = excluded.merchant_name, "
         "display_name = excluded.display_name, updated_at_utc = excluded.updated_at_utc, "
-        "updated_at_tz = excluded.updated_at_tz, updated_at_offset_minutes = excluded.updated_at_offset_minutes",
+        "updated_at_tz = excluded.updated_at_tz, "
+        "updated_at_offset_minutes = excluded.updated_at_offset_minutes",
         (
             record_id,
             account_id,
@@ -413,7 +489,15 @@ def _apply_transaction(
         _insert_raw_payload(conn, record_id, payload)
 
 
-def _insert_raw_payload(conn: sqlcipher.Connection, transaction_id: str, payload: Dict[str, Any]) -> None:
+def _insert_raw_payload(
+    conn: sqlcipher.Connection,
+    transaction_id: str,
+    payload: Dict[str, Any],
+) -> None:
+    """Persist a raw provider payload linked to a transaction.
+
+    REQ: FUNC-SYNC-003
+    """
     meta = _timestamp_meta("created_at")
     conn.execute(
         "INSERT INTO provider_raw ("
@@ -431,14 +515,17 @@ def _insert_raw_payload(conn: sqlcipher.Connection, transaction_id: str, payload
 
 
 def _apply_removed(conn: sqlcipher.Connection, removed: Iterable[Dict[str, Any]]) -> int:
+    """Delete removed transactions from the local store.
+
+    REQ: FUNC-SYNC-001
+    """
     removed_count = 0
     for payload in removed:
         transaction_id = payload.get("transaction_id")
         if not transaction_id:
             continue
         cur = conn.execute(
-            "DELETE FROM transaction_record "
-            "WHERE provider_transaction_id = ? OR id = ?",
+            "DELETE FROM transaction_record " "WHERE provider_transaction_id = ? OR id = ?",
             (transaction_id, transaction_id),
         )
         removed_count += cur.rowcount
@@ -446,6 +533,10 @@ def _apply_removed(conn: sqlcipher.Connection, removed: Iterable[Dict[str, Any]]
 
 
 def _update_sync_state(conn: sqlcipher.Connection, item_id: str, cursor: str, status: str) -> None:
+    """Persist sync cursor and status for a linked item.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    """
     meta = _timestamp_meta("last_sync_at")
     row = conn.execute(
         "SELECT id FROM sync_state WHERE item_id = ?",
@@ -486,6 +577,10 @@ def _update_sync_state(conn: sqlcipher.Connection, item_id: str, cursor: str, st
 
 
 def _get_sync_cursor(conn: sqlcipher.Connection, item_id: str) -> Optional[str]:
+    """Load the saved Plaid cursor for a linked item.
+
+    REQ: FUNC-SYNC-001
+    """
     row = conn.execute(
         "SELECT plaid_cursor FROM sync_state WHERE item_id = ?",
         (item_id,),
@@ -493,7 +588,7 @@ def _get_sync_cursor(conn: sqlcipher.Connection, item_id: str) -> Optional[str]:
     return row[0] if row else None
 
 
-def sync_item_transactions_and_balances(
+def sync_item_transactions_and_balances(  # noqa: PLR0912, PLR0915
     provider_item_id: str,
     plaid_institution_id: Optional[str] = None,
     db_path: Optional[str] = None,
@@ -589,7 +684,14 @@ def sync_item_transactions_and_balances(
         conn.close()
 
 
-def _find_account_id(conn: sqlcipher.Connection, provider_account_id: Optional[str]) -> Optional[str]:
+def _find_account_id(
+    conn: sqlcipher.Connection,
+    provider_account_id: Optional[str],
+) -> Optional[str]:
+    """Resolve internal account ID from a provider account ID.
+
+    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    """
     if not provider_account_id:
         return None
     row = conn.execute(
