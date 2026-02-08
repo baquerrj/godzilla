@@ -71,3 +71,4 @@ class PlaidSandboxFlowTests(unittest.TestCase):
             key = store_access_token(store, "item123", "token123")
             self.assertEqual(key, "plaid_access_token:item123")
             self.assertEqual(store.get_secret(key), "token123")
+

@@ -19,6 +19,7 @@ CREATE TABLE institution (
 
 CREATE TABLE plaid_item (
   id TEXT PRIMARY KEY,
+  provider_item_id TEXT NOT NULL UNIQUE,
   institution_id TEXT NOT NULL REFERENCES institution(id) ON DELETE CASCADE,
   access_token_ref TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('linked', 'requires_reauth', 'error')),
@@ -33,6 +34,7 @@ CREATE TABLE plaid_item (
 CREATE TABLE account (
   id TEXT PRIMARY KEY,
   item_id TEXT NOT NULL REFERENCES plaid_item(id) ON DELETE CASCADE,
+  provider_account_id TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   type TEXT NOT NULL,
   subtype TEXT,
@@ -217,6 +219,7 @@ CREATE TABLE pin_config (
 
 CREATE TABLE sync_state (
   id TEXT PRIMARY KEY,
+  item_id TEXT NOT NULL REFERENCES plaid_item(id) ON DELETE CASCADE,
   plaid_cursor TEXT,
   last_sync_at_utc TEXT,
   last_sync_at_tz TEXT,
@@ -230,6 +233,8 @@ CREATE INDEX idx_transaction_category ON transaction_record(category_id);
 CREATE INDEX idx_transaction_account ON transaction_record(account_id);
 CREATE INDEX idx_conflict_status ON conflict(status);
 CREATE INDEX idx_budget_month_category ON budget(month, category_id);
+CREATE UNIQUE INDEX idx_account_provider_id ON account(provider_account_id);
+CREATE UNIQUE INDEX idx_sync_state_item_id ON sync_state(item_id);
 
 CREATE UNIQUE INDEX idx_transaction_provider_id
   ON transaction_record(provider_transaction_id)

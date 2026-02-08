@@ -116,6 +116,7 @@ classDiagram
   }
   class PlaidItem {
     +id (uuid)
+    +provider_item_id (string)
     +institution_id (uuid, fk Institution.id)
     +access_token_ref (string, secret ref)
     +status (enum)
@@ -129,6 +130,7 @@ classDiagram
   class Account {
     +id (uuid)
     +item_id (uuid, fk PlaidItem.id)
+    +provider_account_id (string)
     +name (string)
     +type (enum)
     +subtype (string)

@@ -1,5 +1,6 @@
 import nox
 
+nox.options.reuse_existing_virtualenvs = True
 
 @nox.session(python="3.12")
 def lint(session: nox.Session) -> None:

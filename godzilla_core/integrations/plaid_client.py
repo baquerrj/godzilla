@@ -126,6 +126,30 @@ class PlaidClient:
             raise PlaidApiError("Missing access_token or item_id in response")
         return {"access_token": access_token, "item_id": item_id}
 
+    def transactions_sync(
+        self,
+        access_token: str,
+        cursor: Optional[str] = None,
+        count: int = 100,
+    ) -> Dict[str, Any]:
+        """Fetch incremental transaction updates.
+
+        REQ: FUNC-SYNC-001
+        """
+        payload: Dict[str, Any] = {"access_token": access_token, "count": count}
+        if cursor:
+            payload["cursor"] = cursor
+        return self._post("/transactions/sync", payload)
+
+    def accounts_balance_get(self, access_token: str) -> Dict[str, Any]:
+        """Fetch account balances.
+
+        REQ: FUNC-ACCT-003
+        """
+        payload = {"access_token": access_token}
+        return self._post("/accounts/balance/get", payload)
+
+
 
 def store_access_token(secret_store: SecretStore, item_id: str, access_token: str) -> str:
     """Store an access token in the secrets store and return the key.

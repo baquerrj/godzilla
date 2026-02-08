@@ -46,6 +46,7 @@ erDiagram
 
 ### plaid_item
 - `id` (uuid, pk)
+- `provider_item_id` (text, not null, unique)
 - `institution_id` (uuid, fk institution.id, not null)
 - `access_token_ref` (text, not null)  // secret ref in secure store
 - `status` (text enum, not null)       // linked, requires_reauth, error
@@ -59,6 +60,7 @@ erDiagram
 ### account
 - `id` (uuid, pk)
 - `item_id` (uuid, fk plaid_item.id, not null)
+- `provider_account_id` (text, not null, unique)
 - `name` (text, not null)
 - `type` (text enum, not null)
 - `subtype` (text, nullable)
@@ -230,8 +232,9 @@ Single-row table.
 - `updated_at_offset_minutes` (int, not null)
 
 ### sync_state
-Single-row table for cursors and last-run state.
+Per-item cursor and last-run state.
 - `id` (uuid, pk)
+- `item_id` (uuid, fk plaid_item.id, not null)
 - `plaid_cursor` (text, nullable)
 - `last_sync_at_utc` (timestamp, nullable)
 - `last_sync_at_tz` (text, nullable)
@@ -244,6 +247,8 @@ Single-row table for cursors and last-run state.
 - Index on `transaction_record.account_id` for list/detail views.
 - Index on `conflict.status` for queue performance.
 - Foreign keys enforced (PRAGMA foreign_keys=ON).
+- Unique index on `account.provider_account_id`.
+- Unique index on `sync_state.item_id`.
 
 ## Security considerations
 - Database file is encrypted with SQLCipher (SEC-CRY-001).

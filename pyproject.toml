@@ -13,6 +13,11 @@ dependencies = [
   "sqlcipher3-binary>=0.6.0",
 ]
 
+[project.scripts]
+link-sandbox-item = "godzilla_core.scripts.link_sandbox_item:main"
+migrations = "godzilla_core.scripts.migrations:main"
+sync-sandbox-items = "godzilla_core.scripts.sync_sandbox_items:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",

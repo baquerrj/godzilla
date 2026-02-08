@@ -72,8 +72,12 @@
 - requirement_id: FUNC-ACCT-003
   title: Account metadata retrieval
   parent_requirement_id: FUNC-ACCT-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.accounts_balance_get
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - godzilla_core/integrations/plaid_sync.py:_upsert_account
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_account_metadata_upsert
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -138,8 +142,13 @@
 - requirement_id: FUNC-SYNC-001
   title: Incremental transaction sync
   parent_requirement_id: FUNC-ACCT-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.transactions_sync
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - godzilla_core/integrations/plaid_sync.py:_update_sync_state
+  - godzilla_core/integrations/plaid_sync.py:_get_sync_cursor
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -147,8 +156,11 @@
 - requirement_id: FUNC-SYNC-002
   title: Idempotent ingestion
   parent_requirement_id: FUNC-SYNC-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_idempotent_ingestion_does_not_duplicate
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -156,8 +168,11 @@
 - requirement_id: FUNC-SYNC-003
   title: Pending vs posted handling
   parent_requirement_id: FUNC-SYNC-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_pending_to_posted_updates_record
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -394,8 +409,11 @@
 - requirement_id: FUNC-REP-006
   title: Balance snapshotting
   parent_requirement_id: FUNC-ACCT-005
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - godzilla_core/integrations/plaid_sync.py:_insert_balance_snapshot
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_balance_snapshot_upserts_per_day
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md

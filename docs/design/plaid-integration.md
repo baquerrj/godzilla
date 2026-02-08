@@ -1,6 +1,6 @@
 # Plaid Sandbox Integration (MVP)
 
-Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-005, FUNC-ACCT-007, SEC-DATA-001, SEC-CRY-002, SEC-NET-001, SEC-NET-003
+Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-005, FUNC-ACCT-007, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006, SEC-DATA-001, SEC-CRY-002, SEC-NET-001, SEC-NET-003
 
 ## Problem statement
 The MVP must connect to Plaid sandbox to create a Link session, exchange the public token for an access token, and store that access token securely. Transactions and balances are retrieved via Plaid endpoints using the stored token.
@@ -23,6 +23,25 @@ sequenceDiagram
   CORE->>SEC: store access_token (keyed by item_id)
 ```
 
+## Sync and persistence
+When a manual sync is triggered, the core pulls balances and incremental transactions for the linked item. Account metadata and balances are upserted into the encrypted DB, transactions are ingested idempotently, and the sync cursor is persisted.
+
+```mermaid
+sequenceDiagram
+  participant UI as Desktop UI
+  participant CORE as Python Core
+  participant PLAID as Plaid API
+  participant DB as Encrypted DB
+
+  UI->>CORE: syncItem(item_id)
+  CORE->>PLAID: /accounts/balance/get
+  PLAID-->>CORE: accounts + balances
+  CORE->>DB: upsert accounts + balance_snapshot
+  CORE->>PLAID: /transactions/sync (cursor)
+  PLAID-->>CORE: added/modified/removed + next_cursor
+  CORE->>DB: upsert transactions + update sync_state
+```
+
 ## API/interface changes
 ## Dev CLI
 Use the helper script to create a sandbox item and store the access token:
@@ -31,6 +50,14 @@ Use the helper script to create a sandbox item and store the access token:
 python3 godzilla_core/scripts/link_sandbox_item.py \
   --institution-id ins_109508 \
   --products transactions,balance,identity
+```
+
+To sync transactions and balances into the main DB:
+
+```bash
+python3 godzilla_core/scripts/sync_plaid_item.py \
+  --item-id <item_id> \
+  --institution-id ins_109508
 ```
 
 - `PlaidConfig.from_env()` reads `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`.
