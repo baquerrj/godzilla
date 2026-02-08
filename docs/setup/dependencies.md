@@ -69,6 +69,16 @@ pip install pyinstaller
 - `sqlcipher3-binary` provides a self-contained SQLCipher-backed DB-API build. citeturn1search0
 - PyInstaller is installed via `pip install pyinstaller`. citeturn0search1
 
+### Environment variables (dev)
+Configure local DB and secrets store paths/keys (examples):
+
+```bash
+export GODZILLA_DB_PATH="$HOME/.local/share/godzilla/godzilla.db"
+export GODZILLA_DB_KEY="replace-with-strong-passphrase"
+export GODZILLA_SECRETS_PATH="$HOME/.local/share/godzilla/secrets.db"
+export GODZILLA_SECRETS_KEY="replace-with-strong-passphrase"
+```
+
 ## 5) Local HTTPS for FastAPI
 Run the FastAPI server with HTTPS enabled using Uvicorn’s SSL options:
 

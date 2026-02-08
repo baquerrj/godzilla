@@ -96,6 +96,7 @@ Repositories:
 - Tauri v2 bundles the Python FastAPI sidecar via `externalBin`.
 - FastAPI runs on loopback with HTTPS; a per-install certificate is generated and pinned in the Tauri host.
 - SQLite is encrypted using SQLCipher via `sqlcipher3-binary` (self-contained wheels).
+- Secrets are stored in a separate SQLCipher DB at `GODZILLA_SECRETS_PATH` using `GODZILLA_SECRETS_KEY`.
 - Python sidecar is packaged with PyInstaller.
 
 ## Data contracts and invariants

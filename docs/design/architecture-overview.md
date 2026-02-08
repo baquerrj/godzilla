@@ -14,6 +14,7 @@ The MVP is a single-process desktop application with a local data store (SQLite)
 - Transport: HTTPS on localhost between the Tauri host and the Python service.
 - Certificate strategy: per-install certificate generated at first run and pinned in the Tauri host.
 - Data store: SQLite with SQLCipher via `sqlcipher3-binary` (self-contained wheels).
+- Secrets store: separate SQLCipher file using `GODZILLA_SECRETS_PATH` and `GODZILLA_SECRETS_KEY`.
 - Packaging: Python sidecar packaged with PyInstaller.
 
 ### High-level component diagram
