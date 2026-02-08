@@ -24,6 +24,15 @@ sequenceDiagram
 ```
 
 ## API/interface changes
+## Dev CLI
+Use the helper script to create a sandbox item and store the access token:
+
+```bash
+python3 godzilla_core/scripts/link_sandbox_item.py \
+  --institution-id ins_109508 \
+  --products transactions,balance,identity
+```
+
 - `PlaidConfig.from_env()` reads `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`.
 - `PlaidClient.create_sandbox_public_token()`
 - `PlaidClient.exchange_public_token()`

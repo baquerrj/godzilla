@@ -12,7 +12,7 @@ from typing import Iterable, Optional
 
 from sqlcipher3 import dbapi2 as sqlcipher
 
-from app.util.time import local_timestamp_metadata
+from godzilla_core.util.time import local_timestamp_metadata
 
 class MigrationError(RuntimeError):
     pass

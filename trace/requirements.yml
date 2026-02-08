@@ -29,12 +29,12 @@
 - requirement_id: SYS-004
   title: Timestamp metadata
   code_refs:
-  - python_core/app/util/time.py:local_timestamp_metadata
-  - python_core/app/security/secrets.py:SecretStore.set_secret
-  - python_core/app/db/migrations.py:run_migrations
+  - godzilla_core/util/time.py:local_timestamp_metadata
+  - godzilla_core/security/secrets.py:SecretStore.set_secret
+  - godzilla_core/db/migrations.py:run_migrations
   - migrations/0001_init.sql
   test_refs:
-  - python_core/tests/test_secrets.py:SecretStoreTests
+  - godzilla_core/tests/test_secrets.py:SecretStoreTests
   doc_refs:
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -43,10 +43,11 @@
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
   code_refs:
-  - python_core/app/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
-  - python_core/app/integrations/plaid_client.py:link_sandbox_item
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
+  - godzilla_core/integrations/plaid_client.py:link_sandbox_item
+  - godzilla_core/scripts/link_sandbox_item.py:main
   test_refs:
-  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
+  - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -56,11 +57,12 @@
   title: Token exchange and storage
   parent_requirement_id: SYS-003
   code_refs:
-  - python_core/app/integrations/plaid_client.py:PlaidClient.exchange_public_token
-  - python_core/app/integrations/plaid_client.py:store_access_token
-  - python_core/app/integrations/plaid_client.py:link_sandbox_item
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.exchange_public_token
+  - godzilla_core/integrations/plaid_client.py:store_access_token
+  - godzilla_core/integrations/plaid_client.py:link_sandbox_item
+  - godzilla_core/scripts/link_sandbox_item.py:main
   test_refs:
-  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
+  - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -575,9 +577,9 @@
   title: Encryption at rest
   parent_requirement_id: SYS-003
   code_refs:
-  - python_core/app/db/migrations.py:run_migrations
+  - godzilla_core/db/migrations.py:run_migrations
   test_refs:
-  - python_core/tests/test_migrations.py:MigrationRunnerTests
+  - godzilla_core/tests/test_migrations.py:MigrationRunnerTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -587,10 +589,10 @@
   title: Key storage
   parent_requirement_id: SYS-003
   code_refs:
-  - python_core/app/security/secrets.py:SecretStore
+  - godzilla_core/security/secrets.py:SecretStore
   test_refs:
-  - python_core/tests/test_secrets.py:SecretStoreTests
-  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
+  - godzilla_core/tests/test_secrets.py:SecretStoreTests
+  - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md

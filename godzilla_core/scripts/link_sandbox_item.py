@@ -12,9 +12,9 @@ from pathlib import Path
 
 
 def _ensure_app_importable() -> None:
-    root = Path(__file__).resolve().parents[1]
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
+    repo_root = Path(__file__).resolve().parents[2]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
 
 
 def _parse_products(value: str | None) -> list[str] | None:
@@ -26,8 +26,8 @@ def _parse_products(value: str | None) -> list[str] | None:
 def main() -> int:
     _ensure_app_importable()
 
-    from app.integrations.plaid_client import PlaidClient, PlaidConfig, link_sandbox_item
-    from app.security.secrets import store_from_env
+    from godzilla_core.integrations.plaid_client import PlaidClient, PlaidConfig, link_sandbox_item
+    from godzilla_core.security.secrets import store_from_env
 
     parser = argparse.ArgumentParser(
         description="Create a Plaid sandbox item and store its access token",

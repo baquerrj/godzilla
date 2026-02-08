@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 
-from app.security.secrets import SecretStore
+from godzilla_core.security.secrets import SecretStore
 from sqlcipher3 import dbapi2 as sqlcipher
 
 

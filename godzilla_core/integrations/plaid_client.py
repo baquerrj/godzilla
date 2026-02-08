@@ -11,7 +11,7 @@ import os
 from typing import Any, Dict, Iterable, Optional
 from urllib import request, error
 
-from app.security.secrets import SecretStore
+from godzilla_core.security.secrets import SecretStore
 
 
 _ENV_URLS = {

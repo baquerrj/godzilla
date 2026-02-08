@@ -100,7 +100,16 @@ Uvicorn supports `--ssl-keyfile` and `--ssl-certfile` for TLS. citeturn1se
 ## 6) Tauri sidecar support
 The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` in `tauri.conf.json`. citeturn0search0
 
-## 7) Verification checklist
+## 7) Dev workflow
+
+- Install dev tooling:
+  - `python3 -m pip install -e ".[dev]"`
+  - `python3 -m pip install nox`
+- Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
+- Tests: `nox -s tests` (or `python3 -m pytest`)
+- Build wheel: `nox -s build` (or `python3 -m build --wheel`)
+
+## 8) Verification checklist
 - `rustc --version`
   rustc 1.93.0 (254b59607 2026-01-19)
 - `node -v`

@@ -7,14 +7,14 @@ import os
 import tempfile
 import unittest
 
-from app.integrations.plaid_client import (
+from godzilla_core.integrations.plaid_client import (
     PlaidClient,
     PlaidConfig,
     PlaidConfigError,
     link_sandbox_item,
     store_access_token,
 )
-from app.security.secrets import SecretStore
+from godzilla_core.security.secrets import SecretStore
 
 
 class PlaidConfigTests(unittest.TestCase):

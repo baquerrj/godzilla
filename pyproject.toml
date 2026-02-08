@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "godzilla-core"
+version = "0.1.0"
+description = "Core services for the Godzilla personal budgeting app."
+readme = "docs/product-requirements-document.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi[standard]>=0.128.0",
+  "sqlcipher3-binary>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+  "ruff>=0.6.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "godzilla_core"}
+packages = {find = {where = ["godzilla_core"], exclude = ["tests", "tests.*"]}}
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["godzilla_core"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "PL"]
+
+[tool.pytest.ini_options]
+testpaths = ["godzilla_core/tests"]
+addopts = "--cov=godzilla_core --cov-report=term-missing"
