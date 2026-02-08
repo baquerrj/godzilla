@@ -78,6 +78,10 @@ export GODZILLA_DB_KEY="replace-with-strong-passphrase"
 export GODZILLA_SECRETS_PATH="$HOME/.local/share/godzilla/secrets.db"
 export GODZILLA_SECRETS_KEY="replace-with-strong-passphrase"
 export GODZILLA_LOCAL_TZ="America/Denver"
+export PLAID_CLIENT_ID="replace-with-sandbox-client-id"
+export PLAID_SECRET="replace-with-sandbox-secret"
+export PLAID_ENV="sandbox"
+export PLAID_SANDBOX_INSTITUTION_ID="ins_109508"
 ```
 
 ## 5) Local HTTPS for FastAPI

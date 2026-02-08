@@ -42,22 +42,31 @@
 - requirement_id: FUNC-ACCT-001
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - python_core/app/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
+  - python_core/app/integrations/plaid_client.py:link_sandbox_item
+  test_refs:
+  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: FUNC-ACCT-002
   title: Token exchange and storage
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - python_core/app/integrations/plaid_client.py:PlaidClient.exchange_public_token
+  - python_core/app/integrations/plaid_client.py:store_access_token
+  - python_core/app/integrations/plaid_client.py:link_sandbox_item
+  test_refs:
+  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
+  - docs/design/plaid-integration.md
 - requirement_id: FUNC-ACCT-003
   title: Account metadata retrieval
   parent_requirement_id: FUNC-ACCT-001
@@ -67,6 +76,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: FUNC-ACCT-004
   title: Connection state tracking
   parent_requirement_id: FUNC-ACCT-003
@@ -85,6 +95,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: FUNC-ACCT-006
   title: Scheduled refresh (optional deployment)
   parent_requirement_id: FUNC-ACCT-004
@@ -103,6 +114,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: FUNC-ACCT-008
   title: Unlink institution
   parent_requirement_id: SYS-003
@@ -578,11 +590,13 @@
   - python_core/app/security/secrets.py:SecretStore
   test_refs:
   - python_core/tests/test_secrets.py:SecretStoreTests
+  - python_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
+  - docs/design/plaid-integration.md
 - requirement_id: SEC-CRY-003
   title: Encrypted backups
   parent_requirement_id: FUNC-BKP-001
@@ -647,6 +661,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
@@ -665,6 +680,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/plaid-integration.md
 - requirement_id: SEC-DATA-001
   title: No secrets in client
   parent_requirement_id: SYS-003
@@ -675,6 +691,7 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
+  - docs/design/plaid-integration.md
 - requirement_id: SEC-DATA-002
   title: Logging policy
   parent_requirement_id: FUNC-AUD-002
