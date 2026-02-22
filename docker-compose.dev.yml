@@ -19,6 +19,15 @@ services:
       - godzilla-npm-cache:/home/vscode/.npm
       - godzilla-cargo-registry:/usr/local/cargo/registry
       - godzilla-cargo-git:/usr/local/cargo/git
+    # Secrets are injected from an env file that is never committed.
+    # Set GODENV_FILE to an absolute path, or symlink .godenv in the
+    # repo root to your credentials file:
+    #   ln -sf /home/baquerrj/projects/godzila/.godenv .godenv
+    # Expected keys: GODZILLA_DB_KEY, GODZILLA_SECRETS_KEY,
+    #   GODZILLA_API_TOKEN, PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV
+    env_file:
+      - path: "${GODENV_FILE:-.godenv}"
+        required: false
     environment:
       PYTHONUNBUFFERED: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
