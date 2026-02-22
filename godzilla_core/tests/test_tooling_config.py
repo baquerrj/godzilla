@@ -82,6 +82,8 @@ class ToolingConfigTests(unittest.TestCase):
         compose_text = compose_path.read_text(encoding="utf-8")
 
         self.assertIn("services:", compose_text)
+        self.assertIn("  init-perms:", compose_text)
+        self.assertIn("condition: service_completed_successfully", compose_text)
         self.assertIn("  dev:", compose_text)
         self.assertIn("container_name: godzilla-dev", compose_text)
         self.assertIn("- godzilla-workspace:/workspace", compose_text)

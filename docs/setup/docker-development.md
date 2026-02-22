@@ -24,6 +24,10 @@ The dev image defined by `Dockerfile.dev` contains:
   - `godzilla-cargo-registry`
   - `godzilla-cargo-git`
 
+Compose includes an `init-perms` helper service that runs as root before `dev`
+starts. It ensures these named-volume mountpoints are owned by the `vscode`
+user so SQLCipher, npm, and Cargo can write without manual permission fixes.
+
 The application DB and secrets DB paths are set by compose as:
 - `GODZILLA_DB_PATH=/home/vscode/.local/share/godzilla/godzilla.db`
 - `GODZILLA_SECRETS_PATH=/home/vscode/.local/share/godzilla/secrets.db`
@@ -58,6 +62,12 @@ Start or restart the development container:
 docker compose -f docker-compose.dev.yml up -d dev
 ```
 
+If you need to re-apply ownership on existing volumes, run:
+
+```bash
+docker compose -f docker-compose.dev.yml up --force-recreate init-perms
+```
+
 Open an interactive shell:
 
 ```bash
@@ -75,7 +85,19 @@ docker compose -f docker-compose.dev.yml exec dev bash -lc 'cd /workspace/godzil
 Run the API server from inside the container (example):
 
 ```bash
-docker compose -f docker-compose.dev.yml exec dev bash -lc 'cd /workspace/godzilla && godzilla-api --host 0.0.0.0 --port 8787'
+docker compose -f docker-compose.dev.yml exec dev bash -lc 'cd /workspace/godzilla && godzilla-api --host 127.0.0.1 --port 8787'
+```
+
+## Tauri GUI requirement in containers
+`npm run tauri dev` requires a Linux display server (X11/Wayland). In a
+headless container, Tauri may panic with:
+
+- `Failed to initialize GTK`
+
+For headless validation use:
+
+```bash
+docker compose -f docker-compose.dev.yml exec dev bash -lc 'cd /workspace/godzilla/ui && npm run dev'
 ```
 
 ## VS Code connection to the running image

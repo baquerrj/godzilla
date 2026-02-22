@@ -48,8 +48,15 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 
 RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
     && useradd --uid "${USER_UID}" --gid "${USER_GID}" -m "${USERNAME}" \
-    && mkdir -p /workspace /workspace/godzilla \
-    && chown -R "${USERNAME}:${USERNAME}" /workspace \
+    && mkdir -p \
+      /workspace \
+      /workspace/godzilla \
+      /home/${USERNAME}/.local/share/godzilla \
+      /home/${USERNAME}/.cache/pip \
+      /home/${USERNAME}/.npm \
+      /usr/local/cargo/registry \
+      /usr/local/cargo/git \
+    && chown -R "${USERNAME}:${USERNAME}" /workspace /home/${USERNAME} \
     && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" "${RUSTUP_HOME}"
 
 WORKDIR /workspace/godzilla

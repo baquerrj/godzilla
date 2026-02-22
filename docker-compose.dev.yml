@@ -1,8 +1,33 @@
 # REQ: SEC-DATA-004
 
 services:
+  init-perms:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        USER_UID: ${LOCAL_UID:-1000}
+        USER_GID: ${LOCAL_GID:-1000}
+    user: root
+    command: >
+      bash -lc '
+      mkdir -p /workspace /home/vscode/.local/share/godzilla /home/vscode/.cache/pip /home/vscode/.npm /usr/local/cargo/registry /usr/local/cargo/git &&
+      chown -R ${LOCAL_UID:-1000}:${LOCAL_GID:-1000} /workspace /home/vscode/.local/share/godzilla /home/vscode/.cache/pip /home/vscode/.npm /usr/local/cargo/registry /usr/local/cargo/git
+      '
+    volumes:
+      - godzilla-workspace:/workspace
+      - godzilla-data:/home/vscode/.local/share/godzilla
+      - godzilla-pip-cache:/home/vscode/.cache/pip
+      - godzilla-npm-cache:/home/vscode/.npm
+      - godzilla-cargo-registry:/usr/local/cargo/registry
+      - godzilla-cargo-git:/usr/local/cargo/git
+    restart: "no"
+
   dev:
     container_name: godzilla-dev
+    depends_on:
+      init-perms:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile.dev

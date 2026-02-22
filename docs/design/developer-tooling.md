@@ -9,6 +9,7 @@ The project needs a reproducible containerized development environment so every 
 Containerized development uses four assets:
 - `Dockerfile.dev` defines the pinned Linux toolchain and developer user.
 - `docker-compose.dev.yml` runs a long-lived `dev` service with named volumes for workspace, app data, and dependency caches.
+- `docker-compose.dev.yml` also includes an `init-perms` bootstrap service that fixes ownership on mounted volume paths before `dev` starts.
 - `docker-compose.dev.ssh-agent.yml` optionally forwards host SSH agent sockets for Git operations without copying private keys.
 - `.devcontainer/devcontainer.json` lets VS Code open or attach directly to the `dev` service.
 - Existing `pyproject.toml` and `noxfile.py` remain the source of truth for Python dependencies and quality commands run inside the container.
@@ -17,6 +18,7 @@ Containerized development uses four assets:
 flowchart LR
   DOCKERFILE[Dockerfile.dev]
   COMPOSE[docker-compose.dev.yml]
+  INIT[init-perms service]
   DEVCONTAINER[.devcontainer/devcontainer.json]
   IMAGE[godzilla-dev image]
   CONTAINER[dev container]
@@ -25,7 +27,8 @@ flowchart LR
 
   DOCKERFILE --> IMAGE
   IMAGE --> COMPOSE
-  COMPOSE --> CONTAINER
+  COMPOSE --> INIT
+  INIT --> CONTAINER
   DEVCONTAINER --> CONTAINER
   VSCODE --> CONTAINER
   CONTAINER --> NOX
@@ -37,6 +40,7 @@ None.
 ## API/interface changes
 - Add `Dockerfile.dev` with Python 3.12, Node.js 24 LTS, Rust stable, Git, and Linux build prerequisites.
 - Add `docker-compose.dev.yml` with pure named-volume workspace/data mounts and persistent dependency caches.
+- Add an `init-perms` service to enforce writable ownership for named-volume mountpoints (`godzilla-data`, pip/npm caches, Cargo caches) before startup.
 - Add a stable container name (`godzilla-dev`) for repeatable manual container operations.
 - Add `docker-compose.dev.ssh-agent.yml` as an optional SSH agent forwarding overlay for Git SSH workflows.
 - Add `.devcontainer/devcontainer.json` so VS Code can attach to the running containerized environment.
