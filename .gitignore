@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.coverage
 build/
 develop-eggs/
 dist/
@@ -44,6 +45,7 @@ yarn-error.log
 # Environment
 .env
 .env.local
+.claude/
 
 # OS
 Thumbs.db
