@@ -19,12 +19,12 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - `integrations/plaid_client.py` — 37%
   - `db/migrations.py` — 26%
 
-- [ ] **3. Frontend scaffold (Tauri v2 + React + Vite)**
+- [x] **3. Frontend scaffold (Tauri v2 + React + Vite)**
   Initialize Tauri v2 project, pin Node.js v24 LTS, configure Vite dev proxy to
   forward `/api/*` → `127.0.0.1:8787`, generate per-install self-signed cert and
   configure Tauri to pin it.
 
-- [ ] **4. Typed frontend API client module**
+- [x] **4. Typed frontend API client module**
   TypeScript client for all 6 endpoints with loading/error/success state handling.
 
 - [ ] **5. MVP UI — accounts + sync flow**

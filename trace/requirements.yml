@@ -47,6 +47,9 @@
   - godzilla_core/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
   - godzilla_core/scripts/link_sandbox_item.py:main
+  - ui/src/api/types.ts:PlaidLinkRequest
+  - ui/src/api/types.ts:PlaidLinkResult
+  - ui/src/api/client.ts:GodzillaApi.plaidLink
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
@@ -65,6 +68,9 @@
   - godzilla_core/integrations/plaid_client.py:store_access_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
   - godzilla_core/scripts/link_sandbox_item.py:main
+  - ui/src/api/types.ts:PlaidLinkRequest
+  - ui/src/api/types.ts:PlaidLinkResult
+  - ui/src/api/client.ts:GodzillaApi.plaidLink
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
@@ -83,6 +89,9 @@
   - godzilla_core/integrations/plaid_client.py:PlaidClient.accounts_balance_get
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_upsert_account
+  - ui/src/api/types.ts:Account
+  - ui/src/api/client.ts:GodzillaApi.getAccounts
+  - ui/src/api/client.ts:useApiCall
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_account_metadata_upsert
@@ -99,6 +108,8 @@
   - godzilla_core/api/app.py:get_sync_state
   - godzilla_core/integrations/plaid_sync.py:_set_item_last_sync
   - godzilla_core/integrations/plaid_sync.py:_update_sync_state
+  - ui/src/api/types.ts:SyncState
+  - ui/src/api/client.ts:GodzillaApi.getSyncState
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_sync_state_returns_item_status
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
@@ -113,6 +124,9 @@
   code_refs:
   - godzilla_core/api/app.py:plaid_sync
   - godzilla_core/scripts/sync_plaid_item.py:main
+  - ui/src/api/types.ts:PlaidSyncRequest
+  - ui/src/api/types.ts:PlaidSyncResult
+  - ui/src/api/client.ts:GodzillaApi.plaidSync
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
   doc_refs:
@@ -171,6 +185,9 @@
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_update_sync_state
   - godzilla_core/integrations/plaid_sync.py:_get_sync_cursor
+  - ui/src/api/types.ts:PlaidSyncRequest
+  - ui/src/api/types.ts:PlaidSyncResult
+  - ui/src/api/client.ts:GodzillaApi.plaidSync
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
@@ -248,6 +265,9 @@
   parent_requirement_id: SYS-001
   code_refs:
   - godzilla_core/api/app.py:get_transactions
+  - ui/src/api/types.ts:Transaction
+  - ui/src/api/types.ts:GetTransactionsParams
+  - ui/src/api/client.ts:GodzillaApi.getTransactions
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_supports_pagination_and_sorting
   doc_refs:
@@ -442,6 +462,9 @@
   - godzilla_core/api/app.py:get_balances
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_insert_balance_snapshot
+  - ui/src/api/types.ts:BalanceSnapshot
+  - ui/src/api/types.ts:GetBalancesParams
+  - ui/src/api/client.ts:GodzillaApi.getBalances
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_balances_returns_snapshots
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_balance_snapshot_upserts_per_day
@@ -715,7 +738,8 @@
 - requirement_id: SEC-NET-001
   title: TLS enforcement
   parent_requirement_id: SYS-003
-  code_refs: []
+  code_refs:
+  - ui/scripts/gen-cert.sh
   test_refs: []
   doc_refs:
   - docs/design/architecture-overview.md
