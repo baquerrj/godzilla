@@ -27,7 +27,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] **4. Typed frontend API client module**
   TypeScript client for all 6 endpoints with loading/error/success state handling.
 
-- [ ] **5. MVP UI — accounts + sync flow**
+- [x] **5. MVP UI — accounts + sync flow**
   "Connect sandbox account", "Run sync", accounts/transactions/balances tables,
   sync status panel.
 

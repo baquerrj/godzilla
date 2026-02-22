@@ -1,50 +1,71 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+/**
+ * Root application component.
+ *
+ * Reads the API token from the Tauri runtime, gates the UI on its
+ * presence, and orchestrates data refresh across all panels.
+ *
+ * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
+ * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006,
+ * REQ: SEC-ACC-004
+ */
+
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { AccountsTable } from "./components/AccountsTable";
+import { BalancesTable } from "./components/BalancesTable";
+import { SyncStatePanel } from "./components/SyncStatePanel";
+import { TransactionsTable } from "./components/TransactionsTable";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+export function App() {
+  // null = still loading from Tauri; "" = token not configured
+  const [token, setToken] = useState<string | null>(null);
+  // Incrementing this causes all data panels to re-fetch.
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  // REQ: SEC-ACC-004 — obtain API token from the Tauri runtime
+  useEffect(() => {
+    invoke<string>("get_api_token")
+      .then((t) => setToken(t ?? ""))
+      .catch(() => setToken(""));
+  }, []);
+
+  const handleRefresh = () => setRefreshKey((k) => k + 1);
+
+  if (token === null) {
+    return <div className="status-msg">Connecting…</div>;
+  }
+
+  if (token === "") {
+    return (
+      <div className="status-msg status-error">
+        <p>
+          <strong>GODZILLA_API_TOKEN</strong> is not set.
+        </p>
+        <p>
+          Start the sidecar with the required environment variables and
+          relaunch the app.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+    <div className="app">
+      <header className="app-header">
+        <h1>Godzilla</h1>
+      </header>
+      <main className="app-main">
+        <SyncStatePanel
+          token={token}
+          refreshKey={refreshKey}
+          onRefresh={handleRefresh}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+        <AccountsTable token={token} refreshKey={refreshKey} />
+        <TransactionsTable token={token} refreshKey={refreshKey} />
+        <BalancesTable token={token} refreshKey={refreshKey} />
+      </main>
+    </div>
   );
 }
 

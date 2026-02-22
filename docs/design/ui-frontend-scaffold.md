@@ -153,9 +153,64 @@ const [result, execute] = useApiCall<Account[]>();
 - `useApiCall` is kept generic so each view component owns its own state
   slice without a shared global store for M1.
 
+## MVP UI components (M1 task 5)
+
+### Token acquisition
+
+`src-tauri/src/lib.rs` exposes a `get_api_token` Tauri command that reads
+`GODZILLA_API_TOKEN` from the process environment and returns it to the
+React app via `invoke("get_api_token")`.  If the variable is unset the UI
+shows a configuration error screen.
+
+### Component hierarchy
+
+```
+App
+├── SyncStatePanel     — sync state table, Connect and Run Sync buttons
+├── AccountsTable      — linked account list with balance
+├── TransactionsTable  — paginated transaction list with sort-by-date/amount
+└── BalancesTable      — most-recent 100 balance snapshots
+```
+
+All four panels accept `token` and `refreshKey` props.  When a sync or link
+succeeds, `App.handleRefresh` increments `refreshKey`, causing all panels to
+re-fetch their data.
+
+### State refresh flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant SP as SyncStatePanel
+  participant App as App (refreshKey)
+  participant AT as AccountsTable
+  participant TT as TransactionsTable
+  participant BT as BalancesTable
+
+  U->>SP: click "Connect Sandbox Account"
+  SP->>SP: plaidLink() → success
+  SP->>App: onRefresh()
+  App->>AT: refreshKey++
+  App->>TT: refreshKey++
+  App->>BT: refreshKey++
+  AT->>AT: getAccounts()
+  TT->>TT: getTransactions()
+  BT->>BT: getBalances()
+```
+
+### Test setup
+
+`vitest` + `@testing-library/react` + `jsdom`.  The `src/test/setup.ts`
+file registers `@testing-library/jest-dom/vitest` matchers and explicit
+`cleanup()` after each test.  Each component test file mocks `GodzillaApi`
+while keeping `useApiCall` real so state transitions are exercised.
+
+Run with: `cd ui && npm test`
+
 ## Rollout/migration notes
 
 - No database or backend changes required.
 - Run `bash ui/scripts/gen-cert.sh` once per machine to generate TLS key
   material (used in M6).
-- Install dependencies: `cd ui && npm install`.
+- Install dependencies and run tests: `cd ui && npm install && npm test`.
+- To launch the dev UI: start the Python sidecar, then `npm run tauri dev`.

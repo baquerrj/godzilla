@@ -50,9 +50,11 @@
   - ui/src/api/types.ts:PlaidLinkRequest
   - ui/src/api/types.ts:PlaidLinkResult
   - ui/src/api/client.ts:GodzillaApi.plaidLink
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
+  - ui/src/test/SyncStatePanel.test.tsx:calls plaidLink and onRefresh on connect
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -71,9 +73,11 @@
   - ui/src/api/types.ts:PlaidLinkRequest
   - ui/src/api/types.ts:PlaidLinkResult
   - ui/src/api/client.ts:GodzillaApi.plaidLink
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
+  - ui/src/test/SyncStatePanel.test.tsx:calls plaidLink and onRefresh on connect
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -92,9 +96,11 @@
   - ui/src/api/types.ts:Account
   - ui/src/api/client.ts:GodzillaApi.getAccounts
   - ui/src/api/client.ts:useApiCall
+  - ui/src/components/AccountsTable.tsx:AccountsTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_account_metadata_upsert
+  - ui/src/test/AccountsTable.test.tsx:AccountsTable
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -110,9 +116,11 @@
   - godzilla_core/integrations/plaid_sync.py:_update_sync_state
   - ui/src/api/types.ts:SyncState
   - ui/src/api/client.ts:GodzillaApi.getSyncState
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_sync_state_returns_item_status
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
+  - ui/src/test/SyncStatePanel.test.tsx:displays sync state rows
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -127,8 +135,10 @@
   - ui/src/api/types.ts:PlaidSyncRequest
   - ui/src/api/types.ts:PlaidSyncResult
   - ui/src/api/client.ts:GodzillaApi.plaidSync
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
+  - ui/src/test/SyncStatePanel.test.tsx:calls plaidSync and onRefresh on run sync
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -188,9 +198,11 @@
   - ui/src/api/types.ts:PlaidSyncRequest
   - ui/src/api/types.ts:PlaidSyncResult
   - ui/src/api/client.ts:GodzillaApi.plaidSync
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_sync_endpoint_returns_sync_result
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
+  - ui/src/test/SyncStatePanel.test.tsx:calls plaidSync and onRefresh on run sync
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -268,8 +280,10 @@
   - ui/src/api/types.ts:Transaction
   - ui/src/api/types.ts:GetTransactionsParams
   - ui/src/api/client.ts:GodzillaApi.getTransactions
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_supports_pagination_and_sorting
+  - ui/src/test/TransactionsTable.test.tsx:TransactionsTable
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -465,9 +479,11 @@
   - ui/src/api/types.ts:BalanceSnapshot
   - ui/src/api/types.ts:GetBalancesParams
   - ui/src/api/client.ts:GodzillaApi.getBalances
+  - ui/src/components/BalancesTable.tsx:BalancesTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_balances_returns_snapshots
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_balance_snapshot_upserts_per_day
+  - ui/src/test/BalancesTable.test.tsx:BalancesTable
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -728,8 +744,11 @@
   parent_requirement_id: SYS-003
   code_refs:
   - godzilla_core/api/app.py:require_api_key
+  - ui/src-tauri/src/lib.rs:get_api_token
+  - ui/src/App.tsx:App
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_auth_required_for_endpoints
+  - ui/src/test/App.test.tsx:shows error when token is empty
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
