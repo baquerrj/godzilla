@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1.7
+# REQ: SEC-DATA-004
+
+FROM python:3.12-bookworm
+
+ARG NODE_MAJOR=24
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:/home/${USERNAME}/.local/bin:${PATH}
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    file \
+    git \
+    gnupg \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    libssl-dev \
+    libwebkit2gtk-4.1-dev \
+    libxdo-dev \
+    openssh-client \
+    pkg-config \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install --global npm@11 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --profile minimal --default-toolchain stable
+
+RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
+    && useradd --uid "${USER_UID}" --gid "${USER_GID}" -m "${USERNAME}" \
+    && mkdir -p /workspace /workspace/godzilla \
+    && chown -R "${USERNAME}:${USERNAME}" /workspace \
+    && chown -R "${USERNAME}:${USERNAME}" "${CARGO_HOME}" "${RUSTUP_HOME}"
+
+WORKDIR /workspace/godzilla
+USER ${USERNAME}
+
+RUN python3 -m pip install --upgrade pip setuptools wheel nox
+
+CMD ["sleep", "infinity"]

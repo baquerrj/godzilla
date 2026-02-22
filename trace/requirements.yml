@@ -786,12 +786,23 @@
 - requirement_id: SEC-DATA-004
   title: Dependency hygiene
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - pyproject.toml
+  - noxfile.py
+  - Dockerfile.dev
+  - docker-compose.dev.yml
+  - docker-compose.dev.ssh-agent.yml
+  - .devcontainer/devcontainer.json
+  - .dockerignore
+  test_refs:
+  - godzilla_core/tests/test_tooling_config.py:ToolingConfigTests
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/developer-tooling.md
+  - docs/setup/dependencies.md
+  - docs/setup/docker-development.md
 - requirement_id: SEC-DATA-005
   title: Data minimization
   parent_requirement_id: FUNC-SET-002

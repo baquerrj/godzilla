@@ -2,6 +2,8 @@
 
 This document sets up the local development environment for the MVP (Linux-first). It assumes a local-only desktop app using Tauri + React UI, a Python FastAPI sidecar, and SQLite with SQLCipher.
 
+For a containerized setup, use `docs/setup/docker-development.md`.
+
 ## 1) System dependencies (Linux)
 Install Tauri’s Linux prerequisites (Debian/Ubuntu example):
 

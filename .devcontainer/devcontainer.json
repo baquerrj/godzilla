@@ -1,0 +1,36 @@
+{
+  "name": "godzilla-dev",
+  "godzillaRequirementTags": [
+    "REQ: SEC-DATA-004"
+  ],
+  "dockerComposeFile": [
+    "../docker-compose.dev.yml"
+  ],
+  "service": "dev",
+  "workspaceFolder": "/workspace/godzilla",
+  "remoteUser": "vscode",
+  "overrideCommand": false,
+  "postCreateCommand": "bash -lc \"if [ -f /workspace/godzilla/pyproject.toml ]; then cd /workspace/godzilla && python3 -m pip install -e '.[dev]' && npm install; else echo 'Clone the repository into /workspace/godzilla, then rerun dependency installation.'; fi\"",
+  "postStartCommand": "git config --global --add safe.directory /workspace/godzilla",
+  "forwardPorts": [
+    8787,
+    8443
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": [
+          "godzilla_core/tests"
+        ]
+      }
+    }
+  }
+}

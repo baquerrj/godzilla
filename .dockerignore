@@ -1,0 +1,15 @@
+# REQ: SEC-DATA-004
+.git
+.nox
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+build
+dist
+node_modules
+godzilla_core.egg-info
