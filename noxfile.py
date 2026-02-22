@@ -16,7 +16,7 @@ def lint(session: nox.Session) -> None:
     """
     session.install("black>=24.0.0", "ruff>=0.6.0")
     session.run("ruff", "check", "godzilla_core")
-    session.run("black", "--check", "godzilla_core", "noxfile.py", "db_inspect.py")
+    session.run("black", "--check", "godzilla_core", "noxfile.py")
 
 
 @nox.session(python="3.12")
@@ -26,7 +26,7 @@ def format(session: nox.Session) -> None:
     REQ: SEC-DATA-004
     """
     session.install("black>=24.0.0")
-    session.run("black", "godzilla_core", "noxfile.py", "db_inspect.py")
+    session.run("black", "godzilla_core", "noxfile.py")
 
 
 @nox.session(python="3.12")

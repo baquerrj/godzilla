@@ -2,6 +2,10 @@
 
 REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
 REQ: FUNC-ACCT-005, FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001,
+REQ: FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005,
+REQ: FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
+REQ: FUNC-CAT-001, FUNC-CAT-002,
+REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-REP-006, SEC-ACC-004, SEC-DATA-003
 """
 
@@ -15,7 +19,7 @@ from hmac import compare_digest
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Path, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlcipher3 import dbapi2 as sqlcipher
 
@@ -119,7 +123,7 @@ class AccountResponse(BaseModel):
 class TransactionResponse(BaseModel):
     """Transaction read model for list views.
 
-    REQ: FUNC-TXN-001
+    REQ: FUNC-TXN-001, FUNC-TXN-002
     """
 
     transaction_id: str
@@ -131,8 +135,129 @@ class TransactionResponse(BaseModel):
     status: str
     merchant_name: str | None
     display_name: str
+    category_id: str | None
+    notes: str | None
     is_transfer: bool
     is_excluded: bool
+
+
+class TransactionSplitResponse(BaseModel):
+    """Split portion of a transaction.
+
+    REQ: FUNC-TXN-008
+    """
+
+    split_id: str
+    amount: float
+    category_id: str | None
+    notes: str | None
+
+
+class TransactionDetailResponse(BaseModel):
+    """Full transaction detail including tags, splits, and raw provider payload.
+
+    REQ: FUNC-TXN-003
+    """
+
+    transaction_id: str
+    account_id: str
+    provider_account_id: str
+    date: str
+    amount: float
+    currency: str
+    status: str
+    merchant_name: str | None
+    display_name: str
+    category_id: str | None
+    notes: str | None
+    is_transfer: bool
+    is_excluded: bool
+    tags: list[str]
+    splits: list[TransactionSplitResponse]
+    raw_provider_payloads: list[dict[str, Any]]
+
+
+class CategoryResponse(BaseModel):
+    """Category read model.
+
+    REQ: FUNC-CAT-001, FUNC-CAT-002
+    """
+
+    category_id: str
+    name: str
+    parent_id: str | None
+    active: bool
+
+
+class CreateCategoryRequest(BaseModel):
+    """Request body for creating a category.
+
+    REQ: FUNC-CAT-002
+    """
+
+    name: str = Field(min_length=1, max_length=128)
+    parent_id: str | None = Field(default=None)
+
+
+class PatchCategoryRequest(BaseModel):
+    """Request body for updating a category.
+
+    REQ: FUNC-CAT-002
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    active: bool | None = Field(default=None)
+
+
+class PatchTransactionRequest(BaseModel):
+    """Request body for user overrides on a transaction.
+
+    REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007
+    """
+
+    category_id: str | None = Field(default=None)
+    display_name: str | None = Field(default=None, min_length=1, max_length=256)
+    notes: str | None = Field(default=None, max_length=2048)
+    is_transfer: bool | None = Field(default=None)
+    is_excluded: bool | None = Field(default=None)
+    add_tags: list[str] | None = Field(default=None)
+    remove_tags: list[str] | None = Field(default=None)
+
+
+class SplitItem(BaseModel):
+    """One portion of a transaction split.
+
+    REQ: FUNC-TXN-008
+    """
+
+    amount: float
+    category_id: str | None = Field(default=None)
+    notes: str | None = Field(default=None, max_length=2048)
+
+
+class ConflictResponse(BaseModel):
+    """Conflict read model for resolution queue.
+
+    REQ: FUNC-SYNC-006, FUNC-SYNC-007
+    """
+
+    conflict_id: str
+    entity_type: str
+    entity_id: str
+    field_name: str
+    local_value: str
+    provider_value: str
+    status: str
+    resolution_choice: str | None
+
+
+class ResolveConflictRequest(BaseModel):
+    """Request body for resolving a conflict.
+
+    REQ: FUNC-SYNC-007
+    """
+
+    resolution_choice: Literal["local", "provider"]
 
 
 class BalanceResponse(BaseModel):
@@ -371,10 +496,82 @@ def _register_plaid_routes(app: FastAPI) -> None:
             raise HTTPException(status_code=400, detail="Plaid sync failed") from exc
 
 
+def _validate_category_assignment(conn: sqlcipher.Connection, category_id: str) -> None:
+    """Validate that a category can be assigned to a transaction or split.
+
+    Raises HTTPException(422) if the category does not exist, is not active,
+    or is a parent category (leaf-only assignment enforced).
+
+    REQ: FUNC-CAT-002, FUNC-TXN-004
+
+    Args:
+        conn: Open database connection.
+        category_id: Category primary key to validate.
+    """
+    row = conn.execute(
+        "SELECT id, active FROM category WHERE id = ?",
+        (category_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=422, detail=f"Category '{category_id}' does not exist")
+    if not row[1]:
+        raise HTTPException(status_code=422, detail=f"Category '{category_id}' is not active")
+    child_row = conn.execute(
+        "SELECT id FROM category WHERE parent_id = ? LIMIT 1",
+        (category_id,),
+    ).fetchone()
+    if child_row is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Category '{category_id}' has children; only leaf categories may be assigned",
+        )
+
+
+def _row_to_transaction_response(row: tuple[Any, ...]) -> TransactionResponse:
+    """Build a TransactionResponse from a SELECT result row.
+
+    REQ: FUNC-TXN-001, FUNC-TXN-002
+
+    Args:
+        row: Columns: id, account_id, provider_account_id, date, amount, currency,
+             status, merchant_name, display_name, category_id, notes, is_transfer,
+             is_excluded.
+    """
+    return TransactionResponse(
+        transaction_id=row[0],
+        account_id=row[1],
+        provider_account_id=row[2],
+        date=row[3],
+        amount=float(row[4]),
+        currency=row[5],
+        status=row[6],
+        merchant_name=row[7],
+        display_name=row[8],
+        category_id=row[9],
+        notes=row[10],
+        is_transfer=bool(row[11]),
+        is_excluded=bool(row[12]),
+    )
+
+
+_TXN_SELECT = (
+    "SELECT "
+    "transaction_record.id, transaction_record.account_id, account.provider_account_id, "
+    "transaction_record.date, transaction_record.amount, transaction_record.currency, "
+    "transaction_record.status, transaction_record.merchant_name, "
+    "transaction_record.display_name, transaction_record.category_id, "
+    "transaction_record.notes, transaction_record.is_transfer, "
+    "transaction_record.is_excluded "
+    "FROM transaction_record "
+    "JOIN account ON account.id = transaction_record.account_id"
+)
+
+
 def _register_read_routes(app: FastAPI) -> None:
     """Register read/query endpoints on the FastAPI application.
 
-    REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-REP-006, FUNC-ACCT-004, SEC-ACC-004
+    REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
+    REQ: FUNC-REP-006, FUNC-ACCT-004, FUNC-CAT-001, FUNC-SYNC-006, SEC-ACC-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -426,33 +623,54 @@ def _register_read_routes(app: FastAPI) -> None:
     )
     async def get_transactions(
         account_id: str | None = Query(default=None, min_length=1),
+        date_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        date_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        category_id: str | None = Query(default=None, min_length=1),
+        merchant: str | None = Query(default=None, min_length=1, max_length=128),
+        amount_min: float | None = Query(default=None),
+        amount_max: float | None = Query(default=None),
         limit: int = Query(default=50, ge=1, le=_MAX_PAGE_SIZE),
         offset: int = Query(default=0, ge=0),
         sort_by: Literal["date", "amount"] = Query(default="date"),
         sort_order: Literal["asc", "desc"] = Query(default="desc"),
     ) -> list[TransactionResponse]:
-        """List transactions with pagination and sorting.
+        """List transactions with pagination, sorting, and optional filters.
 
-        REQ: FUNC-TXN-001
+        REQ: FUNC-TXN-001, FUNC-TXN-002
         """
         sort_direction = "ASC" if sort_order == "asc" else "DESC"
         sort_field = _SORT_FIELDS[sort_by]
-        where_clause = ""
+
+        conditions: list[str] = []
         params: list[Any] = []
 
         if account_id:
-            where_clause = " WHERE transaction_record.account_id = ?"
+            conditions.append("transaction_record.account_id = ?")
             params.append(account_id)
+        if date_from:
+            conditions.append("transaction_record.date >= ?")
+            params.append(date_from)
+        if date_to:
+            conditions.append("transaction_record.date <= ?")
+            params.append(date_to)
+        if category_id:
+            conditions.append("transaction_record.category_id = ?")
+            params.append(category_id)
+        if merchant:
+            conditions.append(
+                "(transaction_record.merchant_name LIKE ? OR transaction_record.display_name LIKE ?)"
+            )
+            params.extend([f"%{merchant}%", f"%{merchant}%"])
+        if amount_min is not None:
+            conditions.append("transaction_record.amount >= ?")
+            params.append(amount_min)
+        if amount_max is not None:
+            conditions.append("transaction_record.amount <= ?")
+            params.append(amount_max)
 
+        where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
         query = (
-            "SELECT "
-            "transaction_record.id, transaction_record.account_id, account.provider_account_id, "
-            "transaction_record.date, transaction_record.amount, transaction_record.currency, "
-            "transaction_record.status, transaction_record.merchant_name, "
-            "transaction_record.display_name, transaction_record.is_transfer, "
-            "transaction_record.is_excluded "
-            "FROM transaction_record "
-            "JOIN account ON account.id = transaction_record.account_id"
+            f"{_TXN_SELECT}"
             f"{where_clause} "
             f"ORDER BY {sort_field} {sort_direction}, transaction_record.id ASC "
             "LIMIT ? OFFSET ?"
@@ -462,22 +680,84 @@ def _register_read_routes(app: FastAPI) -> None:
         with _db_connection() as conn:
             rows = conn.execute(query, params).fetchall()
 
-        return [
-            TransactionResponse(
-                transaction_id=row[0],
-                account_id=row[1],
-                provider_account_id=row[2],
-                date=row[3],
-                amount=float(row[4]),
-                currency=row[5],
-                status=row[6],
-                merchant_name=row[7],
-                display_name=row[8],
-                is_transfer=bool(row[9]),
-                is_excluded=bool(row[10]),
+        return [_row_to_transaction_response(row) for row in rows]
+
+    @app.get(
+        "/transactions/{transaction_id}",
+        response_model=TransactionDetailResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_transaction(
+        transaction_id: str = Path(min_length=1),
+    ) -> TransactionDetailResponse:
+        """Fetch full detail for a single transaction.
+
+        REQ: FUNC-TXN-003
+        """
+        with _db_connection() as conn:
+            row = conn.execute(
+                f"{_TXN_SELECT} WHERE transaction_record.id = ?",
+                (transaction_id,),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="Transaction not found")
+
+            tag_rows = conn.execute(
+                "SELECT tag.name FROM transaction_tag "
+                "JOIN tag ON tag.id = transaction_tag.tag_id "
+                "WHERE transaction_tag.transaction_id = ? "
+                "ORDER BY tag.name ASC",
+                (transaction_id,),
+            ).fetchall()
+
+            split_rows = conn.execute(
+                "SELECT id, amount, category_id, notes FROM transaction_split "
+                "WHERE transaction_id = ? ORDER BY rowid ASC",
+                (transaction_id,),
+            ).fetchall()
+
+            raw_rows = conn.execute(
+                "SELECT raw_payload FROM provider_raw WHERE transaction_id = ? "
+                "ORDER BY created_at_utc ASC",
+                (transaction_id,),
+            ).fetchall()
+
+        tags = [r[0] for r in tag_rows]
+        splits = [
+            TransactionSplitResponse(
+                split_id=r[0],
+                amount=float(r[1]),
+                category_id=r[2],
+                notes=r[3],
             )
-            for row in rows
+            for r in split_rows
         ]
+        raw_payloads = []
+        for r in raw_rows:
+            try:
+                raw_payloads.append(json.loads(r[0]))
+            except (json.JSONDecodeError, TypeError):
+                raw_payloads.append({"raw": r[0]})
+
+        base = _row_to_transaction_response(row)
+        return TransactionDetailResponse(
+            transaction_id=base.transaction_id,
+            account_id=base.account_id,
+            provider_account_id=base.provider_account_id,
+            date=base.date,
+            amount=base.amount,
+            currency=base.currency,
+            status=base.status,
+            merchant_name=base.merchant_name,
+            display_name=base.display_name,
+            category_id=base.category_id,
+            notes=base.notes,
+            is_transfer=base.is_transfer,
+            is_excluded=base.is_excluded,
+            tags=tags,
+            splits=splits,
+            raw_provider_payloads=raw_payloads,
+        )
 
     @app.get(
         "/balances",
@@ -563,16 +843,495 @@ def _register_read_routes(app: FastAPI) -> None:
             for row in rows
         ]
 
+    @app.get(
+        "/categories",
+        response_model=list[CategoryResponse],
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_categories() -> list[CategoryResponse]:
+        """List all categories as a flat list (client builds tree).
+
+        REQ: FUNC-CAT-001
+        """
+        with _db_connection() as conn:
+            rows = conn.execute(
+                "SELECT id, name, parent_id, active FROM category ORDER BY parent_id NULLS FIRST, name ASC"
+            ).fetchall()
+        return [
+            CategoryResponse(
+                category_id=row[0],
+                name=row[1],
+                parent_id=row[2],
+                active=bool(row[3]),
+            )
+            for row in rows
+        ]
+
+    @app.get(
+        "/conflicts",
+        response_model=list[ConflictResponse],
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_conflicts(
+        status: Literal["open", "resolved"] = Query(default="open"),
+    ) -> list[ConflictResponse]:
+        """List conflicts filtered by status.
+
+        REQ: FUNC-SYNC-006
+        """
+        with _db_connection() as conn:
+            rows = conn.execute(
+                "SELECT conflict_id, entity_type, entity_id, field_name, "
+                "local_value, provider_value, status, resolution_choice "
+                "FROM conflict WHERE status = ? "
+                "ORDER BY local_updated_at_utc DESC",
+                (status,),
+            ).fetchall()
+        return [
+            ConflictResponse(
+                conflict_id=row[0],
+                entity_type=row[1],
+                entity_id=row[2],
+                field_name=row[3],
+                local_value=row[4],
+                provider_value=row[5],
+                status=row[6],
+                resolution_choice=row[7],
+            )
+            for row in rows
+        ]
+
+
+def _register_write_routes(app: FastAPI) -> None:
+    """Register mutating endpoints for categories, transactions, and conflicts.
+
+    REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
+    REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004
+
+    Args:
+        app: FastAPI app instance to attach routes to.
+    """
+    from godzilla_core.util.time import local_timestamp_metadata
+    from uuid import uuid4
+
+    @app.post(
+        "/categories",
+        response_model=CategoryResponse,
+        dependencies=[Depends(require_api_key)],
+        status_code=201,
+    )
+    async def create_category(request: CreateCategoryRequest) -> CategoryResponse:
+        """Create a new category.
+
+        REQ: FUNC-CAT-002
+        """
+        with _db_connection() as conn:
+            if request.parent_id is not None:
+                parent_row = conn.execute(
+                    "SELECT id, active FROM category WHERE id = ?",
+                    (request.parent_id,),
+                ).fetchone()
+                if parent_row is None:
+                    raise HTTPException(
+                        status_code=422, detail=f"Parent category '{request.parent_id}' not found"
+                    )
+                if not parent_row[1]:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Parent category '{request.parent_id}' is inactive",
+                    )
+
+            conflict_row = conn.execute(
+                "SELECT id FROM category WHERE name = ? AND parent_id IS ?",
+                (request.name, request.parent_id),
+            ).fetchone()
+            if conflict_row is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="A category with this name already exists under the same parent",
+                )
+
+            new_id = str(uuid4())
+            conn.execute(
+                "INSERT INTO category (id, name, parent_id, active) VALUES (?, ?, ?, 1)",
+                (new_id, request.name, request.parent_id),
+            )
+            conn.commit()
+
+        return CategoryResponse(
+            category_id=new_id,
+            name=request.name,
+            parent_id=request.parent_id,
+            active=True,
+        )
+
+    @app.patch(
+        "/categories/{category_id}",
+        response_model=CategoryResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def patch_category(
+        category_id: str = Path(min_length=1),
+        request: PatchCategoryRequest = ...,
+    ) -> CategoryResponse:
+        """Rename or deactivate a category.
+
+        REQ: FUNC-CAT-002
+        """
+        with _db_connection() as conn:
+            row = conn.execute(
+                "SELECT id, name, parent_id, active FROM category WHERE id = ?",
+                (category_id,),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="Category not found")
+
+            name, parent_id, active = row[1], row[2], bool(row[3])
+
+            if request.active is False:
+                assigned_row = conn.execute(
+                    "SELECT id FROM transaction_record WHERE category_id = ? LIMIT 1",
+                    (category_id,),
+                ).fetchone()
+                if assigned_row is not None:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Cannot deactivate a category that is assigned to transactions",
+                    )
+
+            if request.name is not None:
+                name = request.name
+            if request.active is not None:
+                active = request.active
+
+            conn.execute(
+                "UPDATE category SET name = ?, active = ? WHERE id = ?",
+                (name, 1 if active else 0, category_id),
+            )
+            conn.commit()
+
+        return CategoryResponse(
+            category_id=category_id,
+            name=name,
+            parent_id=parent_id,
+            active=active,
+        )
+
+    @app.patch(
+        "/transactions/{transaction_id}",
+        response_model=TransactionDetailResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def patch_transaction(
+        transaction_id: str = Path(min_length=1),
+        request: PatchTransactionRequest = ...,
+    ) -> TransactionDetailResponse:
+        """Apply user overrides to a transaction and record provenance.
+
+        REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-SYNC-004
+        """
+        utc, tz, offset = local_timestamp_metadata()
+
+        with _db_connection() as conn:
+            txn_row = conn.execute(
+                "SELECT id, category_id, display_name, notes, is_transfer, is_excluded "
+                "FROM transaction_record WHERE id = ?",
+                (transaction_id,),
+            ).fetchone()
+            if txn_row is None:
+                raise HTTPException(status_code=404, detail="Transaction not found")
+
+            if request.category_id is not None:
+                _validate_category_assignment(conn, request.category_id)
+
+            _patchable = {
+                "category_id": request.category_id,
+                "display_name": request.display_name,
+                "notes": request.notes,
+                "is_transfer": (
+                    1 if request.is_transfer else 0 if request.is_transfer is not None else None
+                ),
+                "is_excluded": (
+                    1 if request.is_excluded else 0 if request.is_excluded is not None else None
+                ),
+            }
+            current_values = {
+                "category_id": txn_row[1],
+                "display_name": txn_row[2],
+                "notes": txn_row[3],
+                "is_transfer": txn_row[4],
+                "is_excluded": txn_row[5],
+            }
+
+            for field, new_value in _patchable.items():
+                if new_value is None:
+                    continue
+                old_value = current_values[field]
+                conn.execute(
+                    "INSERT INTO transaction_override ("
+                    "id, transaction_id, field_name, source, provider_value, user_value, "
+                    "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+                    ") VALUES (?, ?, ?, 'user', ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(transaction_id, field_name) DO UPDATE SET "
+                    "source = 'user', provider_value = excluded.provider_value, "
+                    "user_value = excluded.user_value, "
+                    "updated_at_utc = excluded.updated_at_utc, "
+                    "updated_at_tz = excluded.updated_at_tz, "
+                    "updated_at_offset_minutes = excluded.updated_at_offset_minutes",
+                    (
+                        str(uuid4()),
+                        transaction_id,
+                        field,
+                        str(old_value) if old_value is not None else None,
+                        str(new_value),
+                        utc,
+                        tz,
+                        offset,
+                    ),
+                )
+                conn.execute(
+                    f"UPDATE transaction_record SET {field} = ? WHERE id = ?",  # noqa: S608
+                    (new_value, transaction_id),
+                )
+
+            if request.add_tags:
+                for tag_name in request.add_tags:
+                    tag_row = conn.execute(
+                        "SELECT id FROM tag WHERE name = ?", (tag_name,)
+                    ).fetchone()
+                    if tag_row is None:
+                        tag_id = str(uuid4())
+                        conn.execute(
+                            "INSERT INTO tag (id, name, active) VALUES (?, ?, 1)",
+                            (tag_id, tag_name),
+                        )
+                    else:
+                        tag_id = tag_row[0]
+                    conn.execute(
+                        "INSERT OR IGNORE INTO transaction_tag (transaction_id, tag_id) "
+                        "VALUES (?, ?)",
+                        (transaction_id, tag_id),
+                    )
+
+            if request.remove_tags:
+                for tag_name in request.remove_tags:
+                    conn.execute(
+                        "DELETE FROM transaction_tag WHERE transaction_id = ? AND tag_id = ("
+                        "SELECT id FROM tag WHERE name = ?)",
+                        (transaction_id, tag_name),
+                    )
+
+            conn.commit()
+
+        from godzilla_core.api.app import app as _app  # noqa: F401 — avoid circular; use endpoint
+
+        return await get_transaction_detail_internal(conn_factory=_db_connection, txn_id=transaction_id)
+
+    @app.post(
+        "/transactions/{transaction_id}/splits",
+        response_model=TransactionDetailResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def post_transaction_splits(
+        transaction_id: str = Path(min_length=1),
+        splits: list[SplitItem] = ...,
+    ) -> TransactionDetailResponse:
+        """Replace splits for a transaction.
+
+        REQ: FUNC-TXN-008
+        """
+        with _db_connection() as conn:
+            txn_row = conn.execute(
+                "SELECT amount FROM transaction_record WHERE id = ?",
+                (transaction_id,),
+            ).fetchone()
+            if txn_row is None:
+                raise HTTPException(status_code=404, detail="Transaction not found")
+
+            txn_amount = float(txn_row[0])
+            split_total = sum(s.amount for s in splits)
+            if splits and abs(split_total - txn_amount) > 0.005:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Split amounts ({split_total:.2f}) must sum to transaction amount ({txn_amount:.2f})",
+                )
+
+            for split in splits:
+                if split.category_id is not None:
+                    _validate_category_assignment(conn, split.category_id)
+
+            conn.execute(
+                "DELETE FROM transaction_split WHERE transaction_id = ?",
+                (transaction_id,),
+            )
+            for split in splits:
+                conn.execute(
+                    "INSERT INTO transaction_split (id, transaction_id, amount, category_id, notes) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (str(uuid4()), transaction_id, split.amount, split.category_id, split.notes),
+                )
+            conn.commit()
+
+        return await get_transaction_detail_internal(conn_factory=_db_connection, txn_id=transaction_id)
+
+    @app.post(
+        "/conflicts/{conflict_id}/resolve",
+        response_model=ConflictResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def resolve_conflict(
+        conflict_id: str = Path(min_length=1),
+        request: ResolveConflictRequest = ...,
+    ) -> ConflictResponse:
+        """Resolve a conflict by choosing local or provider value.
+
+        REQ: FUNC-SYNC-007
+        """
+        utc, tz, offset = local_timestamp_metadata()
+
+        with _db_connection() as conn:
+            c_row = conn.execute(
+                "SELECT conflict_id, entity_type, entity_id, field_name, "
+                "local_value, provider_value, status "
+                "FROM conflict WHERE conflict_id = ?",
+                (conflict_id,),
+            ).fetchone()
+            if c_row is None:
+                raise HTTPException(status_code=404, detail="Conflict not found")
+            if c_row[6] == "resolved":
+                raise HTTPException(status_code=409, detail="Conflict is already resolved")
+
+            entity_id = c_row[2]
+            field_name = c_row[3]
+            provider_value = c_row[5]
+
+            if request.resolution_choice == "provider":
+                conn.execute(
+                    f"UPDATE transaction_record SET {field_name} = ? WHERE id = ?",  # noqa: S608
+                    (provider_value, entity_id),
+                )
+                conn.execute(
+                    "DELETE FROM transaction_override WHERE transaction_id = ? AND field_name = ?",
+                    (entity_id, field_name),
+                )
+
+            conn.execute(
+                "UPDATE conflict SET status = 'resolved', resolution_choice = ?, "
+                "resolved_at_utc = ?, resolved_at_tz = ?, resolved_at_offset_minutes = ? "
+                "WHERE conflict_id = ?",
+                (request.resolution_choice, utc, tz, offset, conflict_id),
+            )
+            conn.execute(
+                "INSERT INTO conflict_resolution (id, conflict_id, resolved_by, "
+                "resolved_at_utc, resolved_at_tz, resolved_at_offset_minutes, choice) "
+                "VALUES (?, ?, 'user', ?, ?, ?, ?)",
+                (str(uuid4()), conflict_id, utc, tz, offset, request.resolution_choice),
+            )
+            conn.commit()
+
+        return ConflictResponse(
+            conflict_id=c_row[0],
+            entity_type=c_row[1],
+            entity_id=entity_id,
+            field_name=field_name,
+            local_value=c_row[4],
+            provider_value=provider_value,
+            status="resolved",
+            resolution_choice=request.resolution_choice,
+        )
+
+
+async def get_transaction_detail_internal(
+    conn_factory: Any,
+    txn_id: str,
+) -> TransactionDetailResponse:
+    """Fetch a full TransactionDetailResponse by transaction ID.
+
+    REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-008
+
+    Args:
+        conn_factory: Context manager that yields a DB connection.
+        txn_id: Internal transaction primary key.
+    """
+    with conn_factory() as conn:
+        row = conn.execute(
+            f"{_TXN_SELECT} WHERE transaction_record.id = ?",
+            (txn_id,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        tag_rows = conn.execute(
+            "SELECT tag.name FROM transaction_tag "
+            "JOIN tag ON tag.id = transaction_tag.tag_id "
+            "WHERE transaction_tag.transaction_id = ? "
+            "ORDER BY tag.name ASC",
+            (txn_id,),
+        ).fetchall()
+
+        split_rows = conn.execute(
+            "SELECT id, amount, category_id, notes FROM transaction_split "
+            "WHERE transaction_id = ? ORDER BY rowid ASC",
+            (txn_id,),
+        ).fetchall()
+
+        raw_rows = conn.execute(
+            "SELECT raw_payload FROM provider_raw WHERE transaction_id = ? "
+            "ORDER BY created_at_utc ASC",
+            (txn_id,),
+        ).fetchall()
+
+    tags = [r[0] for r in tag_rows]
+    splits = [
+        TransactionSplitResponse(
+            split_id=r[0],
+            amount=float(r[1]),
+            category_id=r[2],
+            notes=r[3],
+        )
+        for r in split_rows
+    ]
+    raw_payloads = []
+    for r in raw_rows:
+        try:
+            raw_payloads.append(json.loads(r[0]))
+        except (json.JSONDecodeError, TypeError):
+            raw_payloads.append({"raw": r[0]})
+
+    base = _row_to_transaction_response(row)
+    return TransactionDetailResponse(
+        transaction_id=base.transaction_id,
+        account_id=base.account_id,
+        provider_account_id=base.provider_account_id,
+        date=base.date,
+        amount=base.amount,
+        currency=base.currency,
+        status=base.status,
+        merchant_name=base.merchant_name,
+        display_name=base.display_name,
+        category_id=base.category_id,
+        notes=base.notes,
+        is_transfer=base.is_transfer,
+        is_excluded=base.is_excluded,
+        tags=tags,
+        splits=splits,
+        raw_provider_payloads=raw_payloads,
+    )
+
 
 def create_app() -> FastAPI:
     """Build and return the FastAPI application.
 
     REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
-    REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006, SEC-ACC-004
+    REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004,
+    REQ: FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
+    REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
+    REQ: FUNC-REP-006, SEC-ACC-004
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
     _register_plaid_routes(app)
     _register_read_routes(app)
+    _register_write_routes(app)
     return app
 
 

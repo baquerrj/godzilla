@@ -36,12 +36,12 @@ class MigrationRunnerTests(unittest.TestCase):
         self.tmp_dir.cleanup()
 
     def test_applies_initial_schema(self) -> None:
-        """Verify initial migration creates schema_version=1 and key tables.
+        """Verify migrations create the expected schema version and key tables.
 
         REQ: SEC-CRY-001, SYS-004
         """
         version = run_migrations(db_path=self.db_path, db_key=self.db_key)
-        self.assertEqual(version, 1)
+        self.assertEqual(version, 2)
 
         conn = sqlcipher.connect(self.db_path)
         conn.execute("PRAGMA key = 'test-key';")
@@ -128,7 +128,7 @@ class MigrationRunnerTests(unittest.TestCase):
         conn.execute("PRAGMA key = 'test-key';")
         row = conn.execute(
             "SELECT version, applied_at_utc, applied_at_tz, applied_at_offset_minutes "
-            "FROM schema_version"
+            "FROM schema_version WHERE version = 1"
         ).fetchone()
         conn.close()
 
