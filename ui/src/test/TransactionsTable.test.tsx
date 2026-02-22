@@ -43,6 +43,8 @@ const makeTxn = (id: string, overrides: Partial<Transaction> = {}): Transaction 
   display_name: "Coffee Shop",
   is_transfer: false,
   is_excluded: false,
+  category_id: null,
+  notes: null,
   ...overrides,
 });
 

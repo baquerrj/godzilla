@@ -6,14 +6,13 @@
  * same field names and optionality as the backend.
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006
+ * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
+ * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
+ * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006
  */
 
-// ---------------------------------------------------------------------------
 // Response models (read)
-// ---------------------------------------------------------------------------
-
-/** Linked account metadata.  REQ: FUNC-ACCT-003 */
 export interface Account {
   account_id: string;
   provider_account_id: string;
@@ -28,7 +27,6 @@ export interface Account {
   owner_names: unknown[];
 }
 
-/** Transaction list-view record.  REQ: FUNC-TXN-001 */
 export interface Transaction {
   transaction_id: string;
   account_id: string;
@@ -41,9 +39,41 @@ export interface Transaction {
   display_name: string;
   is_transfer: boolean;
   is_excluded: boolean;
+  category_id: string | null;
+  notes: string | null;
 }
 
-/** Balance snapshot for net-worth views.  REQ: FUNC-REP-006 */
+export interface TransactionSplit {
+  split_id: string;
+  amount: number;
+  category_id: string | null;
+  notes: string | null;
+}
+
+export interface TransactionDetail extends Transaction {
+  tags: string[];
+  splits: TransactionSplit[];
+  raw_provider_payloads: Record<string, unknown>[];
+}
+
+export interface Category {
+  category_id: string;
+  name: string;
+  parent_id: string | null;
+  active: boolean;
+}
+
+export interface Conflict {
+  conflict_id: string;
+  entity_type: string;
+  entity_id: string;
+  field_name: string;
+  local_value: string;
+  provider_value: string;
+  status: string;
+  resolution_choice: string | null;
+}
+
 export interface BalanceSnapshot {
   snapshot_id: string;
   account_id: string;
@@ -53,7 +83,6 @@ export interface BalanceSnapshot {
   currency: string;
 }
 
-/** Per-item incremental-sync state.  REQ: FUNC-ACCT-004 */
 export interface SyncState {
   item_id: string;
   institution_id: string;
@@ -65,14 +94,12 @@ export interface SyncState {
   cursor: string | null;
 }
 
-/** Successful Plaid link result.  REQ: FUNC-ACCT-001, FUNC-ACCT-002 */
 export interface PlaidLinkResult {
   item_id: string;
   institution_id: string;
   env: string;
 }
 
-/** Successful Plaid sync result.  REQ: FUNC-ACCT-005, FUNC-SYNC-001 */
 export interface PlaidSyncResult {
   item_id: string;
   added: number;
@@ -82,60 +109,69 @@ export interface PlaidSyncResult {
   cursor: string;
 }
 
-// ---------------------------------------------------------------------------
 // Request payloads (write)
-// ---------------------------------------------------------------------------
-
-/** Body for POST /plaid/link.  REQ: FUNC-ACCT-001, FUNC-ACCT-002 */
 export interface PlaidLinkRequest {
   institution_id?: string;
   products?: string[];
 }
 
-/** Body for POST /plaid/sync.  REQ: FUNC-ACCT-005, FUNC-SYNC-001 */
 export interface PlaidSyncRequest {
   item_id: string;
   institution_id?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Query parameter shapes
-// ---------------------------------------------------------------------------
+export interface PatchTransactionRequest {
+  category_id?: string | null;
+  display_name?: string | null;
+  notes?: string | null;
+  is_transfer?: boolean | null;
+  is_excluded?: boolean | null;
+  add_tags?: string[];
+  remove_tags?: string[];
+}
 
-/** Optional filters/pagination for GET /transactions.  REQ: FUNC-TXN-001 */
+export interface SplitItem {
+  amount: number;
+  category_id?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  parent_id?: string | null;
+}
+
+export interface PatchCategoryRequest {
+  name?: string | null;
+  active?: boolean | null;
+}
+
+export interface ResolveConflictRequest {
+  resolution_choice: "local" | "provider";
+}
+
+// Query parameter shapes
 export interface GetTransactionsParams {
   account_id?: string;
+  date_from?: string;
+  date_to?: string;
+  category_id?: string;
+  merchant?: string;
+  amount_min?: number;
+  amount_max?: number;
   limit?: number;
   offset?: number;
   sort_by?: "date" | "amount";
   sort_order?: "asc" | "desc";
 }
 
-/** Optional filters/pagination for GET /balances.  REQ: FUNC-REP-006 */
 export interface GetBalancesParams {
   account_id?: string;
   limit?: number;
   offset?: number;
 }
 
-// ---------------------------------------------------------------------------
 // Async operation state
-// ---------------------------------------------------------------------------
-
-/**
- * Discriminated union representing the lifecycle of an async API call.
- *
- * REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-REP-006
- *
- * Usage:
- *   const [result, execute] = useApiCall<Account[]>();
- *   switch (result.status) {
- *     case "idle":    // not yet called
- *     case "loading": // in flight
- *     case "success": // result.data is T
- *     case "error":   // result.message describes the failure
- *   }
- */
 export type ApiResult<T> =
   | { status: "idle" }
   | { status: "loading" }

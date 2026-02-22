@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Policy precedence: `AGENTS.md` is the repository-wide policy source. If any instruction here conflicts with `AGENTS.md`, follow `AGENTS.md`.
+
 ## Project Overview
 
 Godzilla is a single-user personal budgeting app. The Python package `godzilla-core` contains all backend services: Plaid integration, an encrypted SQLite database, a local FastAPI sidecar, and CLI scripts.
@@ -91,9 +93,10 @@ docs/design/    Markdown design docs with Mermaid diagrams
 
 ## Traceability Requirements
 
-Every production function/class **must** include `REQ: <REQ-ID>` tags in its docstring or module header. Every test **must** also include `REQ:` tags. After any change, update `trace/requirements.yml` with new `code_refs` and `test_refs`.
-
-Requirement IDs follow the pattern: `SYS-NNN`, `FUNC-<DOMAIN>-NNN`, `SEC-<DOMAIN>-NNN`. See `docs/product-requirements-document.md` for the full list.
+Follow the traceability policy in `AGENTS.md`:
+- Add `REQ:` tags in production modules/functions/classes and tests.
+- Update `trace/requirements.yml` when requirements are impacted.
+- Use requirement IDs from `docs/product-requirements-document.md`.
 
 ## Code Quality
 
@@ -106,4 +109,4 @@ Requirement IDs follow the pattern: `SYS-NNN`, `FUNC-<DOMAIN>-NNN`, `SEC-<DOMAIN
 
 ## When to Run Lint and Tests
 
-Run lint (`ruff` + `black --check`) and the full test suite after any change to **functional** source code. For **purely non-functional changes** (e.g. adding or editing comments, TODO annotations, or docstrings without altering logic), skip running the unit tests — only run lint to verify formatting.
+Run lint (`ruff` + `black --check`) and the full test suite after any change to **functional** source code. For **purely non-functional changes** (for example comments, TODO annotations, or docstrings without logic changes), skip unit tests and run lint only.

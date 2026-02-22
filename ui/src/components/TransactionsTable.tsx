@@ -1,30 +1,43 @@
 /**
- * Transactions table: paginated list with sort-by-date and sort-by-amount.
+ * Transactions table: paginated list with sort, filter, and detail on click.
  *
- * REQ: FUNC-TXN-001
+ * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003
  */
 
 import { useEffect, useState } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
-import type { Transaction } from "../api/types";
+import type { GetTransactionsParams, Transaction } from "../api/types";
 
 const PAGE_SIZE = 50;
 
 interface Props {
   token: string;
   refreshKey: number;
+  filters?: Omit<GetTransactionsParams, "limit" | "offset" | "sort_by" | "sort_order">;
+  onSelectTransaction?: (id: string) => void;
 }
 
-export function TransactionsTable({ token, refreshKey }: Props) {
+export function TransactionsTable({
+  token,
+  refreshKey,
+  filters = {},
+  onSelectTransaction,
+}: Props) {
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [result, execute] = useApiCall<Transaction[]>();
 
-  // REQ: FUNC-TXN-001 — paginated, sorted transaction fetch
+  // Reset to first page when filters change
+  useEffect(() => {
+    setOffset(0);
+  }, [filters]);
+
+  // REQ: FUNC-TXN-001, FUNC-TXN-002 — paginated, sorted, filtered transaction fetch
   useEffect(() => {
     execute(() =>
       GodzillaApi.getTransactions(token, {
+        ...filters,
         limit: PAGE_SIZE,
         offset,
         sort_by: sortBy,
@@ -32,7 +45,7 @@ export function TransactionsTable({ token, refreshKey }: Props) {
       }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, refreshKey, offset, sortBy, sortOrder]);
+  }, [token, refreshKey, offset, sortBy, sortOrder, filters]);
 
   const handleSortClick = (field: "date" | "amount") => {
     if (field === sortBy) {
@@ -101,6 +114,7 @@ export function TransactionsTable({ token, refreshKey }: Props) {
               </th>
               <th>Merchant</th>
               <th>Display Name</th>
+              <th>Category</th>
               <th>Status</th>
               <th
                 className="sortable"
@@ -118,10 +132,18 @@ export function TransactionsTable({ token, refreshKey }: Props) {
               <tr
                 key={txn.transaction_id}
                 className={txn.is_excluded ? "excluded" : ""}
+                onClick={
+                  onSelectTransaction
+                    ? () => onSelectTransaction(txn.transaction_id)
+                    : undefined
+                }
+                style={onSelectTransaction ? { cursor: "pointer" } : undefined}
+                data-testid={`txn-row-${txn.transaction_id}`}
               >
                 <td>{txn.date}</td>
                 <td>{txn.merchant_name ?? "—"}</td>
                 <td>{txn.display_name}</td>
+                <td>{txn.category_id ?? "—"}</td>
                 <td>
                   <span className={`badge badge-${txn.status}`}>
                     {txn.status}

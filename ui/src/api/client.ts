@@ -1,17 +1,11 @@
 /**
  * Typed HTTP client for the Godzilla local API sidecar.
  *
- * All six MVP endpoints are covered.  Each function accepts an API token
- * as its first argument so the caller (typically obtained from a Tauri
- * invoke command) controls the credential lifetime.
- *
- * Base URL selection:
- *   - Dev (Vite proxy):  /api  →  Vite forwards to 127.0.0.1:8787
- *   - Production build:  http://127.0.0.1:8787  (no proxy available)
- *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006,
- * REQ: SEC-ACC-004
+ * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
+ * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
+ * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004
  */
 
 import { useCallback, useState } from "react";
@@ -19,29 +13,30 @@ import type {
   Account,
   ApiResult,
   BalanceSnapshot,
+  Category,
+  Conflict,
+  CreateCategoryRequest,
   GetBalancesParams,
   GetTransactionsParams,
+  PatchCategoryRequest,
+  PatchTransactionRequest,
   PlaidLinkRequest,
   PlaidLinkResult,
   PlaidSyncRequest,
   PlaidSyncResult,
+  ResolveConflictRequest,
+  SplitItem,
   SyncState,
   Transaction,
+  TransactionDetail,
 } from "./types";
 
-// ---------------------------------------------------------------------------
 // Internal helpers
-// ---------------------------------------------------------------------------
 
-/** In dev the Vite proxy strips /api and forwards to 127.0.0.1:8787.
- *  In production Tauri builds the WebView loads from tauri://localhost so
- *  we must use the absolute loopback address instead.
- */
 const API_BASE: string = import.meta.env.DEV
   ? "/api"
   : "http://127.0.0.1:8787";
 
-/** Structured error carrying the HTTP status code from the sidecar. */
 export class ApiError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -73,7 +68,7 @@ async function request<T>(
       const body = (await response.json()) as { detail?: string };
       if (body.detail) message = body.detail;
     } catch {
-      // Ignore JSON parse failure — keep the generic status message.
+      // Ignore JSON parse failure
     }
     throw new ApiError(response.status, message);
   }
@@ -92,36 +87,13 @@ function buildQueryString(
   return `?${qs.toString()}`;
 }
 
-// ---------------------------------------------------------------------------
 // Public API client
-// ---------------------------------------------------------------------------
 
-/**
- * Godzilla API client.
- *
- * A plain object of async functions — no class instantiation required.
- * The API token is passed per-call so individual views can use different
- * token sources (e.g., a Tauri invoke command vs. a test fixture).
- *
- * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006,
- * REQ: SEC-ACC-004
- */
 export const GodzillaApi = {
-  /**
-   * List all linked accounts.
-   *
-   * REQ: FUNC-ACCT-003
-   */
   getAccounts(token: string): Promise<Account[]> {
     return request<Account[]>("/accounts", token);
   },
 
-  /**
-   * List transactions with optional pagination and sorting.
-   *
-   * REQ: FUNC-TXN-001
-   */
   getTransactions(
     token: string,
     params: GetTransactionsParams = {},
@@ -132,11 +104,28 @@ export const GodzillaApi = {
     return request<Transaction[]>(`/transactions${qs}`, token);
   },
 
-  /**
-   * List balance snapshots with optional account filter and pagination.
-   *
-   * REQ: FUNC-REP-006
-   */
+  getTransaction(token: string, id: string): Promise<TransactionDetail> {
+    return request<TransactionDetail>(`/transactions/${encodeURIComponent(id)}`, token);
+  },
+
+  patchTransaction(
+    token: string,
+    id: string,
+    body: PatchTransactionRequest,
+  ): Promise<TransactionDetail> {
+    return request<TransactionDetail>(`/transactions/${encodeURIComponent(id)}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  postSplits(token: string, id: string, splits: SplitItem[]): Promise<TransactionDetail> {
+    return request<TransactionDetail>(`/transactions/${encodeURIComponent(id)}/splits`, token, {
+      method: "POST",
+      body: JSON.stringify(splits),
+    });
+  },
+
   getBalances(
     token: string,
     params: GetBalancesParams = {},
@@ -147,20 +136,43 @@ export const GodzillaApi = {
     return request<BalanceSnapshot[]>(`/balances${qs}`, token);
   },
 
-  /**
-   * List per-item sync state for all linked Plaid items.
-   *
-   * REQ: FUNC-ACCT-004
-   */
   getSyncState(token: string): Promise<SyncState[]> {
     return request<SyncState[]>("/sync-state", token);
   },
 
-  /**
-   * Create a sandbox Plaid item and store its access token.
-   *
-   * REQ: FUNC-ACCT-001, FUNC-ACCT-002
-   */
+  getCategories(token: string): Promise<Category[]> {
+    return request<Category[]>("/categories", token);
+  },
+
+  postCategory(token: string, body: CreateCategoryRequest): Promise<Category> {
+    return request<Category>("/categories", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  patchCategory(token: string, id: string, body: PatchCategoryRequest): Promise<Category> {
+    return request<Category>(`/categories/${encodeURIComponent(id)}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  getConflicts(token: string, status = "open"): Promise<Conflict[]> {
+    return request<Conflict[]>(`/conflicts?status=${encodeURIComponent(status)}`, token);
+  },
+
+  resolveConflict(
+    token: string,
+    id: string,
+    body: ResolveConflictRequest,
+  ): Promise<Conflict> {
+    return request<Conflict>(`/conflicts/${encodeURIComponent(id)}/resolve`, token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   plaidLink(token: string, body: PlaidLinkRequest): Promise<PlaidLinkResult> {
     return request<PlaidLinkResult>("/plaid/link", token, {
       method: "POST",
@@ -168,11 +180,6 @@ export const GodzillaApi = {
     });
   },
 
-  /**
-   * Trigger an incremental sync for one Plaid item.
-   *
-   * REQ: FUNC-ACCT-005, FUNC-SYNC-001
-   */
   plaidSync(
     token: string,
     body: PlaidSyncRequest,
@@ -184,29 +191,8 @@ export const GodzillaApi = {
   },
 } as const;
 
-// ---------------------------------------------------------------------------
 // React hook
-// ---------------------------------------------------------------------------
 
-/**
- * React hook for wrapping any GodzillaApi call with loading/error/success state.
- *
- * REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-REP-006
- *
- * @example
- * ```tsx
- * const [result, execute] = useApiCall<Account[]>();
- *
- * useEffect(() => {
- *   execute(() => GodzillaApi.getAccounts(token));
- * }, [token]);
- *
- * if (result.status === "loading") return <Spinner />;
- * if (result.status === "error")   return <ErrorBanner message={result.message} />;
- * if (result.status === "success") return <AccountList accounts={result.data} />;
- * return null;
- * ```
- */
 export function useApiCall<T>(): [
   ApiResult<T>,
   (fn: () => Promise<T>) => Promise<void>,
