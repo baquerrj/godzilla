@@ -87,6 +87,31 @@ docker compose -f docker-compose.dev.yml exec dev bash -lc 'cd /workspace/godzil
 The `.devcontainer/devcontainer.json` file is configured for the same service, but this pure named-volume workflow expects the repository content inside `/workspace/godzilla`.
 If that command is missing, install the Dev Containers extension (`ms-vscode-remote.remote-containers`) in the host VS Code and reload.
 
+## Claude CLI inside the container
+
+The dev image installs the Claude Code CLI via the official native installer during the build. The
+binary lands at `~/.local/bin/claude`, which is already on `PATH`.
+
+Authentication credentials live in `~/.claude/` on the host. Mount them into the container with the
+`docker-compose.dev.claude.yml` override so that no separate login step is required:
+
+```bash
+docker compose \
+  -f docker-compose.dev.yml \
+  -f docker-compose.dev.claude.yml \
+  up -d dev
+```
+
+If you prefer API-key authentication instead of OAuth, export `ANTHROPIC_API_KEY` in your shell
+before starting the container — the override file passes it through automatically.
+
+The auto-updater is disabled inside the container (`DISABLE_AUTOUPDATER=1`). To pick up a new
+version of Claude Code, rebuild the image:
+
+```bash
+docker compose -f docker-compose.dev.yml build --no-cache dev
+```
+
 ## Git and network access
 - The image includes Git and OpenSSH client tooling.
 - Outbound network access is provided by Docker's default bridge networking.

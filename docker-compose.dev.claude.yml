@@ -1,0 +1,10 @@
+# REQ: SEC-DATA-004
+
+services:
+  dev:
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Disable the auto-updater; upgrade the image instead to pick up a new claude version.
+      DISABLE_AUTOUPDATER: "1"
+    volumes:
+      - ${HOME}/.claude:/home/vscode/.claude:rw
