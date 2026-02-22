@@ -7,8 +7,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TransactionFilters, EMPTY_FILTERS } from "../components/TransactionFilters";
-import type { FilterValues } from "../components/TransactionFilters";
-import type { Category } from "../api/types";
+import type { Account, Category } from "../api/types";
 
 const makeCategory = (
   id: string,
@@ -22,8 +21,19 @@ const makeCategory = (
   active,
 });
 
-const TOKEN = "tok";
-void TOKEN;
+const makeAccount = (id: string, name: string): Account => ({
+  account_id: id,
+  provider_account_id: `${id}-provider`,
+  item_id: "item-1",
+  institution_id: "ins_1",
+  name,
+  account_type: "depository",
+  subtype: "checking",
+  mask: "1234",
+  balance: 100,
+  currency: "USD",
+  owner_names: [],
+});
 
 describe("TransactionFilters", () => {
   it("renders all filter inputs  REQ: FUNC-TXN-002", () => {
@@ -31,11 +41,13 @@ describe("TransactionFilters", () => {
     render(
       <TransactionFilters
         values={EMPTY_FILTERS}
+        accounts={[]}
         categories={[]}
         onChange={onChange}
         onReset={vi.fn()}
       />,
     );
+    expect(screen.getByTestId("filter-account")).toBeInTheDocument();
     expect(screen.getByTestId("filter-date-from")).toBeInTheDocument();
     expect(screen.getByTestId("filter-date-to")).toBeInTheDocument();
     expect(screen.getByTestId("filter-merchant")).toBeInTheDocument();
@@ -54,6 +66,7 @@ describe("TransactionFilters", () => {
     render(
       <TransactionFilters
         values={EMPTY_FILTERS}
+        accounts={[]}
         categories={cats}
         onChange={onChange}
         onReset={vi.fn()}
@@ -72,6 +85,7 @@ describe("TransactionFilters", () => {
     render(
       <TransactionFilters
         values={EMPTY_FILTERS}
+        accounts={[]}
         categories={[]}
         onChange={onChange}
         onReset={vi.fn()}
@@ -90,6 +104,7 @@ describe("TransactionFilters", () => {
     render(
       <TransactionFilters
         values={EMPTY_FILTERS}
+        accounts={[]}
         categories={[]}
         onChange={vi.fn()}
         onReset={onReset}
@@ -97,5 +112,24 @@ describe("TransactionFilters", () => {
     );
     fireEvent.click(screen.getByTestId("filter-reset"));
     expect(onReset).toHaveBeenCalledOnce();
+  });
+
+  it("calls onChange when account changes  REQ: FUNC-TXN-002", () => {
+    const onChange = vi.fn();
+    render(
+      <TransactionFilters
+        values={EMPTY_FILTERS}
+        accounts={[makeAccount("acc_1", "Checking")]}
+        categories={[]}
+        onChange={onChange}
+        onReset={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("filter-account"), {
+      target: { value: "acc_1" },
+    });
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ account_id: "acc_1" }),
+    );
   });
 });

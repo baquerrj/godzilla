@@ -96,6 +96,7 @@
   - ui/src/api/types.ts:Account
   - ui/src/api/client.ts:GodzillaApi.getAccounts
   - ui/src/api/client.ts:useApiCall
+  - ui/src/App.tsx:App
   - ui/src/components/AccountsTable.tsx:AccountsTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
@@ -266,29 +267,39 @@
   code_refs:
   - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
   - godzilla_core/api/app.py:get_conflicts
+  - ui/src/api/types.ts:Conflict
+  - ui/src/api/client.ts:GodzillaApi.getConflicts
+  - ui/src/components/ConflictQueue.tsx:ConflictQueue
   test_refs:
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_creates_open_conflict_row
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_when_values_match
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_without_user_override
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_deduplicates_open_conflicts
   - godzilla_core/tests/test_api_layer.py:test_get_conflicts_returns_empty_list
+  - ui/src/test/ConflictQueue.test.tsx:shows conflict rows with local and provider values
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-SYNC-007
   title: Conflict resolution queue
   parent_requirement_id: FUNC-SYNC-006
   code_refs:
   - godzilla_core/api/app.py:resolve_conflict
+  - ui/src/api/types.ts:ResolveConflictRequest
+  - ui/src/api/client.ts:GodzillaApi.resolveConflict
+  - ui/src/components/ConflictQueue.tsx:ConflictQueue
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_resolve_conflict_local_choice
+  - ui/src/test/ConflictQueue.test.tsx:resolves conflict with local choice
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-001
   title: Transaction list
   parent_requirement_id: SYS-001
@@ -297,6 +308,7 @@
   - ui/src/api/types.ts:Transaction
   - ui/src/api/types.ts:GetTransactionsParams
   - ui/src/api/client.ts:GodzillaApi.getTransactions
+  - ui/src/App.tsx:App
   - ui/src/components/TransactionsTable.tsx:TransactionsTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_supports_pagination_and_sorting
@@ -306,90 +318,125 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-002
   title: Search and filters
   parent_requirement_id: FUNC-TXN-001
   code_refs:
   - godzilla_core/api/app.py:get_transactions
+  - ui/src/App.tsx:App
+  - ui/src/components/TransactionFilters.tsx:TransactionFilters
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_date_filter
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_merchant_filter
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_amount_filter
+  - ui/src/test/TransactionFilters.test.tsx:TransactionFilters
+  - ui/src/test/TransactionsTable.test.tsx:passes filter params to getTransactions
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-003
   title: Transaction detail view
   parent_requirement_id: FUNC-TXN-001
   code_refs:
   - godzilla_core/api/app.py:get_transaction_detail
   - godzilla_core/api/app.py:get_transaction_detail_internal
+  - ui/src/api/types.ts:TransactionDetail
+  - ui/src/api/client.ts:GodzillaApi.getTransaction
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_transaction_detail_not_found
   - godzilla_core/tests/test_api_layer.py:test_get_transaction_detail_success
+  - ui/src/test/TransactionDetailPanel.test.tsx:fetches and displays transaction detail
+  - ui/src/test/TransactionsTable.test.tsx:calls onSelectTransaction when a row is clicked
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-004
   title: Category override
   parent_requirement_id: FUNC-SYNC-004
   code_refs:
   - godzilla_core/api/app.py:patch_transaction
   - godzilla_core/api/app.py:_validate_category_assignment
+  - ui/src/api/client.ts:GodzillaApi.patchTransaction
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_category_and_notes
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_rejects_parent_category
+  - ui/src/test/TransactionDetailPanel.test.tsx:saves category and notes via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-005
   title: Notes and tags
   parent_requirement_id: FUNC-TXN-002
   code_refs:
   - godzilla_core/api/app.py:patch_transaction
+  - ui/src/api/client.ts:GodzillaApi.patchTransaction
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_tags_add_and_remove
+  - ui/src/test/TransactionDetailPanel.test.tsx:saves category and notes via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-006
   title: Mark transfer
   parent_requirement_id: FUNC-BUD-004
   code_refs:
   - godzilla_core/api/app.py:patch_transaction
+  - ui/src/api/client.ts:GodzillaApi.patchTransaction
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
+  - ui/src/test/TransactionDetailPanel.test.tsx:toggles transfer flag via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-007
   title: Exclude from budget
   parent_requirement_id: FUNC-BUD-004
   code_refs:
   - godzilla_core/api/app.py:patch_transaction
+  - ui/src/api/client.ts:GodzillaApi.patchTransaction
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
+  - ui/src/test/TransactionDetailPanel.test.tsx:toggles exclude flag via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-008
   title: Split transactions
   parent_requirement_id: FUNC-TXN-003
   code_refs:
   - godzilla_core/api/app.py:post_transaction_splits
+  - ui/src/api/types.ts:SplitItem
+  - ui/src/api/client.ts:GodzillaApi.postSplits
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_post_splits_replaces_existing
   - godzilla_core/tests/test_api_layer.py:test_post_splits_rejects_wrong_sum
+  - ui/src/test/TransactionDetailPanel.test.tsx:saves splits via postSplits
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-TXN-009
   title: Deduplication heuristic fallback
   parent_requirement_id: FUNC-SYNC-002
@@ -405,12 +452,18 @@
   code_refs:
   - godzilla_core/api/app.py:get_categories
   - migrations/0002_seed_categories.sql
+  - ui/src/components/categoryUtils.ts:leafActiveCategories
+  - ui/src/components/TransactionFilters.tsx:TransactionFilters
+  - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
+  - ui/src/App.tsx:App
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_categories_seeded_taxonomy
+  - ui/src/test/TransactionFilters.test.tsx:shows only leaf active categories in dropdown
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: FUNC-CAT-002
   title: Category management
   parent_requirement_id: FUNC-CAT-001

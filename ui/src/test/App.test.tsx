@@ -2,7 +2,7 @@
  * Tests for the root App component: token gate and layout rendering.
  *
  * REQ: SEC-ACC-004, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-TXN-001, FUNC-REP-006
+ * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007, FUNC-REP-006
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -23,8 +23,16 @@ vi.mock("../api/client", async () => {
     GodzillaApi: {
       getAccounts: vi.fn().mockResolvedValue([]),
       getTransactions: vi.fn().mockResolvedValue([]),
+      getTransaction: vi.fn(),
+      patchTransaction: vi.fn(),
+      postSplits: vi.fn(),
       getBalances: vi.fn().mockResolvedValue([]),
       getSyncState: vi.fn().mockResolvedValue([]),
+      getCategories: vi.fn().mockResolvedValue([]),
+      postCategory: vi.fn(),
+      patchCategory: vi.fn(),
+      getConflicts: vi.fn().mockResolvedValue([]),
+      resolveConflict: vi.fn(),
       plaidLink: vi.fn(),
       plaidSync: vi.fn(),
     },
@@ -40,10 +48,16 @@ describe("App", () => {
   });
 
   it("shows loading state while fetching token", () => {
-    // Never resolves during this test
-    mockInvoke.mockReturnValue(new Promise(() => {}));
+    let resolveToken: (value: string) => void = () => {};
+    mockInvoke.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveToken = resolve;
+        }),
+    );
     render(<App />);
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
+    resolveToken("");
   });
 
   it("shows error when token is empty  REQ: SEC-ACC-004", async () => {
@@ -60,6 +74,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("sync-state-panel")).toBeInTheDocument();
       expect(screen.getByTestId("accounts-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
       expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
     });

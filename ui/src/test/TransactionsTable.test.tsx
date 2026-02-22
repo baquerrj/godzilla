@@ -1,7 +1,7 @@
 /**
- * Tests for TransactionsTable: rendering, pagination, sorting.
+ * Tests for TransactionsTable: rendering, pagination, sorting, filters.
  *
- * REQ: FUNC-TXN-001
+ * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -131,5 +131,45 @@ describe("TransactionsTable", () => {
         expect.objectContaining({ sort_by: "amount", sort_order: "asc" }),
       ),
     );
+  });
+
+  it("passes filter params to getTransactions  REQ: FUNC-TXN-002", async () => {
+    mockGetTransactions.mockResolvedValue([makeTxn("txn-filter")]);
+    render(
+      <TransactionsTable
+        token={TOKEN}
+        refreshKey={0}
+        filters={{
+          merchant: "Coffee",
+          category_id: "food_coffee",
+          account_id: "acc1",
+        }}
+      />,
+    );
+    await waitFor(() => {
+      expect(mockGetTransactions).toHaveBeenLastCalledWith(
+        TOKEN,
+        expect.objectContaining({
+          merchant: "Coffee",
+          category_id: "food_coffee",
+          account_id: "acc1",
+        }),
+      );
+    });
+  });
+
+  it("calls onSelectTransaction when a row is clicked  REQ: FUNC-TXN-003", async () => {
+    mockGetTransactions.mockResolvedValue([makeTxn("txn-choose")]);
+    const onSelect = vi.fn();
+    render(
+      <TransactionsTable
+        token={TOKEN}
+        refreshKey={0}
+        onSelectTransaction={onSelect}
+      />,
+    );
+    await waitFor(() => screen.getByTestId("txn-row-txn-choose"));
+    await userEvent.click(screen.getByTestId("txn-row-txn-choose"));
+    expect(onSelect).toHaveBeenCalledWith("txn-choose");
   });
 });

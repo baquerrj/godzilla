@@ -6,11 +6,12 @@
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
- * REQ: FUNC-TXN-003, FUNC-CAT-001, FUNC-SYNC-006, FUNC-SYNC-007,
- * REQ: FUNC-REP-006, SEC-ACC-004
+ * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
+ * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-SYNC-006,
+ * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AccountsTable } from "./components/AccountsTable";
 import { BalancesTable } from "./components/BalancesTable";
@@ -21,7 +22,7 @@ import { TransactionFilters, EMPTY_FILTERS } from "./components/TransactionFilte
 import type { FilterValues } from "./components/TransactionFilters";
 import { TransactionsTable } from "./components/TransactionsTable";
 import { GodzillaApi } from "./api/client";
-import type { Category, GetTransactionsParams } from "./api/types";
+import type { Account, Category, GetTransactionsParams } from "./api/types";
 import "./App.css";
 
 export function App() {
@@ -29,6 +30,7 @@ export function App() {
   const [token, setToken] = useState<string | null>(null);
   // Incrementing this causes all data panels to re-fetch.
   const [refreshKey, setRefreshKey] = useState(0);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [filterValues, setFilterValues] = useState<FilterValues>(EMPTY_FILTERS);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
@@ -40,39 +42,45 @@ export function App() {
       .catch(() => setToken(""));
   }, []);
 
-  // Load categories once after token is available
+  // Load filter lookup data whenever token/refresh changes.
   useEffect(() => {
-    if (token) {
-      GodzillaApi.getCategories(token)
-        .then(setCategories)
-        .catch(() => {
-          // Categories are optional; swallow error silently
-        });
-    }
-  }, [token]);
+    if (!token) return;
+    const loadLookups = async () => {
+      const [accountsResult, categoriesResult] = await Promise.allSettled([
+        GodzillaApi.getAccounts(token),
+        GodzillaApi.getCategories(token),
+      ]);
+      if (accountsResult.status === "fulfilled") {
+        setAccounts(accountsResult.value);
+      }
+      if (categoriesResult.status === "fulfilled") {
+        setCategories(categoriesResult.value);
+      }
+    };
+    void loadLookups();
+  }, [token, refreshKey]);
 
   const handleRefresh = () => {
     setRefreshKey((k) => k + 1);
-    if (token) {
-      GodzillaApi.getCategories(token)
-        .then(setCategories)
-        .catch(() => {});
-    }
   };
 
   // Build API filter params from controlled filter form values
-  const activeFilters: GetTransactionsParams = {
-    ...(filterValues.date_from ? { date_from: filterValues.date_from } : {}),
-    ...(filterValues.date_to ? { date_to: filterValues.date_to } : {}),
-    ...(filterValues.merchant ? { merchant: filterValues.merchant } : {}),
-    ...(filterValues.amount_min !== ""
-      ? { amount_min: parseFloat(filterValues.amount_min) }
-      : {}),
-    ...(filterValues.amount_max !== ""
-      ? { amount_max: parseFloat(filterValues.amount_max) }
-      : {}),
-    ...(filterValues.category_id ? { category_id: filterValues.category_id } : {}),
-  };
+  const activeFilters: GetTransactionsParams = useMemo(
+    () => ({
+      ...(filterValues.account_id ? { account_id: filterValues.account_id } : {}),
+      ...(filterValues.date_from ? { date_from: filterValues.date_from } : {}),
+      ...(filterValues.date_to ? { date_to: filterValues.date_to } : {}),
+      ...(filterValues.merchant ? { merchant: filterValues.merchant } : {}),
+      ...(filterValues.amount_min !== ""
+        ? { amount_min: parseFloat(filterValues.amount_min) }
+        : {}),
+      ...(filterValues.amount_max !== ""
+        ? { amount_max: parseFloat(filterValues.amount_max) }
+        : {}),
+      ...(filterValues.category_id ? { category_id: filterValues.category_id } : {}),
+    }),
+    [filterValues],
+  );
 
   if (token === null) {
     return <div className="status-msg">Connecting…</div>;
@@ -107,6 +115,7 @@ export function App() {
         <AccountsTable token={token} refreshKey={refreshKey} />
         <TransactionFilters
           values={filterValues}
+          accounts={accounts}
           categories={categories}
           onChange={setFilterValues}
           onReset={() => setFilterValues(EMPTY_FILTERS)}

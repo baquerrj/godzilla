@@ -9,6 +9,10 @@ import { GodzillaApi, useApiCall } from "../api/client";
 import type { GetTransactionsParams, Transaction } from "../api/types";
 
 const PAGE_SIZE = 50;
+const NO_FILTERS: Omit<
+  GetTransactionsParams,
+  "limit" | "offset" | "sort_by" | "sort_order"
+> = {};
 
 interface Props {
   token: string;
@@ -20,24 +24,25 @@ interface Props {
 export function TransactionsTable({
   token,
   refreshKey,
-  filters = {},
+  filters,
   onSelectTransaction,
 }: Props) {
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [result, execute] = useApiCall<Transaction[]>();
+  const appliedFilters = filters ?? NO_FILTERS;
 
   // Reset to first page when filters change
   useEffect(() => {
     setOffset(0);
-  }, [filters]);
+  }, [appliedFilters]);
 
   // REQ: FUNC-TXN-001, FUNC-TXN-002 — paginated, sorted, filtered transaction fetch
   useEffect(() => {
     execute(() =>
       GodzillaApi.getTransactions(token, {
-        ...filters,
+        ...appliedFilters,
         limit: PAGE_SIZE,
         offset,
         sort_by: sortBy,
@@ -45,7 +50,7 @@ export function TransactionsTable({
       }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, refreshKey, offset, sortBy, sortOrder, filters]);
+  }, [token, refreshKey, offset, sortBy, sortOrder, appliedFilters]);
 
   const handleSortClick = (field: "date" | "amount") => {
     if (field === sortBy) {

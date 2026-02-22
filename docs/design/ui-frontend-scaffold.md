@@ -1,7 +1,9 @@
 # UI Frontend Scaffold and API Client
 
 Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
-FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006, SEC-NET-001,
+FUNC-ACCT-005, FUNC-SYNC-001, FUNC-SYNC-006, FUNC-SYNC-007, FUNC-TXN-001,
+FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
+FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-REP-006, SEC-NET-001,
 SEC-NET-002, SEC-ACC-004
 
 ## Problem statement
@@ -206,6 +208,60 @@ file registers `@testing-library/jest-dom/vitest` matchers and explicit
 while keeping `useApiCall` real so state transitions are exercised.
 
 Run with: `cd ui && npm test`
+
+## M2 UI extension (task 12)
+
+M2 task 12 adds the transaction-management UI surface and conflict queue:
+
+- `TransactionFilters` controls `account`, date range, merchant text, amount
+  range, and category filters (leaf categories only).
+- `TransactionsTable` accepts filter params and opens a selected transaction
+  in `TransactionDetailPanel`.
+- `TransactionDetailPanel` supports category/notes updates, transfer/exclude
+  toggles, and split editing (`POST /transactions/{id}/splits`).
+- `ConflictQueue` lists open conflicts and posts local/provider resolutions.
+
+### Updated component hierarchy
+
+```
+App
+├── SyncStatePanel
+├── ConflictQueue
+├── AccountsTable
+├── TransactionFilters
+├── TransactionsTable
+├── TransactionDetailPanel
+└── BalancesTable
+```
+
+### M2 interaction flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant F as TransactionFilters
+  participant T as TransactionsTable
+  participant D as TransactionDetailPanel
+  participant C as ConflictQueue
+  participant API as FastAPI sidecar
+
+  U->>F: set filter values
+  F->>T: filters prop update
+  T->>API: GET /transactions?...
+  API-->>T: filtered transactions
+
+  U->>T: click transaction row
+  T->>D: transactionId selected
+  D->>API: GET /transactions/{id}
+  API-->>D: detail + splits + raw payload
+  U->>D: update fields / splits
+  D->>API: PATCH /transactions/{id} or POST /transactions/{id}/splits
+  API-->>D: updated detail
+
+  C->>API: GET /conflicts?status=open
+  U->>C: choose local/provider resolution
+  C->>API: POST /conflicts/{id}/resolve
+```
 
 ## Rollout/migration notes
 

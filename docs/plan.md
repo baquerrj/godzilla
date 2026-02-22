@@ -57,7 +57,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   Detect field-level conflicts during sync, write to `conflict` table.
   `GET /conflicts`, `POST /conflicts/{id}/resolve`.
 
-- [ ] **12. M2 UI**
+- [x] **12. M2 UI**
   Transaction list with search/filter, detail view, category picker,
   mark transfer/exclude/split, conflict resolution queue.
 

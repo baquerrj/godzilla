@@ -1,13 +1,14 @@
 /**
  * Tests for TransactionDetailPanel component.
  *
- * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005
+ * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
+ * REQ: FUNC-TXN-007, FUNC-TXN-008
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { TransactionDetailPanel } from "../components/TransactionDetailPanel";
-import type { TransactionDetail } from "../api/types";
+import type { Category, TransactionDetail } from "../api/types";
 
 vi.mock("../api/client", async () => {
   const actual =
@@ -36,8 +37,14 @@ vi.mock("../api/client", async () => {
 import { GodzillaApi } from "../api/client";
 const mockGetTransaction = vi.mocked(GodzillaApi.getTransaction);
 const mockPatchTransaction = vi.mocked(GodzillaApi.patchTransaction);
+const mockPostSplits = vi.mocked(GodzillaApi.postSplits);
 
 const TOKEN = "tok";
+const CATEGORIES: Category[] = [
+  { category_id: "food", name: "Food", parent_id: null, active: true },
+  { category_id: "food_coffee", name: "Coffee", parent_id: "food", active: true },
+  { category_id: "travel", name: "Travel", parent_id: null, active: true },
+];
 
 const makeTxnDetail = (overrides: Partial<TransactionDetail> = {}): TransactionDetail => ({
   transaction_id: "txn-1",
@@ -81,14 +88,15 @@ describe("TransactionDetailPanel", () => {
       <TransactionDetailPanel
         token={TOKEN}
         transactionId="txn-1"
-        categories={[]}
+        categories={CATEGORIES}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
       />,
     );
     await waitFor(() => {
-      expect(screen.getByText("Coffee Shop")).toBeInTheDocument();
+      expect(screen.getByText("Transaction Detail")).toBeInTheDocument();
       expect(screen.getByText("42.00 USD")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("morning coffee")).toBeInTheDocument();
     });
   });
 
@@ -99,7 +107,7 @@ describe("TransactionDetailPanel", () => {
       <TransactionDetailPanel
         token={TOKEN}
         transactionId="txn-1"
-        categories={[]}
+        categories={CATEGORIES}
         onClose={onClose}
         onUpdated={vi.fn()}
       />,
@@ -119,7 +127,7 @@ describe("TransactionDetailPanel", () => {
       <TransactionDetailPanel
         token={TOKEN}
         transactionId="txn-1"
-        categories={[]}
+        categories={CATEGORIES}
         onClose={vi.fn()}
         onUpdated={onUpdated}
       />,
@@ -141,13 +149,97 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
+  it("toggles transfer flag via patchTransaction  REQ: FUNC-TXN-006", async () => {
+    const detail = makeTxnDetail({ is_transfer: false });
+    mockGetTransaction.mockResolvedValue(detail);
+    mockPatchTransaction.mockResolvedValue({ ...detail, is_transfer: true });
+
+    render(
+      <TransactionDetailPanel
+        token={TOKEN}
+        transactionId="txn-1"
+        categories={CATEGORIES}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => screen.getByTestId("detail-is-transfer"));
+    fireEvent.click(screen.getByTestId("detail-is-transfer"));
+
+    await waitFor(() => {
+      expect(mockPatchTransaction).toHaveBeenCalledWith(
+        TOKEN,
+        "txn-1",
+        expect.objectContaining({ is_transfer: true }),
+      );
+    });
+  });
+
+  it("toggles exclude flag via patchTransaction  REQ: FUNC-TXN-007", async () => {
+    const detail = makeTxnDetail({ is_excluded: false });
+    mockGetTransaction.mockResolvedValue(detail);
+    mockPatchTransaction.mockResolvedValue({ ...detail, is_excluded: true });
+
+    render(
+      <TransactionDetailPanel
+        token={TOKEN}
+        transactionId="txn-1"
+        categories={CATEGORIES}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => screen.getByTestId("detail-is-excluded"));
+    fireEvent.click(screen.getByTestId("detail-is-excluded"));
+
+    await waitFor(() => {
+      expect(mockPatchTransaction).toHaveBeenCalledWith(
+        TOKEN,
+        "txn-1",
+        expect.objectContaining({ is_excluded: true }),
+      );
+    });
+  });
+
+  it("saves splits via postSplits  REQ: FUNC-TXN-008", async () => {
+    const detail = makeTxnDetail({
+      amount: 42.0,
+      splits: [{ split_id: "s1", amount: 42.0, category_id: null, notes: null }],
+    });
+    mockGetTransaction.mockResolvedValue(detail);
+    mockPostSplits.mockResolvedValue(detail);
+
+    render(
+      <TransactionDetailPanel
+        token={TOKEN}
+        transactionId="txn-1"
+        categories={CATEGORIES}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("split-save")).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByTestId("split-save"));
+
+    await waitFor(() => {
+      expect(mockPostSplits).toHaveBeenCalledWith(TOKEN, "txn-1", [
+        { amount: 42, category_id: null, notes: null },
+      ]);
+    });
+  });
+
   it("shows error on fetch failure  REQ: FUNC-TXN-003", async () => {
     mockGetTransaction.mockRejectedValue(new Error("not found"));
     render(
       <TransactionDetailPanel
         token={TOKEN}
         transactionId="txn-1"
-        categories={[]}
+        categories={CATEGORIES}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
       />,

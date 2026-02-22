@@ -4,9 +4,12 @@
  * REQ: FUNC-TXN-002
  */
 
-import type { Category } from "../api/types";
+import type { ChangeEvent } from "react";
+import type { Account, Category } from "../api/types";
+import { leafActiveCategories } from "./categoryUtils";
 
 export interface FilterValues {
+  account_id: string;
   date_from: string;
   date_to: string;
   merchant: string;
@@ -16,6 +19,7 @@ export interface FilterValues {
 }
 
 export const EMPTY_FILTERS: FilterValues = {
+  account_id: "",
   date_from: "",
   date_to: "",
   merchant: "",
@@ -26,34 +30,40 @@ export const EMPTY_FILTERS: FilterValues = {
 
 interface Props {
   values: FilterValues;
+  accounts: Account[];
   categories: Category[];
   onChange: (values: FilterValues) => void;
   onReset: () => void;
 }
 
-/** Returns the set of category IDs that are parents (non-leaf). */
-function parentIds(categories: Category[]): Set<string> {
-  const ids = new Set<string>();
-  for (const cat of categories) {
-    if (cat.parent_id !== null) {
-      ids.add(cat.parent_id);
-    }
-  }
-  return ids;
-}
-
-export function TransactionFilters({ values, categories, onChange, onReset }: Props) {
-  const parents = parentIds(categories);
-  const leafCategories = categories.filter(
-    (c) => c.active && !parents.has(c.category_id),
-  );
+export function TransactionFilters({
+  values,
+  accounts,
+  categories,
+  onChange,
+  onReset,
+}: Props) {
+  const leafCategories = leafActiveCategories(categories);
 
   const set = (field: keyof FilterValues) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => onChange({ ...values, [field]: e.target.value });
 
   return (
     <div className="filter-bar" data-testid="transaction-filters">
+      <select
+        aria-label="Account"
+        value={values.account_id}
+        onChange={set("account_id")}
+        data-testid="filter-account"
+      >
+        <option value="">All accounts</option>
+        {accounts.map((account) => (
+          <option key={account.account_id} value={account.account_id}>
+            {account.name}
+          </option>
+        ))}
+      </select>
       <input
         type="date"
         aria-label="From date"
