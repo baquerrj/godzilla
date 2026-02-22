@@ -235,8 +235,13 @@
 - requirement_id: FUNC-SYNC-004
   title: Provider provenance
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_upsert_provider_override
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  - godzilla_core/api/app.py:patch_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_insert_writes_provider_override
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_category_and_notes
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -245,8 +250,11 @@
 - requirement_id: FUNC-SYNC-005
   title: Offline edits
   parent_requirement_id: FUNC-SYNC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_preserved_value
+  - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_update_preserves_user_value_on_conflict
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -255,8 +263,15 @@
 - requirement_id: FUNC-SYNC-006
   title: Conflict detection
   parent_requirement_id: FUNC-SYNC-005
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
+  - godzilla_core/api/app.py:get_conflicts
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_creates_open_conflict_row
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_when_values_match
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_without_user_override
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_deduplicates_open_conflicts
+  - godzilla_core/tests/test_api_layer.py:test_get_conflicts_returns_empty_list
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -265,8 +280,10 @@
 - requirement_id: FUNC-SYNC-007
   title: Conflict resolution queue
   parent_requirement_id: FUNC-SYNC-006
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:resolve_conflict
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_resolve_conflict_local_choice
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -292,8 +309,12 @@
 - requirement_id: FUNC-TXN-002
   title: Search and filters
   parent_requirement_id: FUNC-TXN-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_transactions
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_transactions_date_filter
+  - godzilla_core/tests/test_api_layer.py:test_get_transactions_merchant_filter
+  - godzilla_core/tests/test_api_layer.py:test_get_transactions_amount_filter
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -301,8 +322,12 @@
 - requirement_id: FUNC-TXN-003
   title: Transaction detail view
   parent_requirement_id: FUNC-TXN-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_transaction_detail
+  - godzilla_core/api/app.py:get_transaction_detail_internal
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_transaction_detail_not_found
+  - godzilla_core/tests/test_api_layer.py:test_get_transaction_detail_success
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -310,8 +335,12 @@
 - requirement_id: FUNC-TXN-004
   title: Category override
   parent_requirement_id: FUNC-SYNC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:patch_transaction
+  - godzilla_core/api/app.py:_validate_category_assignment
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_category_and_notes
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_rejects_parent_category
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -319,8 +348,10 @@
 - requirement_id: FUNC-TXN-005
   title: Notes and tags
   parent_requirement_id: FUNC-TXN-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:patch_transaction
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_tags_add_and_remove
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -328,8 +359,10 @@
 - requirement_id: FUNC-TXN-006
   title: Mark transfer
   parent_requirement_id: FUNC-BUD-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:patch_transaction
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -337,8 +370,10 @@
 - requirement_id: FUNC-TXN-007
   title: Exclude from budget
   parent_requirement_id: FUNC-BUD-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:patch_transaction
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -346,8 +381,11 @@
 - requirement_id: FUNC-TXN-008
   title: Split transactions
   parent_requirement_id: FUNC-TXN-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:post_transaction_splits
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_post_splits_replaces_existing
+  - godzilla_core/tests/test_api_layer.py:test_post_splits_rejects_wrong_sum
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -364,8 +402,11 @@
 - requirement_id: FUNC-CAT-001
   title: Category hierarchy
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_categories
+  - migrations/0002_seed_categories.sql
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_categories_seeded_taxonomy
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -373,8 +414,14 @@
 - requirement_id: FUNC-CAT-002
   title: Category management
   parent_requirement_id: FUNC-CAT-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:create_category
+  - godzilla_core/api/app.py:patch_category
+  - godzilla_core/api/app.py:_validate_category_assignment
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_create_category
+  - godzilla_core/tests/test_api_layer.py:test_patch_category_rename
+  - godzilla_core/tests/test_api_layer.py:test_deactivate_category_blocked_when_assigned
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -382,8 +429,15 @@
 - requirement_id: FUNC-CAT-003
   title: Provider category mapping
   parent_requirement_id: FUNC-SYNC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_resolve_category_id
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_resolves_detailed_key
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_falls_back_to_primary
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_unknown_returns_none
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_empty_pfc_returns_none
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_insert_sets_category_id
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md

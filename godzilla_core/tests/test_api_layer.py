@@ -2,8 +2,10 @@
 """API layer tests.
 
 REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
-REQ: FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006, FUNC-AUD-002,
-REQ: SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
+REQ: FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
+REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
+REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-006, FUNC-SYNC-007,
+REQ: FUNC-REP-006, FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
 from __future__ import annotations
@@ -450,3 +452,348 @@ def test_run_api_server_starts_with_loopback_host() -> None:
         host="127.0.0.1",
         port=8899,
     )
+
+
+# ── Transaction filter tests (Task 6) ────────────────────────────────────────
+
+
+async def test_get_transactions_filter_by_date_range(api_client: httpx.AsyncClient) -> None:
+    """Verify date_from / date_to filters narrow transaction results.
+
+    REQ: FUNC-TXN-002
+    """
+    response = await api_client.get(
+        "/transactions?date_from=2026-01-03&date_to=2026-01-03",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["transaction_id"] == "txn-1"
+
+
+async def test_get_transactions_filter_by_merchant(api_client: httpx.AsyncClient) -> None:
+    """Verify merchant text filter matches merchant_name and display_name.
+
+    REQ: FUNC-TXN-002
+    """
+    response = await api_client.get(
+        "/transactions?merchant=Rent",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["transaction_id"] == "txn-2"
+
+
+async def test_get_transactions_filter_by_amount_range(api_client: httpx.AsyncClient) -> None:
+    """Verify amount_min / amount_max filters bound results correctly.
+
+    REQ: FUNC-TXN-002
+    """
+    response = await api_client.get(
+        "/transactions?amount_min=100",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["transaction_id"] == "txn-2"
+
+
+async def test_get_transactions_response_includes_category_and_notes(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify TransactionResponse includes category_id and notes fields.
+
+    REQ: FUNC-TXN-001, FUNC-TXN-002
+    """
+    response = await api_client.get(
+        "/transactions",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) > 0
+    assert "category_id" in payload[0]
+    assert "notes" in payload[0]
+
+
+# ── Transaction detail tests (Task 7) ────────────────────────────────────────
+
+
+async def test_get_transaction_detail_returns_full_record(api_client: httpx.AsyncClient) -> None:
+    """Verify detail endpoint returns all transaction fields.
+
+    REQ: FUNC-TXN-003
+    """
+    response = await api_client.get(
+        "/transactions/txn-1",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["transaction_id"] == "txn-1"
+    assert payload["display_name"] == "Coffee"
+    assert "tags" in payload
+    assert "splits" in payload
+    assert "raw_provider_payloads" in payload
+    assert isinstance(payload["tags"], list)
+    assert isinstance(payload["splits"], list)
+    assert isinstance(payload["raw_provider_payloads"], list)
+
+
+async def test_get_transaction_detail_not_found(api_client: httpx.AsyncClient) -> None:
+    """Verify detail endpoint returns 404 for unknown transaction ID.
+
+    REQ: FUNC-TXN-003
+    """
+    response = await api_client.get(
+        "/transactions/no-such-id",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert response.status_code == 404
+
+
+# ── Category management tests (Task 8) ───────────────────────────────────────
+
+
+async def test_get_categories_returns_seeded_taxonomy(api_client: httpx.AsyncClient) -> None:
+    """Verify categories endpoint returns the seeded Plaid taxonomy.
+
+    REQ: FUNC-CAT-001
+    """
+    response = await api_client.get("/categories", headers={"X-API-Key": "test-api-token"})
+    assert response.status_code == 200
+    payload = response.json()
+    ids = {c["category_id"] for c in payload}
+    assert "food_and_drink" in ids
+    assert "food_and_drink_coffee" in ids
+    parent_map = {c["category_id"]: c["parent_id"] for c in payload}
+    assert parent_map["food_and_drink_coffee"] == "food_and_drink"
+    assert parent_map["food_and_drink"] is None
+
+
+async def test_create_category_and_patch(api_client: httpx.AsyncClient) -> None:
+    """Verify POST /categories creates and PATCH /categories/{id} renames it.
+
+    REQ: FUNC-CAT-002
+    """
+    create_resp = await api_client.post(
+        "/categories",
+        json={"name": "My Custom Category", "parent_id": "food_and_drink"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert create_resp.status_code == 201
+    created = create_resp.json()
+    assert created["name"] == "My Custom Category"
+    assert created["parent_id"] == "food_and_drink"
+    assert created["active"] is True
+    new_id = created["category_id"]
+
+    patch_resp = await api_client.patch(
+        f"/categories/{new_id}",
+        json={"name": "Renamed Category"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["name"] == "Renamed Category"
+
+
+async def test_create_category_duplicate_name_rejected(api_client: httpx.AsyncClient) -> None:
+    """Verify duplicate category name under same parent returns 409.
+
+    REQ: FUNC-CAT-002
+    """
+    await api_client.post(
+        "/categories",
+        json={"name": "Dup Cat", "parent_id": "income"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    resp = await api_client.post(
+        "/categories",
+        json={"name": "Dup Cat", "parent_id": "income"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 409
+
+
+async def test_patch_category_deactivate_rejects_if_assigned(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify deactivating a category assigned to a transaction returns 409.
+
+    REQ: FUNC-CAT-002
+    """
+    # Assign a leaf category to txn-1 first
+    await api_client.patch(
+        "/transactions/txn-1",
+        json={"category_id": "food_and_drink_coffee"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    resp = await api_client.patch(
+        "/categories/food_and_drink_coffee",
+        json={"active": False},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 409
+
+
+# ── Transaction mutation tests (Task 9) ──────────────────────────────────────
+
+
+async def test_patch_transaction_updates_category_and_notes(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify PATCH /transactions/{id} persists category and notes overrides.
+
+    REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-SYNC-004
+    """
+    resp = await api_client.patch(
+        "/transactions/txn-1",
+        json={"category_id": "food_and_drink_coffee", "notes": "Morning latte"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["category_id"] == "food_and_drink_coffee"
+    assert body["notes"] == "Morning latte"
+
+
+async def test_patch_transaction_adds_and_removes_tags(api_client: httpx.AsyncClient) -> None:
+    """Verify tag add/remove operations via PATCH /transactions/{id}.
+
+    REQ: FUNC-TXN-005
+    """
+    resp = await api_client.patch(
+        "/transactions/txn-1",
+        json={"add_tags": ["coffee", "morning"]},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "coffee" in body["tags"]
+    assert "morning" in body["tags"]
+
+    resp2 = await api_client.patch(
+        "/transactions/txn-1",
+        json={"remove_tags": ["morning"]},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp2.status_code == 200
+    assert "morning" not in resp2.json()["tags"]
+    assert "coffee" in resp2.json()["tags"]
+
+
+async def test_patch_transaction_marks_transfer_and_excluded(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify is_transfer and is_excluded flags are persisted.
+
+    REQ: FUNC-TXN-006, FUNC-TXN-007
+    """
+    resp = await api_client.patch(
+        "/transactions/txn-2",
+        json={"is_transfer": True, "is_excluded": True},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_transfer"] is True
+    assert body["is_excluded"] is True
+
+
+async def test_patch_transaction_parent_category_rejected(api_client: httpx.AsyncClient) -> None:
+    """Verify assigning a parent (non-leaf) category returns 422.
+
+    REQ: FUNC-CAT-002, FUNC-TXN-004
+    """
+    resp = await api_client.patch(
+        "/transactions/txn-1",
+        json={"category_id": "food_and_drink"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_post_transaction_splits_replaces_splits(api_client: httpx.AsyncClient) -> None:
+    """Verify POST /transactions/{id}/splits replaces existing splits.
+
+    REQ: FUNC-TXN-008
+    """
+    resp = await api_client.post(
+        "/transactions/txn-1/splits",
+        json=[
+            {"amount": 10.0, "category_id": "food_and_drink_coffee", "notes": "Coffee"},
+            {"amount": 5.25, "notes": "Tip"},
+        ],
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["splits"]) == 2
+    assert body["splits"][0]["amount"] == 10.0
+    assert body["splits"][1]["amount"] == 5.25
+
+
+async def test_post_transaction_splits_rejects_wrong_sum(api_client: httpx.AsyncClient) -> None:
+    """Verify splits that don't sum to transaction amount return 422.
+
+    REQ: FUNC-TXN-008
+    """
+    resp = await api_client.post(
+        "/transactions/txn-1/splits",
+        json=[{"amount": 5.0}, {"amount": 5.0}],
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 422
+
+
+# ── Conflicts tests (Task 11) ─────────────────────────────────────────────────
+
+
+async def test_get_conflicts_returns_empty_by_default(api_client: httpx.AsyncClient) -> None:
+    """Verify GET /conflicts returns empty list when no conflicts exist.
+
+    REQ: FUNC-SYNC-006
+    """
+    resp = await api_client.get("/conflicts", headers={"X-API-Key": "test-api-token"})
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_resolve_conflict_local_choice(api_client: httpx.AsyncClient) -> None:
+    """Verify POST /conflicts/{id}/resolve with 'local' marks conflict resolved.
+
+    REQ: FUNC-SYNC-007
+    """
+    from sqlcipher3 import dbapi2 as sqlcipher
+
+    db_path = os.environ["GODZILLA_DB_PATH"]
+    db_key = os.environ["GODZILLA_DB_KEY"]
+    conn = sqlcipher.connect(db_path)
+    conn.execute(f"PRAGMA key = '{db_key}';")
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute(
+        "INSERT INTO conflict ("
+        "conflict_id, entity_type, entity_id, field_name, local_value, provider_value, "
+        "local_updated_at_utc, local_updated_at_tz, local_updated_at_offset_minutes, "
+        "provider_updated_at_utc, provider_updated_at_tz, provider_updated_at_offset_minutes, "
+        "status"
+        ") VALUES (?, 'transaction', 'txn-1', 'display_name', 'Coffee', 'Bean Juice', "
+        "'2026-01-03T10:00:00', 'UTC', 0, '2026-01-03T11:00:00', 'UTC', 0, 'open')",
+        ("conflict-test-1",),
+    )
+    conn.commit()
+    conn.close()
+
+    resp = await api_client.post(
+        "/conflicts/conflict-test-1/resolve",
+        json={"resolution_choice": "local"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "resolved"
+    assert body["resolution_choice"] == "local"

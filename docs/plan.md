@@ -35,25 +35,25 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M2 — Transaction list/detail + categorization + search/filters
 
-- [ ] **6. Transaction search & filter API** (`FUNC-TXN-002`)
+- [x] **6. Transaction search & filter API** (`FUNC-TXN-002`)
   Extend `GET /transactions` with date range, account, category, merchant text,
   and amount range filters.
 
-- [ ] **7. Transaction detail endpoint** (`FUNC-TXN-003`)
+- [x] **7. Transaction detail endpoint** (`FUNC-TXN-003`)
   `GET /transactions/{id}` with full detail including read-only raw provider metadata.
 
-- [ ] **8. Category management endpoints** (`FUNC-CAT-001`, `FUNC-CAT-002`)
+- [x] **8. Category management endpoints** (`FUNC-CAT-001`, `FUNC-CAT-002`)
   `GET/POST /categories`, `PATCH /categories/{id}` (rename/deactivate). Enforce
   leaf-only assignment and block deactivated categories.
 
-- [ ] **9. Transaction mutation endpoints** (`FUNC-TXN-004`–`FUNC-TXN-008`)
+- [x] **9. Transaction mutation endpoints** (`FUNC-TXN-004`–`FUNC-TXN-008`)
   `PATCH /transactions/{id}` (category, notes, tags, is_transfer, is_excluded),
   `POST /transactions/{id}/splits`. Write to `transaction_override` for provenance.
 
-- [ ] **10. Provider category mapping on sync** (`FUNC-CAT-003`)
+- [x] **10. Provider category mapping on sync** (`FUNC-CAT-003`)
   Map Plaid category signals to local hierarchy as a suggested default during ingestion.
 
-- [ ] **11. Conflict detection + resolution endpoints** (`FUNC-SYNC-005`–`FUNC-SYNC-007`)
+- [x] **11. Conflict detection + resolution endpoints** (`FUNC-SYNC-005`–`FUNC-SYNC-007`)
   Detect field-level conflicts during sync, write to `conflict` table.
   `GET /conflicts`, `POST /conflicts/{id}/resolve`.
 

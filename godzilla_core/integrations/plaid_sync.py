@@ -1,6 +1,7 @@
 """Plaid sync ingestion for transactions and balances.
 
-REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006,
+REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006
 """
 
 from __future__ import annotations
@@ -335,7 +336,7 @@ def _fallback_transaction_id(account_id: str, payload: Dict[str, Any]) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
-def _apply_transaction(
+def _apply_transaction(  # noqa: PLR0912
     conn: sqlcipher.Connection,
     account_id: str,
     payload: Dict[str, Any],
@@ -343,7 +344,14 @@ def _apply_transaction(
 ) -> None:
     """Insert or update one transaction record from sync payload data.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    On INSERT: maps Plaid personal_finance_category to category_id and records a
+    provider-sourced override in transaction_override.
+
+    On UPDATE: runs conflict detection for category_id, display_name, and
+    merchant_name against any existing user overrides before applying provider values.
+
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-CAT-003, FUNC-SYNC-004,
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006
     """
     provider_transaction_id = payload.get("transaction_id")
     pending_transaction_id = payload.get("pending_transaction_id")
@@ -353,6 +361,14 @@ def _apply_transaction(
     meta_updated = _timestamp_meta("updated_at")
 
     display_name = payload.get("name") or payload.get("merchant_name") or "Unknown"
+    pfc = payload.get("personal_finance_category") or {}
+    category_id = _resolve_category_id(conn, pfc)
+
+    _conflict_fields = {
+        "category_id": category_id,
+        "display_name": display_name,
+        "merchant_name": payload.get("merchant_name"),
+    }
 
     if pending_transaction_id:
         row = conn.execute(
@@ -360,6 +376,14 @@ def _apply_transaction(
             (pending_transaction_id,),
         ).fetchone()
         if row:
+            record_id = row[0]
+            for field, prov_val in _conflict_fields.items():
+                if prov_val is not None:
+                    _detect_and_queue_conflict(conn, record_id, field, str(prov_val))
+            eff_display_name = _preserved_value(conn, record_id, "display_name", display_name)
+            eff_merchant_name = _preserved_value(
+                conn, record_id, "merchant_name", payload.get("merchant_name")
+            )
             conn.execute(
                 "UPDATE transaction_record SET "
                 "provider_transaction_id = ?, date = ?, amount = ?, currency = ?, status = ?, "
@@ -372,16 +396,16 @@ def _apply_transaction(
                     payload.get("amount"),
                     currency,
                     status,
-                    payload.get("merchant_name"),
-                    display_name,
+                    eff_merchant_name,
+                    eff_display_name,
                     meta_updated["updated_at_utc"],
                     meta_updated["updated_at_tz"],
                     meta_updated["updated_at_offset_minutes"],
-                    row[0],
+                    record_id,
                 ),
             )
             if retention_enabled:
-                _insert_raw_payload(conn, row[0], payload)
+                _insert_raw_payload(conn, record_id, payload)
             return
 
     if provider_transaction_id:
@@ -390,6 +414,14 @@ def _apply_transaction(
             (provider_transaction_id,),
         ).fetchone()
         if row:
+            record_id = row[0]
+            for field, prov_val in _conflict_fields.items():
+                if prov_val is not None:
+                    _detect_and_queue_conflict(conn, record_id, field, str(prov_val))
+            eff_display_name = _preserved_value(conn, record_id, "display_name", display_name)
+            eff_merchant_name = _preserved_value(
+                conn, record_id, "merchant_name", payload.get("merchant_name")
+            )
             conn.execute(
                 "UPDATE transaction_record SET "
                 "account_id = ?, date = ?, amount = ?, currency = ?, status = ?, "
@@ -402,16 +434,16 @@ def _apply_transaction(
                     payload.get("amount"),
                     currency,
                     status,
-                    payload.get("merchant_name"),
-                    display_name,
+                    eff_merchant_name,
+                    eff_display_name,
                     meta_updated["updated_at_utc"],
                     meta_updated["updated_at_tz"],
                     meta_updated["updated_at_offset_minutes"],
-                    row[0],
+                    record_id,
                 ),
             )
             if retention_enabled:
-                _insert_raw_payload(conn, row[0], payload)
+                _insert_raw_payload(conn, record_id, payload)
             return
 
         record_id = str(uuid4())
@@ -432,7 +464,7 @@ def _apply_transaction(
                 status,
                 payload.get("merchant_name"),
                 display_name,
-                None,
+                category_id,
                 0,
                 0,
                 None,
@@ -444,6 +476,8 @@ def _apply_transaction(
                 meta_updated["updated_at_offset_minutes"],
             ),
         )
+        if category_id:
+            _upsert_provider_override(conn, record_id, "category_id", category_id)
         if retention_enabled:
             _insert_raw_payload(conn, record_id, payload)
         return
@@ -473,7 +507,7 @@ def _apply_transaction(
             status,
             payload.get("merchant_name"),
             display_name,
-            None,
+            category_id,
             0,
             0,
             None,
@@ -485,6 +519,8 @@ def _apply_transaction(
             meta_updated["updated_at_offset_minutes"],
         ),
     )
+    if category_id:
+        _upsert_provider_override(conn, record_id, "category_id", category_id)
     if retention_enabled:
         _insert_raw_payload(conn, record_id, payload)
 
@@ -510,6 +546,189 @@ def _insert_raw_payload(
             meta["created_at_utc"],
             meta["created_at_tz"],
             meta["created_at_offset_minutes"],
+        ),
+    )
+
+
+def _resolve_category_id(
+    conn: sqlcipher.Connection,
+    personal_finance_category: Optional[Dict[str, Any]],
+) -> Optional[str]:
+    """Map a Plaid personal_finance_category payload to a local category ID.
+
+    Tries the detailed key first, then falls back to the primary key.
+    Returns None when neither key is found in the local category table.
+
+    REQ: FUNC-CAT-003
+
+    Args:
+        conn: Open database connection.
+        personal_finance_category: Plaid ``personal_finance_category`` dict or None.
+
+    Returns:
+        Local category ID string, or None if no mapping exists.
+    """
+    if not personal_finance_category:
+        return None
+
+    detailed = personal_finance_category.get("detailed") or ""
+    primary = personal_finance_category.get("primary") or ""
+
+    for candidate in (detailed.lower(), primary.lower()):
+        if not candidate:
+            continue
+        row = conn.execute(
+            "SELECT id FROM category WHERE id = ?",
+            (candidate,),
+        ).fetchone()
+        if row:
+            return row[0]
+    return None
+
+
+def _upsert_provider_override(
+    conn: sqlcipher.Connection,
+    transaction_id: str,
+    field_name: str,
+    provider_value: str,
+) -> None:
+    """Record a provider-sourced field value in transaction_override.
+
+    Only writes if no user override already exists for this field.
+
+    REQ: FUNC-SYNC-004
+
+    Args:
+        conn: Open database connection.
+        transaction_id: Internal transaction ID.
+        field_name: Name of the overridden field.
+        provider_value: Value supplied by the provider.
+    """
+    meta = _timestamp_meta("updated_at")
+    utc = meta["updated_at_utc"]
+    tz = meta["updated_at_tz"]
+    offset = meta["updated_at_offset_minutes"]
+    conn.execute(
+        "INSERT INTO transaction_override ("
+        "id, transaction_id, field_name, source, provider_value, user_value, "
+        "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, 'provider', ?, NULL, ?, ?, ?) "
+        "ON CONFLICT(transaction_id, field_name) DO UPDATE SET "
+        "provider_value = excluded.provider_value, "
+        "updated_at_utc = excluded.updated_at_utc, "
+        "updated_at_tz = excluded.updated_at_tz, "
+        "updated_at_offset_minutes = excluded.updated_at_offset_minutes "
+        "WHERE transaction_override.source = 'provider'",
+        (
+            str(uuid4()),
+            transaction_id,
+            field_name,
+            provider_value,
+            utc,
+            tz,
+            offset,
+        ),
+    )
+
+
+def _preserved_value(
+    conn: sqlcipher.Connection,
+    transaction_id: str,
+    field_name: str,
+    provider_value: Optional[str],
+) -> Optional[str]:
+    """Return the user override value for a field if one exists, else the provider value.
+
+    Used during sync UPDATE to prevent overwriting user-set field values when a
+    user override is in place.
+
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+
+    Args:
+        conn: Open database connection.
+        transaction_id: Internal transaction ID.
+        field_name: Field to check for a user override.
+        provider_value: Incoming provider value to use as fallback.
+
+    Returns:
+        User's stored value if a user override exists, otherwise ``provider_value``.
+    """
+    row = conn.execute(
+        "SELECT user_value FROM transaction_override "
+        "WHERE transaction_id = ? AND field_name = ? AND source = 'user'",
+        (transaction_id, field_name),
+    ).fetchone()
+    return row[0] if row is not None else provider_value
+
+
+def _detect_and_queue_conflict(
+    conn: sqlcipher.Connection,
+    transaction_id: str,
+    field_name: str,
+    provider_value: str,
+) -> None:
+    """Detect a field-level conflict between a user override and incoming provider value.
+
+    A conflict is raised when:
+    - A user override exists for ``field_name`` on this transaction
+    - The incoming ``provider_value`` differs from the user's stored value
+
+    The field in ``transaction_record`` is NOT updated; the user's value is preserved.
+    An 'open' conflict row is upserted into the ``conflict`` table.
+
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+
+    Args:
+        conn: Open database connection.
+        transaction_id: Internal transaction ID.
+        field_name: Field being examined for conflicts.
+        provider_value: Incoming value from the provider sync payload.
+    """
+    override_row = conn.execute(
+        "SELECT user_value, updated_at_utc, updated_at_tz, updated_at_offset_minutes "
+        "FROM transaction_override "
+        "WHERE transaction_id = ? AND field_name = ? AND source = 'user'",
+        (transaction_id, field_name),
+    ).fetchone()
+    if override_row is None:
+        return
+
+    user_value = override_row[0]
+    if user_value == provider_value:
+        return
+
+    local_utc = override_row[1]
+    local_tz = override_row[2]
+    local_offset = override_row[3]
+    existing = conn.execute(
+        "SELECT conflict_id FROM conflict"
+        " WHERE entity_id = ? AND field_name = ? AND status = 'open'",
+        (transaction_id, field_name),
+    ).fetchone()
+    if existing:
+        return
+
+    provider_meta = _timestamp_meta("provider_updated_at")
+    conn.execute(
+        "INSERT INTO conflict ("
+        "conflict_id, entity_type, entity_id, field_name, "
+        "local_value, provider_value, "
+        "local_updated_at_utc, local_updated_at_tz, local_updated_at_offset_minutes, "
+        "provider_updated_at_utc, provider_updated_at_tz, provider_updated_at_offset_minutes, "
+        "status"
+        ") VALUES (?, 'transaction', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')",
+        (
+            str(uuid4()),
+            transaction_id,
+            field_name,
+            user_value,
+            provider_value,
+            local_utc,
+            local_tz,
+            local_offset,
+            provider_meta["provider_updated_at_utc"],
+            provider_meta["provider_updated_at_tz"],
+            provider_meta["provider_updated_at_offset_minutes"],
         ),
     )
 

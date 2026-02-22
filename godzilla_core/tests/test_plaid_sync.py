@@ -1,6 +1,7 @@
 """Plaid sync ingestion tests.
 
-REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003,
+REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006
 """
 
 import json
@@ -18,11 +19,13 @@ from godzilla_core.integrations.plaid_sync import (
     SyncError,
     _apply_removed,
     _apply_transaction,
+    _detect_and_queue_conflict,
     _fallback_transaction_id,
     _find_account_id,
     _get_plaid_institution_id_for_item,
     _get_sync_cursor,
     _insert_balance_snapshot,
+    _resolve_category_id,
     _retention_enabled,
     _update_sync_state,
     _upsert_account,
@@ -823,3 +826,294 @@ class SyncItemFullFlowTests(unittest.TestCase):
 
         self.assertEqual(row[0], 105.0)
         self.assertEqual(row[1], "Modified")
+
+
+class CategoryMappingTests(unittest.TestCase):
+    """Tests for Plaid personal_finance_category mapping on sync.
+
+    REQ: FUNC-CAT-003, FUNC-SYNC-004
+    """
+
+    def setUp(self) -> None:
+        """Create test database with seeded categories.
+
+        REQ: FUNC-CAT-003
+        """
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.tmp_dir.name, "test.db")
+        self.db_key = "test-key"
+        run_migrations(db_path=self.db_path, db_key=self.db_key)
+
+        self.conn = sqlcipher.connect(self.db_path)
+        self.conn.execute("PRAGMA key = 'test-key';")
+        self.conn.execute("PRAGMA foreign_keys = ON;")
+
+        self.conn.execute(
+            "INSERT INTO institution (id, name, plaid_institution_id, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('inst-1', 'Bank', 'ins_1', '2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.execute(
+            "INSERT INTO plaid_item (id, provider_item_id, institution_id, access_token_ref, "
+            "status, created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('item-1', 'pitem-1', 'inst-1', 'ref', 'linked', "
+            "'2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.execute(
+            "INSERT INTO account (id, item_id, provider_account_id, name, type, currency, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('acc-1', 'item-1', 'provider-acc-1', 'Checking', 'depository', 'USD', "
+            "'2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.commit()
+
+    def tearDown(self) -> None:
+        """Close connection and cleanup.
+
+        REQ: FUNC-CAT-003
+        """
+        self.conn.close()
+        self.tmp_dir.cleanup()
+
+    def test_resolve_category_id_uses_detailed_key(self) -> None:
+        """_resolve_category_id returns the detailed Plaid category ID when available.
+
+        REQ: FUNC-CAT-003
+        """
+        pfc = {"primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_COFFEE"}
+        result = _resolve_category_id(self.conn, pfc)
+        self.assertEqual(result, "food_and_drink_coffee")
+
+    def test_resolve_category_id_falls_back_to_primary(self) -> None:
+        """_resolve_category_id falls back to primary when detailed key is not in DB.
+
+        REQ: FUNC-CAT-003
+        """
+        pfc = {"primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_UNKNOWN_SUBCAT"}
+        result = _resolve_category_id(self.conn, pfc)
+        self.assertEqual(result, "food_and_drink")
+
+    def test_resolve_category_id_returns_none_for_unknown(self) -> None:
+        """_resolve_category_id returns None when neither key maps to a category.
+
+        REQ: FUNC-CAT-003
+        """
+        pfc = {"primary": "UNKNOWN_PRIMARY", "detailed": "UNKNOWN_DETAILED"}
+        result = _resolve_category_id(self.conn, pfc)
+        self.assertIsNone(result)
+
+    def test_resolve_category_id_handles_empty_pfc(self) -> None:
+        """_resolve_category_id returns None for empty or None payload.
+
+        REQ: FUNC-CAT-003
+        """
+        self.assertIsNone(_resolve_category_id(self.conn, {}))
+        self.assertIsNone(_resolve_category_id(self.conn, None))
+
+    def test_apply_transaction_sets_category_from_pfc(self) -> None:
+        """INSERT path maps personal_finance_category to category_id on the record.
+
+        REQ: FUNC-CAT-003, FUNC-SYNC-004
+        """
+        payload = {
+            "transaction_id": "txn-pfc-1",
+            "date": "2026-01-05",
+            "amount": 4.50,
+            "iso_currency_code": "USD",
+            "pending": False,
+            "name": "Blue Bottle",
+            "merchant_name": "Blue Bottle Coffee",
+            "personal_finance_category": {
+                "primary": "FOOD_AND_DRINK",
+                "detailed": "FOOD_AND_DRINK_COFFEE",
+            },
+        }
+        _apply_transaction(self.conn, "acc-1", payload, retention_enabled=False)
+        self.conn.commit()
+
+        row = self.conn.execute(
+            "SELECT category_id FROM transaction_record WHERE provider_transaction_id = ?",
+            ("txn-pfc-1",),
+        ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], "food_and_drink_coffee")
+
+    def test_apply_transaction_writes_provider_override(self) -> None:
+        """INSERT path writes a provider-sourced override for category_id.
+
+        REQ: FUNC-SYNC-004
+        """
+        payload = {
+            "transaction_id": "txn-ov-1",
+            "date": "2026-01-05",
+            "amount": 9.99,
+            "iso_currency_code": "USD",
+            "pending": False,
+            "name": "Netflix",
+            "personal_finance_category": {
+                "primary": "ENTERTAINMENT",
+                "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+            },
+        }
+        _apply_transaction(self.conn, "acc-1", payload, retention_enabled=False)
+        self.conn.commit()
+
+        row = self.conn.execute(
+            "SELECT source, provider_value FROM transaction_override "
+            "JOIN transaction_record"
+            " ON transaction_record.id = transaction_override.transaction_id "
+            "WHERE transaction_record.provider_transaction_id = ?"
+            " AND field_name = 'category_id'",
+            ("txn-ov-1",),
+        ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], "provider")
+        self.assertEqual(row[1], "entertainment_tv_and_movies")
+
+
+class ConflictDetectionTests(unittest.TestCase):
+    """Tests for conflict detection during sync update path.
+
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+    """
+
+    def setUp(self) -> None:
+        """Create test database with a pre-existing transaction and user override.
+
+        REQ: FUNC-SYNC-005
+        """
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.tmp_dir.name, "test.db")
+        self.db_key = "test-key"
+        run_migrations(db_path=self.db_path, db_key=self.db_key)
+
+        self.conn = sqlcipher.connect(self.db_path)
+        self.conn.execute("PRAGMA key = 'test-key';")
+        self.conn.execute("PRAGMA foreign_keys = ON;")
+
+        self.conn.execute(
+            "INSERT INTO institution (id, name, plaid_institution_id, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('inst-1', 'Bank', 'ins_1', '2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.execute(
+            "INSERT INTO plaid_item (id, provider_item_id, institution_id, access_token_ref, "
+            "status, created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('item-1', 'pitem-1', 'inst-1', 'ref', 'linked', "
+            "'2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.execute(
+            "INSERT INTO account (id, item_id, provider_account_id, name, type, currency, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes) "
+            "VALUES ('acc-1', 'item-1', 'provider-acc-1', 'Checking', 'depository', 'USD', "
+            "'2026-01-01T00:00:00', 'UTC', 0)"
+        )
+        self.conn.execute(
+            "INSERT INTO transaction_record ("
+            "id, account_id, provider_transaction_id, date, amount, currency, status, "
+            "display_name, is_transfer, is_excluded, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES ('txn-c1', 'acc-1', 'provider-c1', '2026-01-05', 20.0, 'USD', 'posted', "
+            "'User Name', 0, 0, '2026-01-05T10:00:00', 'UTC', 0, '2026-01-05T10:00:00', 'UTC', 0)"
+        )
+        # Simulate existing user override for display_name
+        self.conn.execute(
+            "INSERT INTO transaction_override ("
+            "id, transaction_id, field_name, source, provider_value, user_value, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES ('ov-1', 'txn-c1', 'display_name', 'user', 'Original Name', 'User Name', "
+            "'2026-01-05T10:00:00', 'UTC', 0)"
+        )
+        self.conn.commit()
+
+    def tearDown(self) -> None:
+        """Close connection and cleanup.
+
+        REQ: FUNC-SYNC-005
+        """
+        self.conn.close()
+        self.tmp_dir.cleanup()
+
+    def test_detect_conflict_creates_open_conflict_row(self) -> None:
+        """Conflict is written when provider value differs from user override.
+
+        REQ: FUNC-SYNC-005, FUNC-SYNC-006
+        """
+        _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Provider Changed Name")
+        self.conn.commit()
+
+        row = self.conn.execute(
+            "SELECT field_name, local_value, provider_value, status "
+            "FROM conflict WHERE entity_id = 'txn-c1'"
+        ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], "display_name")
+        self.assertEqual(row[1], "User Name")
+        self.assertEqual(row[2], "Provider Changed Name")
+        self.assertEqual(row[3], "open")
+
+    def test_detect_conflict_no_conflict_when_values_match(self) -> None:
+        """No conflict is written when provider value matches user override value.
+
+        REQ: FUNC-SYNC-005
+        """
+        _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "User Name")
+        self.conn.commit()
+
+        count = self.conn.execute("SELECT COUNT(*) FROM conflict").fetchone()[0]
+        self.assertEqual(count, 0)
+
+    def test_detect_conflict_no_conflict_without_user_override(self) -> None:
+        """No conflict is written when no user override exists for the field.
+
+        REQ: FUNC-SYNC-005
+        """
+        _detect_and_queue_conflict(self.conn, "txn-c1", "merchant_name", "New Merchant")
+        self.conn.commit()
+
+        count = self.conn.execute("SELECT COUNT(*) FROM conflict").fetchone()[0]
+        self.assertEqual(count, 0)
+
+    def test_detect_conflict_deduplicates_open_conflicts(self) -> None:
+        """Second call with same entity+field does not create a duplicate open conflict.
+
+        REQ: FUNC-SYNC-006
+        """
+        _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Name A")
+        _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Name B")
+        self.conn.commit()
+
+        count = self.conn.execute(
+            "SELECT COUNT(*) FROM conflict WHERE entity_id = 'txn-c1' AND status = 'open'"
+        ).fetchone()[0]
+        self.assertEqual(count, 1)
+
+    def test_apply_transaction_update_preserves_user_override_on_conflict(self) -> None:
+        """On UPDATE, a conflicted field is not overwritten in transaction_record.
+
+        REQ: FUNC-SYNC-005, FUNC-SYNC-006
+        """
+        payload = {
+            "transaction_id": "provider-c1",
+            "date": "2026-01-05",
+            "amount": 20.0,
+            "iso_currency_code": "USD",
+            "pending": False,
+            "name": "Provider Changed Name",
+        }
+        _apply_transaction(self.conn, "acc-1", payload, retention_enabled=False)
+        self.conn.commit()
+
+        # display_name in transaction_record should still be the user's value
+        row = self.conn.execute(
+            "SELECT display_name FROM transaction_record WHERE id = 'txn-c1'"
+        ).fetchone()
+        self.assertEqual(row[0], "User Name")
+
+        # A conflict should have been written
+        conflict_row = self.conn.execute(
+            "SELECT status FROM conflict WHERE entity_id = 'txn-c1' AND field_name = 'display_name'"
+        ).fetchone()
+        self.assertIsNotNone(conflict_row)
+        self.assertEqual(conflict_row[0], "open")

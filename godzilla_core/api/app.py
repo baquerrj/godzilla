@@ -18,8 +18,10 @@ from contextlib import contextmanager
 from hmac import compare_digest
 from pathlib import Path
 from typing import Any, Iterator, Literal
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Path, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, field_validator
 from sqlcipher3 import dbapi2 as sqlcipher
 
@@ -33,6 +35,7 @@ from godzilla_core.integrations.plaid_client import (
 from godzilla_core.integrations.plaid_sync import SyncError, sync_item_transactions_and_balances
 from godzilla_core.security.redaction import redact_sensitive
 from godzilla_core.security.secrets import SecretStoreError, store_from_env
+from godzilla_core.util.time import local_timestamp_metadata
 
 logger = logging.getLogger(__name__)
 _MAX_PAGE_SIZE = 200
@@ -567,7 +570,7 @@ _TXN_SELECT = (
 )
 
 
-def _register_read_routes(app: FastAPI) -> None:
+def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
     REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
@@ -621,7 +624,7 @@ def _register_read_routes(app: FastAPI) -> None:
         response_model=list[TransactionResponse],
         dependencies=[Depends(require_api_key)],
     )
-    async def get_transactions(
+    async def get_transactions(  # noqa: PLR0913
         account_id: str | None = Query(default=None, min_length=1),
         date_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
         date_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
@@ -658,7 +661,8 @@ def _register_read_routes(app: FastAPI) -> None:
             params.append(category_id)
         if merchant:
             conditions.append(
-                "(transaction_record.merchant_name LIKE ? OR transaction_record.display_name LIKE ?)"
+                "(transaction_record.merchant_name LIKE ?"
+                " OR transaction_record.display_name LIKE ?)"
             )
             params.extend([f"%{merchant}%", f"%{merchant}%"])
         if amount_min is not None:
@@ -688,7 +692,7 @@ def _register_read_routes(app: FastAPI) -> None:
         dependencies=[Depends(require_api_key)],
     )
     async def get_transaction(
-        transaction_id: str = Path(min_length=1),
+        transaction_id: str = FastAPIPath(min_length=1),
     ) -> TransactionDetailResponse:
         """Fetch full detail for a single transaction.
 
@@ -855,7 +859,8 @@ def _register_read_routes(app: FastAPI) -> None:
         """
         with _db_connection() as conn:
             rows = conn.execute(
-                "SELECT id, name, parent_id, active FROM category ORDER BY parent_id NULLS FIRST, name ASC"
+                "SELECT id, name, parent_id, active FROM category"
+                " ORDER BY parent_id NULLS FIRST, name ASC"
             ).fetchall()
         return [
             CategoryResponse(
@@ -902,7 +907,7 @@ def _register_read_routes(app: FastAPI) -> None:
         ]
 
 
-def _register_write_routes(app: FastAPI) -> None:
+def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register mutating endpoints for categories, transactions, and conflicts.
 
     REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
@@ -911,8 +916,6 @@ def _register_write_routes(app: FastAPI) -> None:
     Args:
         app: FastAPI app instance to attach routes to.
     """
-    from godzilla_core.util.time import local_timestamp_metadata
-    from uuid import uuid4
 
     @app.post(
         "/categories",
@@ -971,7 +974,7 @@ def _register_write_routes(app: FastAPI) -> None:
         dependencies=[Depends(require_api_key)],
     )
     async def patch_category(
-        category_id: str = Path(min_length=1),
+        category_id: str = FastAPIPath(min_length=1),
         request: PatchCategoryRequest = ...,
     ) -> CategoryResponse:
         """Rename or deactivate a category.
@@ -1023,7 +1026,7 @@ def _register_write_routes(app: FastAPI) -> None:
         dependencies=[Depends(require_api_key)],
     )
     async def patch_transaction(
-        transaction_id: str = Path(min_length=1),
+        transaction_id: str = FastAPIPath(min_length=1),
         request: PatchTransactionRequest = ...,
     ) -> TransactionDetailResponse:
         """Apply user overrides to a transaction and record provenance.
@@ -1123,9 +1126,9 @@ def _register_write_routes(app: FastAPI) -> None:
 
             conn.commit()
 
-        from godzilla_core.api.app import app as _app  # noqa: F401 — avoid circular; use endpoint
-
-        return await get_transaction_detail_internal(conn_factory=_db_connection, txn_id=transaction_id)
+        return await get_transaction_detail_internal(
+            conn_factory=_db_connection, txn_id=transaction_id
+        )
 
     @app.post(
         "/transactions/{transaction_id}/splits",
@@ -1133,7 +1136,7 @@ def _register_write_routes(app: FastAPI) -> None:
         dependencies=[Depends(require_api_key)],
     )
     async def post_transaction_splits(
-        transaction_id: str = Path(min_length=1),
+        transaction_id: str = FastAPIPath(min_length=1),
         splits: list[SplitItem] = ...,
     ) -> TransactionDetailResponse:
         """Replace splits for a transaction.
@@ -1150,10 +1153,14 @@ def _register_write_routes(app: FastAPI) -> None:
 
             txn_amount = float(txn_row[0])
             split_total = sum(s.amount for s in splits)
-            if splits and abs(split_total - txn_amount) > 0.005:
+            _SPLIT_TOLERANCE = 0.005
+            if splits and abs(split_total - txn_amount) > _SPLIT_TOLERANCE:
                 raise HTTPException(
                     status_code=422,
-                    detail=f"Split amounts ({split_total:.2f}) must sum to transaction amount ({txn_amount:.2f})",
+                    detail=(
+                        f"Split amounts ({split_total:.2f}) must sum to"
+                        f" transaction amount ({txn_amount:.2f})"
+                    ),
                 )
 
             for split in splits:
@@ -1166,13 +1173,16 @@ def _register_write_routes(app: FastAPI) -> None:
             )
             for split in splits:
                 conn.execute(
-                    "INSERT INTO transaction_split (id, transaction_id, amount, category_id, notes) "
-                    "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO transaction_split"
+                    " (id, transaction_id, amount, category_id, notes)"
+                    " VALUES (?, ?, ?, ?, ?)",
                     (str(uuid4()), transaction_id, split.amount, split.category_id, split.notes),
                 )
             conn.commit()
 
-        return await get_transaction_detail_internal(conn_factory=_db_connection, txn_id=transaction_id)
+        return await get_transaction_detail_internal(
+            conn_factory=_db_connection, txn_id=transaction_id
+        )
 
     @app.post(
         "/conflicts/{conflict_id}/resolve",
@@ -1180,7 +1190,7 @@ def _register_write_routes(app: FastAPI) -> None:
         dependencies=[Depends(require_api_key)],
     )
     async def resolve_conflict(
-        conflict_id: str = Path(min_length=1),
+        conflict_id: str = FastAPIPath(min_length=1),
         request: ResolveConflictRequest = ...,
     ) -> ConflictResponse:
         """Resolve a conflict by choosing local or provider value.
