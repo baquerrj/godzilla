@@ -7,15 +7,18 @@ REQ: FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002,
 REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
-REQ: FUNC-REP-006, SEC-ACC-004, SEC-DATA-003
+REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, SEC-ACC-004, SEC-DATA-003
 """
 
 from __future__ import annotations
 
+import calendar
 import json
 import logging
 import os
 from contextlib import contextmanager
+from datetime import date, datetime
 from hmac import compare_digest
 from pathlib import Path
 from typing import Any, Iterator, Literal
@@ -327,6 +330,119 @@ class BudgetLineResponse(BaseModel):
     actual: float
     remaining: float
     is_overspent: bool
+
+
+class TopSpendingCategoryResponse(BaseModel):
+    """Top expense category entry for monthly overview.
+
+    REQ: FUNC-REP-001
+    """
+
+    category_id: str
+    category_name: str
+    amount: float
+
+
+class MonthlyOverviewResponse(BaseModel):
+    """Monthly roll-up metrics and top spending categories.
+
+    REQ: FUNC-REP-001, FUNC-REP-007, FUNC-REP-008
+    """
+
+    month: str
+    start_date: str
+    end_date: str
+    income: float
+    expenses: float
+    net_savings: float
+    savings_rate: float
+    top_categories: list[TopSpendingCategoryResponse]
+    inclusion_note: str
+    includes_excluded_items: bool
+
+
+class CashFlowPointResponse(BaseModel):
+    """One month of cash-flow metrics.
+
+    REQ: FUNC-REP-003
+    """
+
+    month: str
+    income: float
+    expenses: float
+    net_savings: float
+    savings_rate: float
+
+
+class CashFlowReportResponse(BaseModel):
+    """Cash-flow report over a custom date range.
+
+    REQ: FUNC-REP-003, FUNC-REP-007, FUNC-REP-008
+    """
+
+    start_date: str
+    end_date: str
+    points: list[CashFlowPointResponse]
+    inclusion_note: str
+    includes_excluded_items: bool
+
+
+class CategoryTrendPointResponse(BaseModel):
+    """One month value in a category trend series.
+
+    REQ: FUNC-REP-004
+    """
+
+    month: str
+    amount: float
+
+
+class CategoryTrendSeriesResponse(BaseModel):
+    """Monthly spending trend for one category.
+
+    REQ: FUNC-REP-004
+    """
+
+    category_id: str
+    category_name: str
+    points: list[CategoryTrendPointResponse]
+
+
+class CategoryTrendsResponse(BaseModel):
+    """Category trend report for selected categories.
+
+    REQ: FUNC-REP-004, FUNC-REP-007, FUNC-REP-008
+    """
+
+    start_month: str
+    end_month: str
+    months: int
+    series: list[CategoryTrendSeriesResponse]
+    inclusion_note: str
+    includes_excluded_items: bool
+
+
+class NetWorthPointResponse(BaseModel):
+    """One date point for assets, liabilities, and net worth.
+
+    REQ: FUNC-REP-005
+    """
+
+    date: str
+    assets: float
+    liabilities: float
+    net_worth: float
+
+
+class NetWorthReportResponse(BaseModel):
+    """Net-worth report over a custom date range.
+
+    REQ: FUNC-REP-005, FUNC-REP-008
+    """
+
+    start_date: str
+    end_date: str
+    points: list[NetWorthPointResponse]
 
 
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
@@ -711,12 +827,137 @@ FROM line_items
 GROUP BY category_id
 """
 
+_REPORT_INCLUSION_NOTE = (
+    "Transaction metrics include posted transactions only; transfers and explicitly "
+    "excluded transactions are omitted; split transactions use split line amounts."
+)
+
+# Shared CTE for report metrics that use budget inclusion rules.
+# Bind params: start_date, end_date, start_date, end_date.
+# REQ: FUNC-REP-007
+_REPORT_LINE_ITEMS_RANGE_CTE = """
+WITH line_items AS (
+  SELECT tr.id AS transaction_id, tr.date AS date, tr.category_id AS category_id, tr.amount AS amount
+  FROM transaction_record tr
+  WHERE tr.date >= ? AND tr.date <= ?
+    AND tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted'
+    AND tr.category_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM transaction_split WHERE transaction_id = tr.id)
+  UNION ALL
+  SELECT tr.id AS transaction_id, tr.date AS date, ts.category_id AS category_id, ts.amount AS amount
+  FROM transaction_split ts
+  JOIN transaction_record tr ON tr.id = ts.transaction_id
+  WHERE tr.date >= ? AND tr.date <= ?
+    AND tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted'
+    AND ts.category_id IS NOT NULL
+)
+"""
+
+
+def _parse_month_start(month: str) -> date:
+    """Parse YYYY-MM into a month-start date object.
+
+    REQ: FUNC-REP-008
+    """
+    try:
+        return datetime.strptime(f"{month}-01", "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid month value") from exc
+
+
+def _month_bounds(month: str) -> tuple[str, str]:
+    """Return first and last day (YYYY-MM-DD) for a YYYY-MM month.
+
+    REQ: FUNC-REP-008
+    """
+    start = _parse_month_start(month)
+    last_day = calendar.monthrange(start.year, start.month)[1]
+    end = date(start.year, start.month, last_day)
+    return start.isoformat(), end.isoformat()
+
+
+def _shift_month(month_start: date, delta_months: int) -> date:
+    """Shift a month-start date by `delta_months`.
+
+    REQ: FUNC-REP-008
+    """
+    month_index = (month_start.year * 12 + (month_start.month - 1)) + delta_months
+    year = month_index // 12
+    month = month_index % 12 + 1
+    return date(year, month, 1)
+
+
+def _iter_month_keys(start_date: date, end_date: date) -> list[str]:
+    """Build inclusive list of month keys (YYYY-MM) between two dates.
+
+    REQ: FUNC-REP-008
+    """
+    cursor = date(start_date.year, start_date.month, 1)
+    end_month = date(end_date.year, end_date.month, 1)
+    keys: list[str] = []
+    while cursor <= end_month:
+        keys.append(cursor.strftime("%Y-%m"))
+        cursor = _shift_month(cursor, 1)
+    return keys
+
+
+def _parse_date_range(start: str, end: str) -> tuple[date, date]:
+    """Parse and validate an inclusive ISO date range.
+
+    REQ: FUNC-REP-008
+    """
+    try:
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date value") from exc
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start must be <= end")
+    return start_date, end_date
+
+
+def _parse_csv_categories(categories: str) -> list[str]:
+    """Parse a comma-separated category list.
+
+    REQ: FUNC-REP-004
+    """
+    parsed = [item.strip() for item in categories.split(",") if item.strip()]
+    if not parsed:
+        raise HTTPException(status_code=422, detail="At least one category is required")
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in parsed:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+def _latest_included_transaction_date(conn: sqlcipher.Connection) -> date:
+    """Return most recent transaction date that participates in report totals.
+
+    REQ: FUNC-REP-007
+    """
+    row = conn.execute(
+        "SELECT MAX(date) FROM transaction_record tr "
+        "WHERE tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted' "
+        "AND (tr.category_id IS NOT NULL "
+        "OR EXISTS (SELECT 1 FROM transaction_split ts "
+        "           WHERE ts.transaction_id = tr.id AND ts.category_id IS NOT NULL))"
+    ).fetchone()
+    if row and row[0]:
+        return datetime.strptime(str(row[0]), "%Y-%m-%d").date()
+    return datetime.now().date()
+
 
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
     REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
-    REQ: FUNC-REP-006, FUNC-ACCT-004, FUNC-CAT-001, FUNC-SYNC-006, SEC-ACC-004,
+    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+    REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, FUNC-ACCT-004, FUNC-CAT-001,
+    REQ: FUNC-SYNC-006, SEC-ACC-004,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
 
     Args:
@@ -1087,6 +1328,237 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 )
             )
         return result
+
+    @app.get(
+        "/reports/monthly-overview",
+        response_model=MonthlyOverviewResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_monthly_overview(
+        month: str = Query(pattern=r"^\d{4}-\d{2}$"),
+    ) -> MonthlyOverviewResponse:
+        """Return monthly overview totals and top spending categories.
+
+        REQ: FUNC-REP-001, FUNC-REP-007, FUNC-REP-008
+        """
+        start_date, end_date = _month_bounds(month)
+        params = (start_date, end_date, start_date, end_date)
+        with _db_connection() as conn:
+            summary_row = conn.execute(
+                _REPORT_LINE_ITEMS_RANGE_CTE
+                + "SELECT "
+                + "COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0), "
+                + "COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) "
+                + "FROM line_items",
+                params,
+            ).fetchone()
+            top_rows = conn.execute(
+                _REPORT_LINE_ITEMS_RANGE_CTE
+                + "SELECT line_items.category_id, category.name, SUM(line_items.amount) AS spend "
+                + "FROM line_items "
+                + "JOIN category ON category.id = line_items.category_id "
+                + "WHERE line_items.amount > 0 "
+                + "GROUP BY line_items.category_id, category.name "
+                + "ORDER BY spend DESC, line_items.category_id ASC "
+                + "LIMIT 5",
+                params,
+            ).fetchall()
+
+        income = float(summary_row[0]) if summary_row else 0.0
+        expenses = float(summary_row[1]) if summary_row else 0.0
+        net_savings = income - expenses
+        savings_rate = (net_savings / income) if income > 0 else 0.0
+        top_categories = [
+            TopSpendingCategoryResponse(
+                category_id=row[0],
+                category_name=row[1],
+                amount=float(row[2]),
+            )
+            for row in top_rows
+        ]
+        return MonthlyOverviewResponse(
+            month=month,
+            start_date=start_date,
+            end_date=end_date,
+            income=income,
+            expenses=expenses,
+            net_savings=net_savings,
+            savings_rate=savings_rate,
+            top_categories=top_categories,
+            inclusion_note=_REPORT_INCLUSION_NOTE,
+            includes_excluded_items=False,
+        )
+
+    @app.get(
+        "/reports/cash-flow",
+        response_model=CashFlowReportResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_cash_flow(
+        start: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        end: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    ) -> CashFlowReportResponse:
+        """Return monthly cash-flow metrics over a custom date range.
+
+        REQ: FUNC-REP-003, FUNC-REP-007, FUNC-REP-008
+        """
+        start_dt, end_dt = _parse_date_range(start, end)
+        params = (start, end, start, end)
+        with _db_connection() as conn:
+            rows = conn.execute(
+                _REPORT_LINE_ITEMS_RANGE_CTE
+                + "SELECT substr(date, 1, 7) AS month, "
+                + "COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) AS income, "
+                + "COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS expenses "
+                + "FROM line_items "
+                + "GROUP BY substr(date, 1, 7) "
+                + "ORDER BY month ASC",
+                params,
+            ).fetchall()
+
+        monthly_totals = {
+            str(row[0]): (float(row[1]), float(row[2]))
+            for row in rows
+        }
+        points: list[CashFlowPointResponse] = []
+        for month_key in _iter_month_keys(start_dt, end_dt):
+            income, expenses = monthly_totals.get(month_key, (0.0, 0.0))
+            net_savings = income - expenses
+            points.append(
+                CashFlowPointResponse(
+                    month=month_key,
+                    income=income,
+                    expenses=expenses,
+                    net_savings=net_savings,
+                    savings_rate=(net_savings / income) if income > 0 else 0.0,
+                )
+            )
+
+        return CashFlowReportResponse(
+            start_date=start,
+            end_date=end,
+            points=points,
+            inclusion_note=_REPORT_INCLUSION_NOTE,
+            includes_excluded_items=False,
+        )
+
+    @app.get(
+        "/reports/category-trends",
+        response_model=CategoryTrendsResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_category_trends(
+        categories: str = Query(min_length=1),
+        months: int = Query(default=12, ge=1, le=24),
+    ) -> CategoryTrendsResponse:
+        """Return monthly category spend trends for one or more categories.
+
+        REQ: FUNC-REP-004, FUNC-REP-007, FUNC-REP-008
+        """
+        category_ids = _parse_csv_categories(categories)
+        with _db_connection() as conn:
+            placeholders = ", ".join("?" for _ in category_ids)
+            category_rows = conn.execute(
+                f"SELECT id, name FROM category WHERE id IN ({placeholders})",  # noqa: S608
+                category_ids,
+            ).fetchall()
+            category_names = {str(row[0]): str(row[1]) for row in category_rows}
+            missing = [item for item in category_ids if item not in category_names]
+            if missing:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Unknown category id(s): {', '.join(missing)}",
+                )
+
+            latest_date = _latest_included_transaction_date(conn)
+            end_month_start = date(latest_date.year, latest_date.month, 1)
+            start_month_start = _shift_month(end_month_start, -(months - 1))
+            start_date = start_month_start.isoformat()
+            end_day = calendar.monthrange(end_month_start.year, end_month_start.month)[1]
+            end_date = date(end_month_start.year, end_month_start.month, end_day).isoformat()
+
+            trend_rows = conn.execute(
+                _REPORT_LINE_ITEMS_RANGE_CTE
+                + f"SELECT line_items.category_id, substr(line_items.date, 1, 7) AS month, "
+                + "SUM(line_items.amount) AS spend "
+                + "FROM line_items "
+                + f"WHERE line_items.category_id IN ({placeholders}) "
+                + "AND line_items.amount > 0 "
+                + "GROUP BY line_items.category_id, substr(line_items.date, 1, 7) "
+                + "ORDER BY month ASC, line_items.category_id ASC",
+                [start_date, end_date, start_date, end_date, *category_ids],
+            ).fetchall()
+
+        month_keys = _iter_month_keys(start_month_start, end_month_start)
+        per_category_month: dict[str, dict[str, float]] = {
+            category_id: {month_key: 0.0 for month_key in month_keys}
+            for category_id in category_ids
+        }
+        for row in trend_rows:
+            category_id = str(row[0])
+            month_key = str(row[1])
+            if category_id in per_category_month and month_key in per_category_month[category_id]:
+                per_category_month[category_id][month_key] = float(row[2])
+
+        series = [
+            CategoryTrendSeriesResponse(
+                category_id=category_id,
+                category_name=category_names[category_id],
+                points=[
+                    CategoryTrendPointResponse(month=month_key, amount=amount)
+                    for month_key, amount in per_category_month[category_id].items()
+                ],
+            )
+            for category_id in category_ids
+        ]
+        return CategoryTrendsResponse(
+            start_month=month_keys[0],
+            end_month=month_keys[-1],
+            months=months,
+            series=series,
+            inclusion_note=_REPORT_INCLUSION_NOTE,
+            includes_excluded_items=False,
+        )
+
+    @app.get(
+        "/reports/net-worth",
+        response_model=NetWorthReportResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_net_worth(
+        start: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        end: str = Query(pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    ) -> NetWorthReportResponse:
+        """Return net-worth time series from balance snapshots.
+
+        REQ: FUNC-REP-005, FUNC-REP-008
+        """
+        _parse_date_range(start, end)
+        with _db_connection() as conn:
+            rows = conn.execute(
+                "SELECT balance_snapshot.date, "
+                "COALESCE(SUM(CASE WHEN account.type IN ('credit', 'loan') "
+                "                  THEN 0 ELSE balance_snapshot.balance END), 0) AS assets, "
+                "COALESCE(SUM(CASE WHEN account.type IN ('credit', 'loan') "
+                "                  THEN ABS(balance_snapshot.balance) ELSE 0 END), 0) AS liabilities "
+                "FROM balance_snapshot "
+                "JOIN account ON account.id = balance_snapshot.account_id "
+                "WHERE balance_snapshot.date >= ? AND balance_snapshot.date <= ? "
+                "GROUP BY balance_snapshot.date "
+                "ORDER BY balance_snapshot.date ASC",
+                (start, end),
+            ).fetchall()
+
+        points = [
+            NetWorthPointResponse(
+                date=str(row[0]),
+                assets=float(row[1]),
+                liabilities=float(row[2]),
+                net_worth=float(row[1]) - float(row[2]),
+            )
+            for row in rows
+        ]
+        return NetWorthReportResponse(start_date=start, end_date=end, points=points)
 
 
 def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
@@ -1594,7 +2066,9 @@ def create_app() -> FastAPI:
     REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004,
     REQ: FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
     REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
-    REQ: FUNC-REP-006, FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
+    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+    REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
     _register_plaid_routes(app)

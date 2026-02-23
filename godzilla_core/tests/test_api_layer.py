@@ -6,7 +6,9 @@ REQ: FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
 REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
-REQ: FUNC-REP-006, FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
+REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+REQ: FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
 from __future__ import annotations
@@ -843,6 +845,466 @@ async def test_resolve_conflict_local_choice(api_client: httpx.AsyncClient) -> N
     body = resp.json()
     assert body["status"] == "resolved"
     assert body["resolution_choice"] == "local"
+
+
+# ── Report tests (M4) ──────────────────────────────────────────────────────────
+
+
+def _seed_report_data(db_path: str, db_key: str) -> None:
+    """Seed report-oriented fixture data for M4 endpoints.
+
+    Dataset characteristics:
+    - Includes income and expense rows across multiple months
+    - Includes transfer/excluded/pending rows that must be ignored
+    - Includes split rows that must replace parent contribution
+    - Includes liability account snapshots for net-worth tests
+
+    REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-007
+    """
+    conn = sqlcipher.connect(db_path)
+    conn.execute(f"PRAGMA key = '{db_key}';")
+    conn.execute("PRAGMA foreign_keys = ON;")
+
+    categories = [
+        ("food", "Food", None, 1),
+        ("food_coffee", "Coffee", "food", 1),
+        ("food_dining", "Dining", "food", 1),
+        ("income", "Income", None, 1),
+        ("income_salary", "Salary", "income", 1),
+    ]
+    conn.executemany(
+        "INSERT OR IGNORE INTO category (id, name, parent_id, active) VALUES (?, ?, ?, ?)",
+        categories,
+    )
+
+    conn.execute(
+        "INSERT OR IGNORE INTO account ("
+        "id, item_id, provider_account_id, name, type, subtype, mask, balance, currency, "
+        "owner_names, created_at_utc, created_at_tz, created_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "acc-cc-1",
+            "item-1",
+            "acct-provider-cc-1",
+            "Credit Card",
+            "credit",
+            "credit card",
+            "2222",
+            -120.0,
+            "USD",
+            None,
+            "2026-01-01T00:00:00",
+            "UTC",
+            0,
+        ),
+    )
+
+    txn_insert = (
+        "INSERT OR IGNORE INTO transaction_record ("
+        "id, account_id, provider_transaction_id, date, amount, currency, status, "
+        "merchant_name, display_name, category_id, is_transfer, is_excluded, notes, "
+        "created_at_utc, created_at_tz, created_at_offset_minutes, updated_at_utc, "
+        "updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+    ts = ("2026-01-10T10:00:00", "UTC", 0)
+
+    txns = [
+        (
+            "txn-r1",
+            "acc-1",
+            "prov-r1",
+            "2026-01-05",
+            30.0,
+            "USD",
+            "posted",
+            "Cafe One",
+            "Coffee Jan",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r2",
+            "acc-1",
+            "prov-r2",
+            "2026-01-08",
+            70.0,
+            "USD",
+            "posted",
+            "Dining House",
+            "Dining Jan",
+            "food_dining",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r3",
+            "acc-1",
+            "prov-r3",
+            "2026-01-09",
+            -200.0,
+            "USD",
+            "posted",
+            "Employer",
+            "Salary Jan",
+            "income_salary",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r4",
+            "acc-1",
+            "prov-r4",
+            "2026-01-11",
+            40.0,
+            "USD",
+            "posted",
+            "Transfer",
+            "Transfer Jan",
+            "food_coffee",
+            1,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r5",
+            "acc-1",
+            "prov-r5",
+            "2026-01-12",
+            25.0,
+            "USD",
+            "posted",
+            "Excluded",
+            "Excluded Jan",
+            "food_dining",
+            0,
+            1,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r6",
+            "acc-1",
+            "prov-r6",
+            "2026-01-13",
+            10.0,
+            "USD",
+            "pending",
+            "Pending",
+            "Pending Jan",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r7",
+            "acc-1",
+            "prov-r7",
+            "2026-01-14",
+            60.0,
+            "USD",
+            "posted",
+            "Split Dinner",
+            "Split Dinner Jan",
+            "food_dining",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r8",
+            "acc-1",
+            "prov-r8",
+            "2025-12-07",
+            50.0,
+            "USD",
+            "posted",
+            "Cafe Two",
+            "Coffee Dec",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r9",
+            "acc-1",
+            "prov-r9",
+            "2025-12-09",
+            -150.0,
+            "USD",
+            "posted",
+            "Employer",
+            "Salary Dec",
+            "income_salary",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+        (
+            "txn-r10",
+            "acc-1",
+            "prov-r10",
+            "2025-11-15",
+            20.0,
+            "USD",
+            "posted",
+            "Bistro",
+            "Dining Nov",
+            "food_dining",
+            0,
+            0,
+            None,
+            *ts,
+            *ts,
+        ),
+    ]
+    conn.executemany(txn_insert, txns)
+
+    conn.execute(
+        "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("split-r7-1", "txn-r7", 40.0, "food_coffee", None),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("split-r7-2", "txn-r7", 20.0, "food_dining", None),
+    )
+
+    snapshots = [
+        ("bal-cc-1", "acc-cc-1", "2026-01-02", -100.0),
+        ("bal-cc-2", "acc-cc-1", "2026-01-03", -120.0),
+    ]
+    conn.executemany(
+        "INSERT OR IGNORE INTO balance_snapshot (id, account_id, date, balance) VALUES (?, ?, ?, ?)",
+        snapshots,
+    )
+
+    conn.commit()
+    conn.close()
+
+
+@pytest.fixture
+async def report_client() -> httpx.AsyncClient:
+    """Provide an authenticated ASGI client seeded for report endpoint tests.
+
+    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+    REQ: FUNC-REP-007, FUNC-REP-008
+    """
+    env_backup = {
+        "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
+        "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
+        "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+    }
+    with TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "report.db")
+        db_key = "report-test-key"
+        run_migrations(db_path=db_path, db_key=db_key)
+        _seed_database(db_path, db_key)
+        _seed_report_data(db_path, db_key)
+
+        os.environ["GODZILLA_DB_PATH"] = db_path
+        os.environ["GODZILLA_DB_KEY"] = db_key
+        os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
+
+    for key, value in env_backup.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
+async def test_reports_monthly_overview_returns_expected_metrics(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify monthly overview totals and top categories for a fixture month.
+
+    REQ: FUNC-REP-001, FUNC-REP-007, FUNC-REP-008
+    """
+    resp = await report_client.get("/reports/monthly-overview?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["income"] == pytest.approx(200.0)
+    assert body["expenses"] == pytest.approx(160.0)
+    assert body["net_savings"] == pytest.approx(40.0)
+    assert body["savings_rate"] == pytest.approx(0.2)
+    assert body["includes_excluded_items"] is False
+    assert body["top_categories"][0]["category_id"] == "food_dining"
+    assert body["top_categories"][0]["amount"] == pytest.approx(90.0)
+    assert body["top_categories"][1]["category_id"] == "food_coffee"
+    assert body["top_categories"][1]["amount"] == pytest.approx(70.0)
+
+
+async def test_reports_monthly_overview_invalid_month_returns_422(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify invalid month values are rejected for monthly overview.
+
+    REQ: FUNC-REP-008
+    """
+    resp = await report_client.get("/reports/monthly-overview?month=2026-13", headers=_HEADERS)
+    assert resp.status_code == 422
+
+
+async def test_reports_cash_flow_returns_monthly_points(report_client: httpx.AsyncClient) -> None:
+    """Verify cash-flow report aggregates by month with savings rate.
+
+    REQ: FUNC-REP-003, FUNC-REP-008
+    """
+    resp = await report_client.get(
+        "/reports/cash-flow?start=2025-11-01&end=2026-01-31",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    points = {row["month"]: row for row in resp.json()["points"]}
+    assert points["2025-11"]["income"] == pytest.approx(0.0)
+    assert points["2025-11"]["expenses"] == pytest.approx(20.0)
+    assert points["2025-11"]["net_savings"] == pytest.approx(-20.0)
+    assert points["2025-11"]["savings_rate"] == pytest.approx(0.0)
+    assert points["2025-12"]["income"] == pytest.approx(150.0)
+    assert points["2025-12"]["expenses"] == pytest.approx(50.0)
+    assert points["2025-12"]["net_savings"] == pytest.approx(100.0)
+    assert points["2025-12"]["savings_rate"] == pytest.approx(100.0 / 150.0)
+    assert points["2026-01"]["income"] == pytest.approx(200.0)
+    assert points["2026-01"]["expenses"] == pytest.approx(160.0)
+    assert points["2026-01"]["net_savings"] == pytest.approx(40.0)
+    assert points["2026-01"]["savings_rate"] == pytest.approx(0.2)
+
+
+async def test_reports_category_trends_supports_multi_category_selection(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify category trends return month-aligned series for selected categories.
+
+    REQ: FUNC-REP-004, FUNC-REP-008
+    """
+    resp = await report_client.get(
+        "/reports/category-trends?categories=food_coffee,food_dining&months=3",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["start_month"] == "2025-11"
+    assert body["end_month"] == "2026-01"
+    series_map = {series["category_id"]: series for series in body["series"]}
+    coffee = {point["month"]: point["amount"] for point in series_map["food_coffee"]["points"]}
+    dining = {point["month"]: point["amount"] for point in series_map["food_dining"]["points"]}
+    assert coffee == {"2025-11": 0.0, "2025-12": 50.0, "2026-01": 70.0}
+    assert dining == {"2025-11": 20.0, "2025-12": 0.0, "2026-01": 90.0}
+
+
+async def test_reports_category_trends_unknown_category_returns_422(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify category trends reject unknown category ids.
+
+    REQ: FUNC-REP-004
+    """
+    resp = await report_client.get(
+        "/reports/category-trends?categories=food_coffee,nope&months=3",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+
+
+async def test_reports_net_worth_returns_assets_liabilities_and_net(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify net worth uses assets minus liabilities over snapshot dates.
+
+    REQ: FUNC-REP-005, FUNC-REP-008
+    """
+    resp = await report_client.get(
+        "/reports/net-worth?start=2026-01-02&end=2026-01-03",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    points = {row["date"]: row for row in resp.json()["points"]}
+    assert points["2026-01-02"]["assets"] == pytest.approx(300.0)
+    assert points["2026-01-02"]["liabilities"] == pytest.approx(100.0)
+    assert points["2026-01-02"]["net_worth"] == pytest.approx(200.0)
+    assert points["2026-01-03"]["assets"] == pytest.approx(321.11)
+    assert points["2026-01-03"]["liabilities"] == pytest.approx(120.0)
+    assert points["2026-01-03"]["net_worth"] == pytest.approx(201.11)
+
+
+async def test_reports_and_budgets_share_inclusion_rules(report_client: httpx.AsyncClient) -> None:
+    """Verify report expense totals reconcile with budget actual totals.
+
+    REQ: FUNC-REP-007, FUNC-BUD-004
+    """
+    for category_id in ("food_coffee", "food_dining"):
+        create_resp = await report_client.post(
+            "/budgets",
+            json={"month": "2026-01", "category_id": category_id, "amount": 500.0},
+            headers=_HEADERS,
+        )
+        assert create_resp.status_code == 201
+
+    budgets_resp = await report_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    report_resp = await report_client.get(
+        "/reports/monthly-overview?month=2026-01",
+        headers=_HEADERS,
+    )
+    assert budgets_resp.status_code == 200
+    assert report_resp.status_code == 200
+    budgets_total = sum(float(line["actual"]) for line in budgets_resp.json())
+    report_expenses = float(report_resp.json()["expenses"])
+    assert budgets_total == pytest.approx(report_expenses)
+
+
+async def test_reports_reject_invalid_date_ranges(report_client: httpx.AsyncClient) -> None:
+    """Verify report endpoints reject invalid date ranges and malformed dates.
+
+    REQ: FUNC-REP-008
+    """
+    reverse = await report_client.get(
+        "/reports/cash-flow?start=2026-02-01&end=2026-01-01",
+        headers=_HEADERS,
+    )
+    assert reverse.status_code == 422
+
+    invalid = await report_client.get(
+        "/reports/net-worth?start=2026-02-30&end=2026-03-01",
+        headers=_HEADERS,
+    )
+    assert invalid.status_code == 422
+
+
+async def test_reports_require_api_key(report_client: httpx.AsyncClient) -> None:
+    """Verify report endpoints enforce API-key authentication.
+
+    REQ: SEC-ACC-004
+    """
+    resp = await report_client.get("/reports/monthly-overview?month=2026-01")
+    assert resp.status_code == 401
 
 
 # ── Budget tests (Task 13) ────────────────────────────────────────────────────
