@@ -279,6 +279,8 @@ class BalanceResponse(BaseModel):
     REQ: FUNC-REP-006
     """
 
+    # TODO(api): Add account_name and populate it from account.name so
+    # balance views can display human-readable account labels.
     snapshot_id: str
     account_id: str
     provider_account_id: str
@@ -927,6 +929,8 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             params.append(account_id)
 
         params.extend([limit, offset])
+        # TODO(api): Include account.name in this query and return it in
+        # BalanceResponse for UI display instead of raw IDs.
         query = (
             "SELECT "
             "balance_snapshot.id, balance_snapshot.account_id, account.provider_account_id, "
