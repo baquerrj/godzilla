@@ -6,6 +6,7 @@ REQ: FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005,
 REQ: FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002,
 REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
+REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-006, SEC-ACC-004, SEC-DATA-003
 """
 
@@ -300,6 +301,32 @@ class SyncStateResponse(BaseModel):
     last_sync_at_offset_minutes: int | None
     last_sync_status: str | None
     cursor: str | None
+
+
+class CreateBudgetRequest(BaseModel):
+    """Request body for creating a monthly budget line.
+
+    REQ: FUNC-BUD-001
+    """
+
+    month: str = Field(pattern=r"^\d{4}-\d{2}$")
+    category_id: str = Field(min_length=1, max_length=128)
+    amount: float = Field(gt=0)
+
+
+class BudgetLineResponse(BaseModel):
+    """Per-category budget line with planned/actual/remaining.
+
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+    """
+
+    budget_id: str
+    category_id: str
+    month: str
+    planned: float
+    actual: float
+    remaining: float
+    is_overspent: bool
 
 
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
@@ -653,12 +680,44 @@ _TXN_SELECT = (
     "JOIN account ON account.id = transaction_record.account_id"
 )
 
+# CTE that computes per-category actual spend for a given month.
+# Two bind parameters, both equal to the YYYY-MM month string.
+# Inclusion rules enforced:
+#   - posted only (no pending)
+#   - no transfers (is_transfer = 0)
+#   - no explicitly excluded transactions (is_excluded = 0)
+#   - split-aware: when a transaction has splits, the parent's amount/category
+#     is ignored; only split rows contribute.
+# The LIKE pattern is safe because `month` is validated to ^\d{4}-\d{2}$ by Pydantic.
+# REQ: FUNC-BUD-002, FUNC-BUD-004
+_BUDGET_ACTUALS_CTE = """
+WITH line_items AS (
+  SELECT tr.category_id, tr.amount AS subtotal
+  FROM transaction_record tr
+  WHERE tr.date LIKE ? || '-%'
+    AND tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted'
+    AND tr.category_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM transaction_split WHERE transaction_id = tr.id)
+  UNION ALL
+  SELECT ts.category_id, ts.amount AS subtotal
+  FROM transaction_split ts
+  JOIN transaction_record tr ON tr.id = ts.transaction_id
+  WHERE tr.date LIKE ? || '-%'
+    AND tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted'
+    AND ts.category_id IS NOT NULL
+)
+SELECT category_id, SUM(subtotal) AS actual
+FROM line_items
+GROUP BY category_id
+"""
+
 
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
     REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
-    REQ: FUNC-REP-006, FUNC-ACCT-004, FUNC-CAT-001, FUNC-SYNC-006, SEC-ACC-004
+    REQ: FUNC-REP-006, FUNC-ACCT-004, FUNC-CAT-001, FUNC-SYNC-006, SEC-ACC-004,
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -990,12 +1049,52 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             for row in rows
         ]
 
+    @app.get(
+        "/budgets",
+        response_model=list[BudgetLineResponse],
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_budgets(
+        month: str = Query(pattern=r"^\d{4}-\d{2}$"),
+    ) -> list[BudgetLineResponse]:
+        """List budget lines with planned/actual/remaining for the given month.
+
+        REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+        """
+        with _db_connection() as conn:
+            budget_rows = conn.execute(
+                "SELECT id, category_id, amount FROM budget WHERE month = ?"
+                " ORDER BY category_id ASC",
+                (month,),
+            ).fetchall()
+            actual_rows = conn.execute(_BUDGET_ACTUALS_CTE, (month, month)).fetchall()
+
+        actuals: dict[str, float] = {row[0]: float(row[1]) for row in actual_rows}
+        result = []
+        for row in budget_rows:
+            planned = float(row[2])
+            actual = actuals.get(row[1], 0.0)
+            remaining = planned - actual
+            result.append(
+                BudgetLineResponse(
+                    budget_id=row[0],
+                    category_id=row[1],
+                    month=month,
+                    planned=planned,
+                    actual=actual,
+                    remaining=remaining,
+                    is_overspent=actual > planned,
+                )
+            )
+        return result
+
 
 def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
-    """Register mutating endpoints for categories, transactions, and conflicts.
+    """Register mutating endpoints for categories, transactions, conflicts, and budgets.
 
     REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
-    REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004
+    REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004,
+    REQ: FUNC-BUD-001
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -1334,6 +1433,81 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
             resolution_choice=request.resolution_choice,
         )
 
+    @app.post(
+        "/budgets",
+        response_model=BudgetLineResponse,
+        dependencies=[Depends(require_api_key)],
+        status_code=201,
+    )
+    async def create_budget(request: CreateBudgetRequest) -> BudgetLineResponse:
+        """Create a monthly budget line for a leaf category.
+
+        REQ: FUNC-BUD-001
+        """
+        with _db_connection() as conn:
+            _validate_category_assignment(conn, request.category_id)
+
+            existing = conn.execute(
+                "SELECT id FROM budget WHERE month = ? AND category_id = ?",
+                (request.month, request.category_id),
+            ).fetchone()
+            if existing is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="A budget line already exists for this category and month",
+                )
+
+            new_id = str(uuid4())
+            conn.execute(
+                "INSERT INTO budget (id, month, category_id, amount) VALUES (?, ?, ?, ?)",
+                (new_id, request.month, request.category_id, request.amount),
+            )
+            conn.commit()
+
+            actual_rows = conn.execute(
+                _BUDGET_ACTUALS_CTE, (request.month, request.month)
+            ).fetchall()
+
+        actuals: dict[str, float] = {row[0]: float(row[1]) for row in actual_rows}
+        actual = actuals.get(request.category_id, 0.0)
+        planned = request.amount
+        remaining = planned - actual
+        _log_event(
+            logging.INFO,
+            "budget_created",
+            {"budget_id": new_id, "month": request.month, "category_id": request.category_id},
+        )
+        return BudgetLineResponse(
+            budget_id=new_id,
+            category_id=request.category_id,
+            month=request.month,
+            planned=planned,
+            actual=actual,
+            remaining=remaining,
+            is_overspent=actual > planned,
+        )
+
+    @app.delete(
+        "/budgets/{budget_id}",
+        dependencies=[Depends(require_api_key)],
+        status_code=204,
+        response_model=None,
+    )
+    async def delete_budget(
+        budget_id: str = FastAPIPath(min_length=1),
+    ) -> None:
+        """Delete a budget line by ID.
+
+        REQ: FUNC-BUD-001
+        """
+        with _db_connection() as conn:
+            row = conn.execute("SELECT id FROM budget WHERE id = ?", (budget_id,)).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="Budget not found")
+            conn.execute("DELETE FROM budget WHERE id = ?", (budget_id,))
+            conn.commit()
+        _log_event(logging.INFO, "budget_deleted", {"budget_id": budget_id})
+
 
 async def get_transaction_detail_internal(
     conn_factory: Any,
@@ -1420,7 +1594,7 @@ def create_app() -> FastAPI:
     REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004,
     REQ: FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
     REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
-    REQ: FUNC-REP-006, SEC-ACC-004
+    REQ: FUNC-REP-006, FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
     _register_plaid_routes(app)

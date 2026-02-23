@@ -5,6 +5,7 @@ REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
 REQ: FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
 REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-006, FUNC-SYNC-007,
+REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-006, FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
@@ -842,3 +843,463 @@ async def test_resolve_conflict_local_choice(api_client: httpx.AsyncClient) -> N
     body = resp.json()
     assert body["status"] == "resolved"
     assert body["resolution_choice"] == "local"
+
+
+# ── Budget tests (Task 13) ────────────────────────────────────────────────────
+
+
+def _seed_budget_data(db_path: str, db_key: str) -> None:
+    """Seed budget-specific fixture data into the test database.
+
+    Inserts categories and transactions designed to verify each inclusion rule
+    independently (transfer, excluded, pending, split-aware).
+
+    Expected actuals for 2026-01:
+      food_coffee = 45.00  (12 + 8 + 25 from split)
+      food_dining = 20.00  (20 from split)
+
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-004
+    """
+    conn = sqlcipher.connect(db_path)
+    conn.execute(f"PRAGMA key = '{db_key}';")
+    conn.execute("PRAGMA foreign_keys = ON;")
+
+    conn.execute(
+        "INSERT OR IGNORE INTO category (id, name, parent_id, active) VALUES (?, ?, ?, ?)",
+        ("food", "Food", None, 1),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO category (id, name, parent_id, active) VALUES (?, ?, ?, ?)",
+        ("food_coffee", "Coffee", "food", 1),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO category (id, name, parent_id, active) VALUES (?, ?, ?, ?)",
+        ("food_dining", "Dining", "food", 1),
+    )
+
+    _TXN_INSERT = (
+        "INSERT OR IGNORE INTO transaction_record ("
+        "id, account_id, provider_transaction_id, date, amount, currency, status, "
+        "merchant_name, display_name, category_id, is_transfer, is_excluded, notes, "
+        "created_at_utc, created_at_tz, created_at_offset_minutes, updated_at_utc, "
+        "updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+    _TS = ("2026-01-10T10:00:00", "UTC", 0)
+
+    # txn-b1: counted (posted, not transfer/excluded, no splits)
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b1",
+            "acc-1",
+            "prov-b1",
+            "2026-01-05",
+            12.00,
+            "USD",
+            "posted",
+            None,
+            "Coffee A",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+
+    # txn-b2: counted (same rules)
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b2",
+            "acc-1",
+            "prov-b2",
+            "2026-01-06",
+            8.00,
+            "USD",
+            "posted",
+            None,
+            "Coffee B",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+
+    # txn-b3: excluded (is_transfer=1)
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b3",
+            "acc-1",
+            "prov-b3",
+            "2026-01-07",
+            50.00,
+            "USD",
+            "posted",
+            None,
+            "Transfer",
+            "food_coffee",
+            1,
+            0,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+
+    # txn-b4: excluded (is_excluded=1)
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b4",
+            "acc-1",
+            "prov-b4",
+            "2026-01-08",
+            30.00,
+            "USD",
+            "posted",
+            None,
+            "Excluded",
+            "food_coffee",
+            0,
+            1,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+
+    # txn-b5: excluded (pending status)
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b5",
+            "acc-1",
+            "prov-b5",
+            "2026-01-09",
+            5.00,
+            "USD",
+            "pending",
+            None,
+            "Pending",
+            "food_coffee",
+            0,
+            0,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+
+    # txn-b6: has splits → parent ignored; splits contribute
+    conn.execute(
+        _TXN_INSERT,
+        (
+            "txn-b6",
+            "acc-1",
+            "prov-b6",
+            "2026-01-10",
+            45.00,
+            "USD",
+            "posted",
+            None,
+            "Dinner",
+            "food_dining",
+            0,
+            0,
+            None,
+            *_TS,
+            *_TS,
+        ),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes)"
+        " VALUES (?, ?, ?, ?, ?)",
+        ("split-b6-1", "txn-b6", 25.00, "food_coffee", None),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes)"
+        " VALUES (?, ?, ?, ?, ?)",
+        ("split-b6-2", "txn-b6", 20.00, "food_dining", None),
+    )
+
+    conn.commit()
+    conn.close()
+
+
+@pytest.fixture
+async def budget_client() -> httpx.AsyncClient:
+    """Provide an authenticated ASGI client seeded with budget fixture data.
+
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+    """
+    env_backup = {
+        "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
+        "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
+        "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+    }
+    with TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "budget.db")
+        db_key = "budget-test-key"
+        run_migrations(db_path=db_path, db_key=db_key)
+        _seed_database(db_path, db_key)
+        _seed_budget_data(db_path, db_key)
+
+        os.environ["GODZILLA_DB_PATH"] = db_path
+        os.environ["GODZILLA_DB_KEY"] = db_key
+        os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
+
+    for key, value in env_backup.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
+_HEADERS = {"X-API-Key": "test-api-token"}
+
+
+async def test_get_budgets_returns_empty_for_no_budgets(budget_client: httpx.AsyncClient) -> None:
+    """Verify GET /budgets returns empty list when no budgets exist.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_get_budgets_missing_month_returns_422(budget_client: httpx.AsyncClient) -> None:
+    """Verify GET /budgets without month query param returns 422.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.get("/budgets", headers=_HEADERS)
+    assert resp.status_code == 422
+
+
+async def test_get_budgets_invalid_month_format_returns_422(
+    budget_client: httpx.AsyncClient,
+) -> None:
+    """Verify GET /budgets with malformed month param returns 422.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.get("/budgets?month=January", headers=_HEADERS)
+    assert resp.status_code == 422
+
+
+async def test_create_budget_returns_201(budget_client: httpx.AsyncClient) -> None:
+    """Verify POST /budgets creates a budget line and returns 201 with payload.
+
+    REQ: FUNC-BUD-001, FUNC-BUD-002
+    """
+    resp = await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 50.00},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["category_id"] == "food_coffee"
+    assert body["month"] == "2026-01"
+    assert body["planned"] == 50.00
+    assert "budget_id" in body
+    assert "actual" in body
+    assert "remaining" in body
+    assert "is_overspent" in body
+
+
+async def test_create_budget_duplicate_returns_409(budget_client: httpx.AsyncClient) -> None:
+    """Verify creating a duplicate budget line returns 409.
+
+    REQ: FUNC-BUD-001
+    """
+    payload = {"month": "2026-02", "category_id": "food_coffee", "amount": 40.00}
+    await budget_client.post("/budgets", json=payload, headers=_HEADERS)
+    resp = await budget_client.post("/budgets", json=payload, headers=_HEADERS)
+    assert resp.status_code == 409
+
+
+async def test_create_budget_parent_category_returns_422(budget_client: httpx.AsyncClient) -> None:
+    """Verify creating a budget for a parent (non-leaf) category returns 422.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food", "amount": 100.00},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_budget_unknown_category_returns_422(budget_client: httpx.AsyncClient) -> None:
+    """Verify creating a budget for an unknown category returns 422.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "no_such_cat", "amount": 50.00},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+
+
+async def test_create_budget_negative_amount_returns_422(budget_client: httpx.AsyncClient) -> None:
+    """Verify creating a budget with amount <= 0 returns 422.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": -5.00},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422
+
+
+async def test_get_budgets_computes_actuals_correctly(budget_client: httpx.AsyncClient) -> None:
+    """Verify GET /budgets returns correct actual values per inclusion rules.
+
+    food_coffee actual = 12 + 8 + 25 (split) = 45.00
+    food_dining actual = 20 (split) = 20.00
+
+    REQ: FUNC-BUD-002, FUNC-BUD-004
+    """
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 60.00},
+        headers=_HEADERS,
+    )
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_dining", "amount": 30.00},
+        headers=_HEADERS,
+    )
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    lines = {line["category_id"]: line for line in resp.json()}
+    assert lines["food_coffee"]["actual"] == pytest.approx(45.00)
+    assert lines["food_dining"]["actual"] == pytest.approx(20.00)
+
+
+async def test_get_budgets_overspent_flagged(budget_client: httpx.AsyncClient) -> None:
+    """Verify is_overspent is True when actual > planned.
+
+    REQ: FUNC-BUD-002, FUNC-BUD-003
+    """
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 20.00},
+        headers=_HEADERS,
+    )
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    line = resp.json()[0]
+    assert line["is_overspent"] is True
+    assert line["remaining"] == pytest.approx(20.00 - 45.00)
+
+
+async def test_get_budgets_excludes_transfers_pending_excluded(
+    budget_client: httpx.AsyncClient,
+) -> None:
+    """Verify transfers, excluded, and pending txns are excluded from actuals.
+
+    txn-b3 (transfer), txn-b4 (excluded), txn-b5 (pending) must not count.
+    Only txn-b1 (12) and txn-b2 (8) + split portion (25) = 45 should count.
+
+    REQ: FUNC-BUD-004
+    """
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 200.00},
+        headers=_HEADERS,
+    )
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    line = next(l for l in resp.json() if l["category_id"] == "food_coffee")
+    # Must not include txn-b3 (50), txn-b4 (30), txn-b5 (5)
+    assert line["actual"] == pytest.approx(45.00)
+
+
+async def test_get_budgets_uses_splits_not_parent(budget_client: httpx.AsyncClient) -> None:
+    """Verify that when splits exist the parent txn amount/category is ignored.
+
+    txn-b6 has category food_dining, amount 45.00 — but has splits, so the
+    parent row is excluded. Only the split rows contribute (25→coffee, 20→dining).
+
+    REQ: FUNC-BUD-004
+    """
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_dining", "amount": 100.00},
+        headers=_HEADERS,
+    )
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    line = next(l for l in resp.json() if l["category_id"] == "food_dining")
+    # Parent amount (45) must NOT count; only split-b6-2 (20) counts.
+    assert line["actual"] == pytest.approx(20.00)
+
+
+async def test_get_budgets_filters_by_month(budget_client: httpx.AsyncClient) -> None:
+    """Verify GET /budgets only returns budgets for the requested month.
+
+    REQ: FUNC-BUD-001
+    """
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 50.00},
+        headers=_HEADERS,
+    )
+    await budget_client.post(
+        "/budgets",
+        json={"month": "2026-02", "category_id": "food_coffee", "amount": 60.00},
+        headers=_HEADERS,
+    )
+    resp = await budget_client.get("/budgets?month=2026-01", headers=_HEADERS)
+    assert resp.status_code == 200
+    months = {line["month"] for line in resp.json()}
+    assert months == {"2026-01"}
+
+
+async def test_delete_budget_returns_204(budget_client: httpx.AsyncClient) -> None:
+    """Verify DELETE /budgets/{id} returns 204 and removes the budget line.
+
+    REQ: FUNC-BUD-001
+    """
+    create_resp = await budget_client.post(
+        "/budgets",
+        json={"month": "2026-03", "category_id": "food_coffee", "amount": 55.00},
+        headers=_HEADERS,
+    )
+    assert create_resp.status_code == 201
+    budget_id = create_resp.json()["budget_id"]
+
+    del_resp = await budget_client.delete(f"/budgets/{budget_id}", headers=_HEADERS)
+    assert del_resp.status_code == 204
+
+    list_resp = await budget_client.get("/budgets?month=2026-03", headers=_HEADERS)
+    assert list_resp.status_code == 200
+    assert list_resp.json() == []
+
+
+async def test_delete_budget_not_found_returns_404(budget_client: httpx.AsyncClient) -> None:
+    """Verify DELETE /budgets/{id} returns 404 for unknown ID.
+
+    REQ: FUNC-BUD-001
+    """
+    resp = await budget_client.delete("/budgets/no-such-budget-id", headers=_HEADERS)
+    assert resp.status_code == 404

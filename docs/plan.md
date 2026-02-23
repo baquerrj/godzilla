@@ -65,12 +65,22 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M3 — Budgets + monthly view + overspend drill-down
 
-- [ ] **13. Budget endpoints** (`FUNC-BUD-001`–`FUNC-BUD-004`)
-  `GET /budgets?month=YYYY-MM` (planned/actual/remaining), `POST /budgets`,
-  `DELETE /budgets/{id}`. Enforce budget inclusion rules throughout.
+- [x] **13. Budget endpoints** (`FUNC-BUD-001`–`FUNC-BUD-004`)
+  - [x] 13a. Pydantic models: `CreateBudgetRequest`, `BudgetLineResponse`
+  - [x] 13b. `_BUDGET_ACTUALS_CTE` module-level SQL constant
+  - [x] 13c. `GET /budgets?month=YYYY-MM` in `_register_read_routes`
+  - [x] 13d. `POST /budgets` and `DELETE /budgets/{id}` in `_register_write_routes`
+  - [x] 13e. Backend tests (15 tests) + `_seed_budget_data` helper
+  - [x] 13f. Lint + full test suite green → commit
 
-- [ ] **14. M3 UI**
-  Monthly budget view with overspend highlighting and drill-down to transactions.
+- [~] **14. M3 UI**
+  - [ ] 14a. TypeScript types: `BudgetLine`, `CreateBudgetRequest`, `GetBudgetsParams`
+  - [ ] 14b. API client methods: `getBudgets`, `createBudget`, `deleteBudget`; 204 handling
+  - [ ] 14c. `BudgetPanel` component
+  - [ ] 14d. `App.tsx` integration + `handleBudgetDrillDown`
+  - [ ] 14e. CSS additions
+  - [ ] 14f. Frontend tests (8 tests in `BudgetPanel.test.tsx`, smoke in `App.test.tsx`)
+  - [ ] 14g. Traceability + design doc + mark plan complete → commit
 
 ---
 
