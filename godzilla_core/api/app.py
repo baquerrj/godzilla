@@ -398,6 +398,73 @@ def _parse_owner_names(value: str | None) -> list[Any]:
     return json.loads(value)
 
 
+def _upsert_linked_item_metadata(
+    conn: sqlcipher.Connection,
+    provider_item_id: str,
+    plaid_institution_id: str,
+) -> None:
+    """Persist linked item/institution metadata in the main DB.
+
+    REQ: FUNC-ACCT-004
+
+    Args:
+        conn: Open encrypted database connection.
+        provider_item_id: Plaid provider item identifier.
+        plaid_institution_id: Plaid institution identifier.
+    """
+    row = conn.execute(
+        "SELECT id FROM institution WHERE plaid_institution_id = ?",
+        (plaid_institution_id,),
+    ).fetchone()
+    if row is None:
+        institution_id = str(uuid4())
+        utc, tz, offset = local_timestamp_metadata()
+        conn.execute(
+            "INSERT INTO institution ("
+            "id, name, plaid_institution_id, created_at_utc, created_at_tz, "
+            "created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            (institution_id, plaid_institution_id, plaid_institution_id, utc, tz, offset),
+        )
+    else:
+        institution_id = row[0]
+
+    access_token_ref = f"plaid_access_token:{provider_item_id}"
+    item_row = conn.execute(
+        "SELECT id FROM plaid_item WHERE provider_item_id = ?",
+        (provider_item_id,),
+    ).fetchone()
+    if item_row is None:
+        item_id = str(uuid4())
+        utc, tz, offset = local_timestamp_metadata()
+        conn.execute(
+            "INSERT INTO plaid_item ("
+            "id, provider_item_id, institution_id, access_token_ref, status, "
+            "last_sync_at_utc, last_sync_at_tz, last_sync_at_offset_minutes, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                item_id,
+                provider_item_id,
+                institution_id,
+                access_token_ref,
+                "linked",
+                None,
+                None,
+                None,
+                utc,
+                tz,
+                offset,
+            ),
+        )
+        return
+
+    conn.execute(
+        "UPDATE plaid_item SET institution_id = ?, access_token_ref = ?, status = ? WHERE id = ?",
+        (institution_id, access_token_ref, "linked", item_row[0]),
+    )
+
+
 async def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
     """Validate API caller credentials.
 
@@ -414,7 +481,8 @@ async def require_api_key(x_api_key: str | None = Header(default=None, alias="X-
 def _register_plaid_routes(app: FastAPI) -> None:
     """Register Plaid endpoints on the FastAPI application.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-005, FUNC-SYNC-001, SEC-ACC-004
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
+    REQ: FUNC-SYNC-001, SEC-ACC-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -428,7 +496,7 @@ def _register_plaid_routes(app: FastAPI) -> None:
     async def plaid_link(request: PlaidLinkRequest) -> PlaidLinkResponse:
         """Create a sandbox Plaid item and persist its token.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004
         """
         try:
             config = PlaidConfig.from_env()
@@ -447,6 +515,13 @@ def _register_plaid_routes(app: FastAPI) -> None:
                 products=request.products,
             )
             institution_id = request.institution_id or config.sandbox_institution_id
+            with _db_connection() as conn:
+                _upsert_linked_item_metadata(
+                    conn=conn,
+                    provider_item_id=link_result["item_id"],
+                    plaid_institution_id=institution_id,
+                )
+                conn.commit()
             return PlaidLinkResponse(
                 item_id=link_result["item_id"],
                 institution_id=institution_id,

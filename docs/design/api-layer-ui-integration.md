@@ -19,6 +19,7 @@ sequenceDiagram
   UI->>API: POST /plaid/link
   API->>PLAID: Sandbox token create + exchange
   API->>SEC: Store access token ref
+  API->>DB: Upsert institution + plaid_item (status=linked)
   API-->>UI: item_id
 
   UI->>API: POST /plaid/sync
@@ -47,6 +48,10 @@ Endpoints:
 - `GET /transactions`
 - `GET /balances`
 - `GET /sync-state`
+
+`POST /plaid/link` behavior:
+- Exchanges and stores the Plaid access token in the secrets DB.
+- Upserts `institution` + `plaid_item` in the main DB so `/sync-state` can surface newly linked items before first sync.
 
 Auth and config:
 - All endpoints require `X-API-Key` matching `GODZILLA_API_TOKEN`.

@@ -45,6 +45,7 @@
   parent_requirement_id: SYS-001
   code_refs:
   - godzilla_core/api/app.py:plaid_link
+  - godzilla_core/api/app.py:_upsert_linked_item_metadata
   - godzilla_core/integrations/plaid_client.py:PlaidClient.create_sandbox_public_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
   - godzilla_core/scripts/link_sandbox_item.py:main
@@ -54,6 +55,7 @@
   - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_persists_item_for_sync_state
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   - ui/src/test/SyncStatePanel.test.tsx:calls plaidLink and onRefresh on connect
   doc_refs:
@@ -67,6 +69,7 @@
   parent_requirement_id: SYS-003
   code_refs:
   - godzilla_core/api/app.py:plaid_link
+  - godzilla_core/api/app.py:_upsert_linked_item_metadata
   - godzilla_core/integrations/plaid_client.py:PlaidClient.exchange_public_token
   - godzilla_core/integrations/plaid_client.py:store_access_token
   - godzilla_core/integrations/plaid_client.py:link_sandbox_item
@@ -77,6 +80,7 @@
   - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_plaid_link_endpoint_uses_link_helper
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_persists_item_for_sync_state
   - godzilla_core/tests/test_plaid_client.py:PlaidSandboxFlowTests
   - ui/src/test/SyncStatePanel.test.tsx:calls plaidLink and onRefresh on connect
   doc_refs:
@@ -113,6 +117,8 @@
   title: Connection state tracking
   parent_requirement_id: FUNC-ACCT-003
   code_refs:
+  - godzilla_core/api/app.py:_upsert_linked_item_metadata
+  - godzilla_core/api/app.py:plaid_link
   - godzilla_core/api/app.py:get_sync_state
   - godzilla_core/integrations/plaid_sync.py:_set_item_last_sync
   - godzilla_core/integrations/plaid_sync.py:_update_sync_state
@@ -121,6 +127,7 @@
   - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_sync_state_returns_item_status
+  - godzilla_core/tests/test_api_layer.py:test_plaid_link_persists_item_for_sync_state
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_cursor_persistence_roundtrip
   - ui/src/test/SyncStatePanel.test.tsx:displays sync state rows
   doc_refs:

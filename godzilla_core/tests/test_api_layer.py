@@ -359,6 +359,44 @@ async def test_plaid_link_endpoint_uses_link_helper(api_client: httpx.AsyncClien
     link_mock.assert_called_once()
 
 
+async def test_plaid_link_persists_item_for_sync_state(api_client: httpx.AsyncClient) -> None:
+    """Verify linking an item registers it for sync-state and run-sync workflows.
+
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004
+    """
+    config = PlaidConfig(
+        client_id="cid",
+        secret="sec",
+        env="sandbox",
+        base_url="https://sandbox.plaid.com",
+        sandbox_institution_id="ins_109508",
+    )
+    with (
+        patch("godzilla_core.api.app.PlaidConfig.from_env", return_value=config),
+        patch("godzilla_core.api.app.PlaidClient"),
+        patch("godzilla_core.api.app.store_from_env", return_value=object()),
+        patch(
+            "godzilla_core.api.app.link_sandbox_item",
+            return_value={"item_id": "item-provider-2", "access_token": "token"},
+        ),
+    ):
+        response = await api_client.post(
+            "/plaid/link",
+            json={"institution_id": "ins_109508", "products": ["transactions", "identity"]},
+            headers={"X-API-Key": "test-api-token"},
+        )
+
+    assert response.status_code == 200
+    state_response = await api_client.get("/sync-state", headers={"X-API-Key": "test-api-token"})
+    assert state_response.status_code == 200
+
+    rows = state_response.json()
+    matching = [row for row in rows if row["item_id"] == "item-provider-2"]
+    assert len(matching) == 1
+    assert matching[0]["institution_id"] == "ins_109508"
+    assert matching[0]["status"] == "linked"
+
+
 async def test_plaid_link_error_response_redacts_logs(api_client: httpx.AsyncClient) -> None:
     """Verify Plaid link errors redact sensitive values in structured logs.
 
