@@ -106,7 +106,12 @@ Follow the traceability policy in `AGENTS.md`:
 - Parameterized queries only — no string concatenation for SQL.
 - All logs must pass through `redact_sensitive`.
 - Design docs in `docs/design/` must be updated for non-trivial changes (Markdown + Mermaid).
+- Always run commands using virtual environment
+- Never install packages in system or user scope
 
 ## When to Run Lint and Tests
 
 Run lint (`ruff` + `black --check`) and the full test suite after any change to **functional** source code. For **purely non-functional changes** (for example comments, TODO annotations, or docstrings without logic changes), skip unit tests and run lint only.
+
+## Commits and Progress
+As progress is made, mark tasks complete in plan markdown files, and make a local commit following the Conventional Commits convention with the configured git user and e-mail.

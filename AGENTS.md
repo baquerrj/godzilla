@@ -81,6 +81,8 @@ Before submission:
 3. `trace/requirements.yml` is updated and consistent.
 4. Design docs are updated/created when needed.
 5. Lint, tests, and build checks pass. Exception: for purely non-functional changes (for example comments, TODOs, docstrings, or docs-only edits with no logic/config/behavior impact), run lint only; tests/build may be skipped.
+    - Always run commands using virtual environment
+    - Never install packages in system or user scope 
 6. Security checks (if configured) pass.
 7. No secrets appear in logs.
 
@@ -97,6 +99,7 @@ Python check commands:
 5. Update `trace/requirements.yml`.
 6. Run required checks.
 7. Summarize: requirements touched, files changed, tests changed, docs changed, commands/results.
+8. Make a local commit following Conventional Commits convention using configured git user and e-mail.
 
 ## 9) Repository conventions
 Ensure these paths exist and stay current:
