@@ -42,16 +42,12 @@ export COMPOSE_DEV='docker compose -f docker-compose.dev.yml -f docker-compose.d
 From the repository root:
 
 ```bash
+export COMPOSE_DEV='docker compose -f docker-compose.dev.yml -f docker-compose.dev.ssh-agent.yml -f docker-compose.dev.claude.yml'
+export GODZILLA_REPO_URL=$(git remote get-url origin)
 $COMPOSE_DEV build dev
 $COMPOSE_DEV up -d dev
-$COMPOSE_DEV exec dev git clone <repo-url> /workspace/godzilla
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m pip install -e ".[dev]" && npm install'
-```
-
-Manual `docker exec` is now stable:
-
-```bash
-docker exec -it godzilla-dev bash
+$COMPOSE_DEV exec dev git clone $GODZILLA_REPO_URL /workspace/godzilla
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/actiavte && pip install -e ".[dev]" && npm install'
 ```
 
 ## Run and use locally
@@ -66,19 +62,22 @@ Open an interactive shell:
 ```bash
 $COMPOSE_DEV exec dev bash
 ```
+```bash
+docker exec -it godzilla-dev bash
+```
 
 Run quality checks inside the container:
 
 ```bash
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && nox -s lint'
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && nox -s tests'
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && nox -s build'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s lint'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s tests'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s build'
 ```
 
 Run the API server from inside the container (example):
 
 ```bash
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && godzilla-api --host 127.0.0.1 --port 8787'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && godzilla-api --host 127.0.0.1 --port 8787'
 ```
 
 Run the browser UI (Vite) and open it from the host:
@@ -121,7 +120,7 @@ When dependencies change in `Dockerfile.dev`, compose files, `pyproject.toml`, o
 $COMPOSE_DEV build --no-cache dev
 $COMPOSE_DEV up -d dev
 $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && git pull --ff-only'
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m pip install -e ".[dev]" && npm install'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/actiavte && pip install -e ".[dev]" && npm install'
 ```
 
 ## Stop and cleanup
@@ -147,4 +146,25 @@ Remove containers, images, and volumes (destructive to workspace/data caches):
 
 ```bash
 $COMPOSE_DEV down --rmi local -v
+```
+
+# Run API Server on host 
+```bash
+set -a
+source .godenv
+set +a
+python3 -m venv venv 
+. venv/bin/activate
+pip install -e ".[dev]"
+godzilla-api --host 127.0.0.1 --port 8787
+```
+
+# Run Browser UI (Vite) on host
+# Terminal 2 (UI)
+```bash
+set -a
+source ../.godenv
+set +a
+npm install
+npm run dev -- --host 127.0.0.1 --port 8443 --strictPort
 ```

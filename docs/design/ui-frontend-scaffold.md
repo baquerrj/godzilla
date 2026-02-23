@@ -18,27 +18,27 @@ loading/error/success contract to every view that calls the backend.
 ```mermaid
 graph TD
     subgraph "Tauri desktop app"
-        FE["React frontend\n(TypeScript)"]
-        API_CLIENT["GodzillaApi client\nsrc/api/client.ts"]
-        HOOK["useApiCall hook\n(loading/error/success)"]
+        FE["React frontend<br>(TypeScript)"]
+        API_CLIENT["GodzillaApi client<br>src/api/client.ts"]
+        HOOK["useApiCall hook<br>(loading/error/success)"]
         FE --> HOOK
         HOOK --> API_CLIENT
     end
 
     subgraph "Dev mode only"
-        VITE_PROXY["Vite dev proxy\n/api/* → 127.0.0.1:8787"]
+        VITE_PROXY["Vite dev proxy<br>/api/* → 127.0.0.1:8787"]
         API_CLIENT -->|"fetch /api/..."| VITE_PROXY
     end
 
     subgraph "Production build"
         TAURI_FETCH["Native fetch"]
-        API_CLIENT -->|"fetch http://127.0.0.1:8787/..."| TAURI_FETCH
+        API_CLIENT -->|"fetch http\://127.0.0.1:8787/..."| TAURI_FETCH
     end
 
     VITE_PROXY --> SIDECAR
     TAURI_FETCH --> SIDECAR
 
-    SIDECAR["FastAPI sidecar\ngodzilla-api"]
+    SIDECAR["FastAPI sidecar<br>godzilla-api"]
 ```
 
 ### Base URL selection
