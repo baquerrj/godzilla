@@ -335,7 +335,9 @@ class PlaidSandboxFlowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = SecretStore(db_path=os.path.join(tmp_dir, "secrets.db"), db_key="test")
             with (
-                patch.object(client, "create_sandbox_public_token", return_value="pt-test"),
+                patch.object(
+                    client, "create_sandbox_public_token", return_value="pt-test"
+                ) as public_token_mock,
                 patch.object(
                     client,
                     "exchange_public_token",
@@ -346,3 +348,4 @@ class PlaidSandboxFlowTests(unittest.TestCase):
 
             self.assertEqual(result["item_id"], "item-test")
             self.assertEqual(store.get_secret("plaid_access_token:item-test"), "at-test")
+            public_token_mock.assert_called_once_with("ins_109508", ["transactions", "identity"])

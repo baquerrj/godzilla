@@ -52,7 +52,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--products",
-        help="Comma-separated products (default: transactions,balance,identity)",
+        help="Comma-separated products (default: transactions,identity)",
     )
     args = parser.parse_args()
 

@@ -237,7 +237,7 @@ async def test_auth_required_for_endpoints(api_client: httpx.AsyncClient) -> Non
 async def test_input_validation_rejects_invalid_payloads(api_client: httpx.AsyncClient) -> None:
     """Verify request body validation failures return 422 responses.
 
-    REQ: FUNC-ACCT-007
+    REQ: FUNC-ACCT-007, SEC-DATA-003
     """
     bad_sync = await api_client.post(
         "/plaid/sync",
@@ -252,6 +252,13 @@ async def test_input_validation_rejects_invalid_payloads(api_client: httpx.Async
         headers={"X-API-Key": "test-api-token"},
     )
     assert bad_link.status_code == 422
+
+    bad_link_products = await api_client.post(
+        "/plaid/link",
+        json={"products": ["transactions", "balance"]},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert bad_link_products.status_code == 422
 
 
 async def test_get_accounts_returns_expected_payload(api_client: httpx.AsyncClient) -> None:

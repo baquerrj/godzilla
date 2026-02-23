@@ -43,6 +43,7 @@ _SORT_FIELDS = {
     "date": "transaction_record.date",
     "amount": "transaction_record.amount",
 }
+_DISALLOWED_PLAID_LINK_PRODUCTS = {"balance"}
 
 
 class PlaidLinkRequest(BaseModel):
@@ -63,9 +64,17 @@ class PlaidLinkRequest(BaseModel):
         """
         if value is None:
             return None
-        normalized = [item.strip() for item in value if item.strip()]
+        normalized = [item.strip().lower() for item in value if item.strip()]
         if not normalized:
             raise ValueError("products must contain at least one value")
+        disallowed = sorted(
+            {item for item in normalized if item in _DISALLOWED_PLAID_LINK_PRODUCTS}
+        )
+        if disallowed:
+            raise ValueError(
+                "products contains unsupported Plaid Link initial_products: "
+                + ", ".join(disallowed)
+            )
         return normalized
 
 

@@ -49,7 +49,7 @@ Use the helper script to create a sandbox item and store the access token:
 ```bash
 python3 godzilla_core/scripts/link_sandbox_item.py \
   --institution-id ins_109508 \
-  --products transactions,balance,identity
+  --products transactions,identity
 ```
 
 To sync transactions and balances into the main DB:

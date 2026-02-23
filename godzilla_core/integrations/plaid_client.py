@@ -19,7 +19,7 @@ _ENV_URLS = {
     "production": "https://production.plaid.com",
 }
 
-_DEFAULT_PRODUCTS = ["transactions", "balance", "identity"]
+_DEFAULT_PRODUCTS = ["transactions", "identity"]
 _DEFAULT_SANDBOX_INSTITUTION_ID = "ins_109508"
 
 
