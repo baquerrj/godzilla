@@ -87,15 +87,81 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M4 — Dashboards/reports + net worth snapshots
 
 - [ ] **15. Dashboard/report endpoints** (`FUNC-REP-001`–`FUNC-REP-008`)
-  - `GET /reports/monthly-overview?month=YYYY-MM`
-  - `GET /reports/cash-flow?start=...&end=...`
-  - `GET /reports/category-trends?categories=...&months=12`
-  - `GET /reports/net-worth?start=...&end=...`
-  All respect inclusion rules and support date navigation.
+  - [ ] 15a. Add shared report SQL helpers that reuse M3 inclusion rules
+    (posted-only, exclude transfer/excluded, split-aware) for all
+    transaction-derived report metrics (`FUNC-REP-007`).
+  - [ ] 15b. Add Pydantic request/response models for monthly overview, cash
+    flow, category trends, and net worth.
+  - [ ] 15c. Implement `GET /reports/monthly-overview?month=YYYY-MM`
+    (`FUNC-REP-001`, `FUNC-REP-008`).
+  - [ ] 15d. Implement `GET /reports/cash-flow?start=YYYY-MM-DD&end=YYYY-MM-DD`
+    (`FUNC-REP-003`, `FUNC-REP-008`).
+  - [ ] 15e. Implement
+    `GET /reports/category-trends?categories=<csv>&months=<int>`
+    (`FUNC-REP-004`, `FUNC-REP-008`).
+  - [ ] 15f. Implement `GET /reports/net-worth?start=YYYY-MM-DD&end=YYYY-MM-DD`
+    with assets/liabilities/net (`FUNC-REP-005`).
+  - [ ] 15g. Add backend tests for math correctness, inclusion consistency,
+    auth, and validation.
+  - [ ] 15h. Update traceability/docs: `trace/requirements.yml`,
+    `docs/design/reports-dashboard.md`, `docs/test-strategy/m4-reports.md`.
 
-- [ ] **16. M4 UI**
-  Monthly overview dashboard, cash flow chart, category trend chart,
-  net worth chart, date/month navigation.
+- [ ] **16. M4 UI** (`FUNC-REP-001`–`FUNC-REP-008`)
+  - [ ] 16a. Add TypeScript report types and API client methods.
+  - [ ] 16b. Add `ReportsPanel` with unified month + custom range controls
+    driving all report widgets (`FUNC-REP-008`).
+  - [ ] 16c. Add monthly overview cards + top-category table with drill-down
+    (`FUNC-REP-001`, `FUNC-REP-002`).
+  - [ ] 16d. Add cash-flow chart + category-trends chart with drill-down from
+    selected points/categories (`FUNC-REP-002`, `FUNC-REP-003`,
+    `FUNC-REP-004`).
+  - [ ] 16e. Add net-worth chart (assets, liabilities, net) for selected range
+    (`FUNC-REP-005`).
+  - [ ] 16f. Add inclusion-rule labeling on transaction-derived metrics
+    (`FUNC-REP-007`).
+  - [ ] 16g. Integrate drill-down into existing `App.tsx` transaction filter
+    state.
+  - [ ] 16h. Add frontend tests for rendering, navigation, and drill-down.
+
+- [ ] **M4 verification checklist (step-by-step to run)**
+  - [ ] 1. Activate env and run quality gates:
+    `source venv/bin/activate && nox -s lint && nox -s tests && nox -s build`
+  - [ ] 2. Run frontend tests/build:
+    `cd ui && npm test && npm run build`
+  - [ ] 3. Start API against a fresh DB:
+    `export GODZILLA_DB_PATH=/tmp/m4-test.db`
+    `export GODZILLA_DB_KEY=m4-test-key`
+    `export GODZILLA_API_TOKEN=m4-test-token`
+    `source venv/bin/activate && migrations && godzilla-api`
+  - [ ] 4. Verify monthly overview endpoint:
+    `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/monthly-overview?month=2026-01"`
+    Expect HTTP 200 and keys: `income`, `expenses`, `net_savings`,
+    `savings_rate`, `top_categories`.
+  - [ ] 5. Verify cash-flow endpoint:
+    `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/cash-flow?start=2025-01-01&end=2026-01-31"`
+    Expect HTTP 200 monthly series with each point containing `month`, `income`,
+    `expenses`, `net_savings`, `savings_rate`.
+  - [ ] 6. Verify category-trends endpoint:
+    `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/category-trends?categories=food_coffee,food_dining&months=12"`
+    Expect HTTP 200 with one series per requested category and <= 12 monthly
+    points each.
+  - [ ] 7. Verify net-worth endpoint:
+    `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/net-worth?start=2025-01-01&end=2026-01-31"`
+    Expect HTTP 200 points where `net_worth = assets - liabilities`.
+  - [ ] 8. Verify negative API cases:
+    missing token => HTTP 401 on all `/reports/*`;
+    bad dates/month/months => HTTP 422.
+  - [ ] 9. Launch UI (`cd ui && npm run dev`) and verify:
+    reports panel renders, month/range changes refresh all report widgets, and
+    inclusion-rule label is visible.
+  - [ ] 10. Verify drill-down UX:
+    click monthly overview/top-category/cash-flow/category-trend metrics and
+    confirm transaction filters auto-populate with matching
+    dates/category/amount-direction.
+  - [ ] 11. Verify traceability completion:
+    `trace/requirements.yml` has populated `code_refs` + `test_refs` for
+    `FUNC-REP-001..008`.
+  - [ ] 12. Mark M4 tasks complete and commit with Conventional Commit.
 
 ---
 

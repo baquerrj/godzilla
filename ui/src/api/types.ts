@@ -9,7 +9,9 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006,
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
+ * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+ * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
@@ -83,6 +85,74 @@ export interface BalanceSnapshot {
   date: string;
   balance: number;
   currency: string;
+}
+
+export interface TopSpendingCategory {
+  category_id: string;
+  category_name: string;
+  amount: number;
+}
+
+export interface MonthlyOverview {
+  month: string;
+  start_date: string;
+  end_date: string;
+  income: number;
+  expenses: number;
+  net_savings: number;
+  savings_rate: number;
+  top_categories: TopSpendingCategory[];
+  inclusion_note: string;
+  includes_excluded_items: boolean;
+}
+
+export interface CashFlowPoint {
+  month: string;
+  income: number;
+  expenses: number;
+  net_savings: number;
+  savings_rate: number;
+}
+
+export interface CashFlowReport {
+  start_date: string;
+  end_date: string;
+  points: CashFlowPoint[];
+  inclusion_note: string;
+  includes_excluded_items: boolean;
+}
+
+export interface CategoryTrendPoint {
+  month: string;
+  amount: number;
+}
+
+export interface CategoryTrendSeries {
+  category_id: string;
+  category_name: string;
+  points: CategoryTrendPoint[];
+}
+
+export interface CategoryTrendsReport {
+  start_month: string;
+  end_month: string;
+  months: number;
+  series: CategoryTrendSeries[];
+  inclusion_note: string;
+  includes_excluded_items: boolean;
+}
+
+export interface NetWorthPoint {
+  date: string;
+  assets: number;
+  liabilities: number;
+  net_worth: number;
+}
+
+export interface NetWorthReport {
+  start_date: string;
+  end_date: string;
+  points: NetWorthPoint[];
 }
 
 export interface SyncState {
@@ -171,6 +241,25 @@ export interface GetBalancesParams {
   account_id?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface GetMonthlyOverviewParams {
+  month: string;
+}
+
+export interface GetCashFlowParams {
+  start: string;
+  end: string;
+}
+
+export interface GetCategoryTrendsParams {
+  categories: string[];
+  months?: number;
+}
+
+export interface GetNetWorthParams {
+  start: string;
+  end: string;
 }
 
 // Budget types
