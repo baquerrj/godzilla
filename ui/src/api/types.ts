@@ -254,6 +254,7 @@ export interface GetCashFlowParams {
 export interface GetCategoryTrendsParams {
   categories: string[];
   months?: number;
+  end_month?: string;
 }
 
 export interface GetNetWorthParams {

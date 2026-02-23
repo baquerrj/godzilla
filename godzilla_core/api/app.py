@@ -837,14 +837,16 @@ _REPORT_INCLUSION_NOTE = (
 # REQ: FUNC-REP-007
 _REPORT_LINE_ITEMS_RANGE_CTE = """
 WITH line_items AS (
-  SELECT tr.id AS transaction_id, tr.date AS date, tr.category_id AS category_id, tr.amount AS amount
+  SELECT tr.id AS transaction_id, tr.date AS date,
+         tr.category_id AS category_id, tr.amount AS amount
   FROM transaction_record tr
   WHERE tr.date >= ? AND tr.date <= ?
     AND tr.is_transfer = 0 AND tr.is_excluded = 0 AND tr.status = 'posted'
     AND tr.category_id IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM transaction_split WHERE transaction_id = tr.id)
   UNION ALL
-  SELECT tr.id AS transaction_id, tr.date AS date, ts.category_id AS category_id, ts.amount AS amount
+  SELECT tr.id AS transaction_id, tr.date AS date,
+         ts.category_id AS category_id, ts.amount AS amount
   FROM transaction_split ts
   JOIN transaction_record tr ON tr.id = ts.transaction_id
   WHERE tr.date >= ? AND tr.date <= ?
@@ -1416,10 +1418,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 params,
             ).fetchall()
 
-        monthly_totals = {
-            str(row[0]): (float(row[1]), float(row[2]))
-            for row in rows
-        }
+        monthly_totals = {str(row[0]): (float(row[1]), float(row[2])) for row in rows}
         points: list[CashFlowPointResponse] = []
         for month_key in _iter_month_keys(start_dt, end_dt):
             income, expenses = monthly_totals.get(month_key, (0.0, 0.0))
@@ -1450,6 +1449,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_category_trends(
         categories: str = Query(min_length=1),
         months: int = Query(default=12, ge=1, le=24),
+        end_month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
     ) -> CategoryTrendsResponse:
         """Return monthly category spend trends for one or more categories.
 
@@ -1470,8 +1470,11 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
                     detail=f"Unknown category id(s): {', '.join(missing)}",
                 )
 
-            latest_date = _latest_included_transaction_date(conn)
-            end_month_start = date(latest_date.year, latest_date.month, 1)
+            if end_month:
+                end_month_start = _parse_month_start(end_month)
+            else:
+                latest_date = _latest_included_transaction_date(conn)
+                end_month_start = date(latest_date.year, latest_date.month, 1)
             start_month_start = _shift_month(end_month_start, -(months - 1))
             start_date = start_month_start.isoformat()
             end_day = calendar.monthrange(end_month_start.year, end_month_start.month)[1]
@@ -1479,7 +1482,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
 
             trend_rows = conn.execute(
                 _REPORT_LINE_ITEMS_RANGE_CTE
-                + f"SELECT line_items.category_id, substr(line_items.date, 1, 7) AS month, "
+                + "SELECT line_items.category_id, substr(line_items.date, 1, 7) AS month, "
                 + "SUM(line_items.amount) AS spend "
                 + "FROM line_items "
                 + f"WHERE line_items.category_id IN ({placeholders}) "
@@ -1540,7 +1543,8 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 "COALESCE(SUM(CASE WHEN account.type IN ('credit', 'loan') "
                 "                  THEN 0 ELSE balance_snapshot.balance END), 0) AS assets, "
                 "COALESCE(SUM(CASE WHEN account.type IN ('credit', 'loan') "
-                "                  THEN ABS(balance_snapshot.balance) ELSE 0 END), 0) AS liabilities "
+                "                  THEN ABS(balance_snapshot.balance) ELSE 0 END), 0) "
+                "AS liabilities "
                 "FROM balance_snapshot "
                 "JOIN account ON account.id = balance_snapshot.account_id "
                 "WHERE balance_snapshot.date >= ? AND balance_snapshot.date <= ? "

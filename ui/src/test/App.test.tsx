@@ -2,7 +2,8 @@
  * Tests for the root App component: token gate and layout rendering.
  *
  * REQ: SEC-ACC-004, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007, FUNC-REP-006,
+ * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007,
+ * REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-006,
  * REQ: SEC-DATA-001
  */
 
@@ -28,6 +29,38 @@ vi.mock("../api/client", async () => {
       patchTransaction: vi.fn(),
       postSplits: vi.fn(),
       getBalances: vi.fn().mockResolvedValue([]),
+      getMonthlyOverview: vi.fn().mockResolvedValue({
+        month: "2026-01",
+        start_date: "2026-01-01",
+        end_date: "2026-01-31",
+        income: 0,
+        expenses: 0,
+        net_savings: 0,
+        savings_rate: 0,
+        top_categories: [],
+        inclusion_note: "note",
+        includes_excluded_items: false,
+      }),
+      getCashFlow: vi.fn().mockResolvedValue({
+        start_date: "2026-01-01",
+        end_date: "2026-01-31",
+        points: [],
+        inclusion_note: "note",
+        includes_excluded_items: false,
+      }),
+      getCategoryTrends: vi.fn().mockResolvedValue({
+        start_month: "2026-01",
+        end_month: "2026-01",
+        months: 1,
+        series: [],
+        inclusion_note: "note",
+        includes_excluded_items: false,
+      }),
+      getNetWorth: vi.fn().mockResolvedValue({
+        start_date: "2026-01-01",
+        end_date: "2026-01-31",
+        points: [],
+      }),
       getSyncState: vi.fn().mockResolvedValue([]),
       getCategories: vi.fn().mockResolvedValue([]),
       postCategory: vi.fn(),
@@ -82,6 +115,7 @@ describe("App", () => {
       expect(screen.getByTestId("accounts-panel")).toBeInTheDocument();
       expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
       expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
     });
   });

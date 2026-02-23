@@ -596,45 +596,88 @@
 - requirement_id: FUNC-REP-001
   title: Monthly overview dashboard
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:MonthlyOverviewResponse
+  - godzilla_core/api/app.py:get_monthly_overview
+  - ui/src/api/types.ts:MonthlyOverview
+  - ui/src/api/client.ts:GodzillaApi.getMonthlyOverview
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_monthly_overview_returns_expected_metrics
+  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-REP-002
   title: Drill-down from metrics
   parent_requirement_id: FUNC-TXN-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  - ui/src/App.tsx:handleReportDrillDown
+  test_refs:
+  - ui/src/test/ReportsPanel.test.tsx:drills down from top category and overview cards
+  - ui/src/test/ReportsPanel.test.tsx:drills down from cash-flow and category trend points
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-REP-003
   title: Cash flow report
   parent_requirement_id: FUNC-REP-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:CashFlowReportResponse
+  - godzilla_core/api/app.py:get_cash_flow
+  - ui/src/api/types.ts:CashFlowReport
+  - ui/src/api/client.ts:GodzillaApi.getCashFlow
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_cash_flow_returns_monthly_points
+  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-REP-004
   title: Category trend report
   parent_requirement_id: FUNC-REP-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:CategoryTrendsResponse
+  - godzilla_core/api/app.py:get_category_trends
+  - ui/src/api/types.ts:CategoryTrendsReport
+  - ui/src/api/client.ts:GodzillaApi.getCategoryTrends
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_supports_multi_category_selection
+  - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_unknown_category_returns_422
+  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-REP-005
   title: Net worth time series
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:NetWorthReportResponse
+  - godzilla_core/api/app.py:get_net_worth
+  - ui/src/api/types.ts:NetWorthReport
+  - ui/src/api/client.ts:GodzillaApi.getNetWorth
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_net_worth_returns_assets_liabilities_and_net
+  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -661,18 +704,42 @@
 - requirement_id: FUNC-REP-007
   title: Inclusion rules consistency
   parent_requirement_id: FUNC-BUD-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_REPORT_LINE_ITEMS_RANGE_CTE
+  - godzilla_core/api/app.py:get_monthly_overview
+  - godzilla_core/api/app.py:get_cash_flow
+  - godzilla_core/api/app.py:get_category_trends
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_and_budgets_share_inclusion_rules
+  - godzilla_core/tests/test_api_layer.py:test_reports_monthly_overview_returns_expected_metrics
+  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-REP-008
   title: Date navigation
   parent_requirement_id: FUNC-REP-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_parse_month_start
+  - godzilla_core/api/app.py:_parse_date_range
+  - godzilla_core/api/app.py:get_monthly_overview
+  - godzilla_core/api/app.py:get_cash_flow
+  - godzilla_core/api/app.py:get_category_trends
+  - godzilla_core/api/app.py:get_net_worth
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reports_monthly_overview_invalid_month_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_respects_end_month
+  - godzilla_core/tests/test_api_layer.py:test_reports_reject_invalid_date_ranges
+  - ui/src/test/ReportsPanel.test.tsx:requests all report endpoints on load
+  - ui/src/test/ReportsPanel.test.tsx:updates range-driven report calls when month changes
   doc_refs:
+  - docs/design/reports-dashboard.md
+  - docs/test-strategy/m4-reports.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md

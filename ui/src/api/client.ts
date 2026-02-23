@@ -5,7 +5,10 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004,
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
+ * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+ * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+ * REQ: SEC-ACC-004,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
@@ -15,13 +18,21 @@ import type {
   ApiResult,
   BalanceSnapshot,
   BudgetLine,
+  CashFlowReport,
   Category,
+  CategoryTrendsReport,
   Conflict,
   CreateBudgetRequest,
   CreateCategoryRequest,
+  GetCashFlowParams,
   GetBalancesParams,
   GetBudgetsParams,
+  GetCategoryTrendsParams,
+  GetMonthlyOverviewParams,
+  GetNetWorthParams,
   GetTransactionsParams,
+  MonthlyOverview,
+  NetWorthReport,
   PatchCategoryRequest,
   PatchTransactionRequest,
   PlaidLinkRequest,
@@ -82,11 +93,9 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-function buildQueryString(
-  params: Record<string, string | number | boolean | undefined>,
-): string {
-  const entries = Object.entries(params).filter(
-    ([, v]) => v !== undefined && v !== null,
+function buildQueryString<T extends object>(params: T): string {
+  const entries = Object.entries(params as Record<string, unknown>).filter(([, v]) =>
+    typeof v === "string" || typeof v === "number" || typeof v === "boolean",
   );
   if (entries.length === 0) return "";
   const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)]));
@@ -104,9 +113,7 @@ export const GodzillaApi = {
     token: string,
     params: GetTransactionsParams = {},
   ): Promise<Transaction[]> {
-    const qs = buildQueryString(
-      params as Record<string, string | number | boolean | undefined>,
-    );
+    const qs = buildQueryString(params);
     return request<Transaction[]>(`/transactions${qs}`, token);
   },
 
@@ -136,10 +143,35 @@ export const GodzillaApi = {
     token: string,
     params: GetBalancesParams = {},
   ): Promise<BalanceSnapshot[]> {
-    const qs = buildQueryString(
-      params as Record<string, string | number | boolean | undefined>,
-    );
+    const qs = buildQueryString(params);
     return request<BalanceSnapshot[]>(`/balances${qs}`, token);
+  },
+
+  getMonthlyOverview(token: string, params: GetMonthlyOverviewParams): Promise<MonthlyOverview> {
+    const qs = buildQueryString(params);
+    return request<MonthlyOverview>(`/reports/monthly-overview${qs}`, token);
+  },
+
+  getCashFlow(token: string, params: GetCashFlowParams): Promise<CashFlowReport> {
+    const qs = buildQueryString(params);
+    return request<CashFlowReport>(`/reports/cash-flow${qs}`, token);
+  },
+
+  getCategoryTrends(
+    token: string,
+    params: GetCategoryTrendsParams,
+  ): Promise<CategoryTrendsReport> {
+    const qs = buildQueryString({
+      categories: params.categories.join(","),
+      months: params.months,
+      end_month: params.end_month,
+    });
+    return request<CategoryTrendsReport>(`/reports/category-trends${qs}`, token);
+  },
+
+  getNetWorth(token: string, params: GetNetWorthParams): Promise<NetWorthReport> {
+    const qs = buildQueryString(params);
+    return request<NetWorthReport>(`/reports/net-worth${qs}`, token);
   },
 
   getSyncState(token: string): Promise<SyncState[]> {
@@ -197,9 +229,7 @@ export const GodzillaApi = {
   },
 
   getBudgets(token: string, params: GetBudgetsParams): Promise<BudgetLine[]> {
-    const qs = buildQueryString(
-      params as Record<string, string | number | boolean | undefined>,
-    );
+    const qs = buildQueryString(params);
     return request<BudgetLine[]>(`/budgets${qs}`, token);
   },
 

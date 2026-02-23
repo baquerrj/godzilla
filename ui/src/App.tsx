@@ -8,7 +8,10 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-SYNC-006,
- * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004, SEC-DATA-001,
+ * REQ: FUNC-SYNC-007,
+ * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+ * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+ * REQ: SEC-ACC-004, SEC-DATA-001,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
@@ -18,6 +21,8 @@ import { AccountsTable } from "./components/AccountsTable";
 import { BalancesTable } from "./components/BalancesTable";
 import { BudgetPanel } from "./components/BudgetPanel";
 import { ConflictQueue } from "./components/ConflictQueue";
+import { ReportsPanel } from "./components/ReportsPanel";
+import type { ReportDrillDown } from "./components/ReportsPanel";
 import { SyncStatePanel } from "./components/SyncStatePanel";
 import { TransactionDetailPanel } from "./components/TransactionDetailPanel";
 import { TransactionFilters, EMPTY_FILTERS } from "./components/TransactionFilters";
@@ -44,7 +49,7 @@ export function App() {
   useEffect(() => {
     const hasTauriRuntime =
       typeof window !== "undefined"
-      && "__TAURI_INTERNALS__" in (window as Window & Record<string, unknown>);
+      && "__TAURI_INTERNALS__" in (window as unknown as Record<string, unknown>);
 
     if (import.meta.env.DEV && !hasTauriRuntime) {
       setToken(DEV_PROXY_TOKEN);
@@ -87,6 +92,18 @@ export function App() {
       category_id: categoryId,
       date_from: `${month}-01`,
       date_to: `${month}-${String(lastDay).padStart(2, "0")}`,
+    });
+  };
+
+  // REQ: FUNC-REP-002 — drill-down from report metrics to transaction filters.
+  const handleReportDrillDown = (input: ReportDrillDown) => {
+    setFilterValues({
+      ...EMPTY_FILTERS,
+      date_from: input.startDate,
+      date_to: input.endDate,
+      ...(input.categoryId ? { category_id: input.categoryId } : {}),
+      ...(input.flow === "income" ? { amount_max: "-0.01" } : {}),
+      ...(input.flow === "expense" ? { amount_min: "0.01" } : {}),
     });
   };
 
@@ -144,6 +161,12 @@ export function App() {
           refreshKey={refreshKey}
           categories={categories}
           onDrillDown={handleBudgetDrillDown}
+        />
+        <ReportsPanel
+          token={token}
+          refreshKey={refreshKey}
+          categories={categories}
+          onDrillDown={handleReportDrillDown}
         />
         <TransactionFilters
           values={filterValues}

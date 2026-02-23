@@ -86,47 +86,47 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M4 — Dashboards/reports + net worth snapshots
 
-- [ ] **15. Dashboard/report endpoints** (`FUNC-REP-001`–`FUNC-REP-008`)
-  - [ ] 15a. Add shared report SQL helpers that reuse M3 inclusion rules
+- [x] **15. Dashboard/report endpoints** (`FUNC-REP-001`–`FUNC-REP-008`)
+  - [x] 15a. Add shared report SQL helpers that reuse M3 inclusion rules
     (posted-only, exclude transfer/excluded, split-aware) for all
     transaction-derived report metrics (`FUNC-REP-007`).
-  - [ ] 15b. Add Pydantic request/response models for monthly overview, cash
+  - [x] 15b. Add Pydantic request/response models for monthly overview, cash
     flow, category trends, and net worth.
-  - [ ] 15c. Implement `GET /reports/monthly-overview?month=YYYY-MM`
+  - [x] 15c. Implement `GET /reports/monthly-overview?month=YYYY-MM`
     (`FUNC-REP-001`, `FUNC-REP-008`).
-  - [ ] 15d. Implement `GET /reports/cash-flow?start=YYYY-MM-DD&end=YYYY-MM-DD`
+  - [x] 15d. Implement `GET /reports/cash-flow?start=YYYY-MM-DD&end=YYYY-MM-DD`
     (`FUNC-REP-003`, `FUNC-REP-008`).
-  - [ ] 15e. Implement
+  - [x] 15e. Implement
     `GET /reports/category-trends?categories=<csv>&months=<int>`
     (`FUNC-REP-004`, `FUNC-REP-008`).
-  - [ ] 15f. Implement `GET /reports/net-worth?start=YYYY-MM-DD&end=YYYY-MM-DD`
+  - [x] 15f. Implement `GET /reports/net-worth?start=YYYY-MM-DD&end=YYYY-MM-DD`
     with assets/liabilities/net (`FUNC-REP-005`).
-  - [ ] 15g. Add backend tests for math correctness, inclusion consistency,
+  - [x] 15g. Add backend tests for math correctness, inclusion consistency,
     auth, and validation.
-  - [ ] 15h. Update traceability/docs: `trace/requirements.yml`,
+  - [x] 15h. Update traceability/docs: `trace/requirements.yml`,
     `docs/design/reports-dashboard.md`, `docs/test-strategy/m4-reports.md`.
 
-- [ ] **16. M4 UI** (`FUNC-REP-001`–`FUNC-REP-008`)
-  - [ ] 16a. Add TypeScript report types and API client methods.
-  - [ ] 16b. Add `ReportsPanel` with unified month + custom range controls
+- [x] **16. M4 UI** (`FUNC-REP-001`–`FUNC-REP-008`)
+  - [x] 16a. Add TypeScript report types and API client methods.
+  - [x] 16b. Add `ReportsPanel` with unified month + custom range controls
     driving all report widgets (`FUNC-REP-008`).
-  - [ ] 16c. Add monthly overview cards + top-category table with drill-down
+  - [x] 16c. Add monthly overview cards + top-category table with drill-down
     (`FUNC-REP-001`, `FUNC-REP-002`).
-  - [ ] 16d. Add cash-flow chart + category-trends chart with drill-down from
+  - [x] 16d. Add cash-flow chart + category-trends chart with drill-down from
     selected points/categories (`FUNC-REP-002`, `FUNC-REP-003`,
     `FUNC-REP-004`).
-  - [ ] 16e. Add net-worth chart (assets, liabilities, net) for selected range
+  - [x] 16e. Add net-worth chart (assets, liabilities, net) for selected range
     (`FUNC-REP-005`).
-  - [ ] 16f. Add inclusion-rule labeling on transaction-derived metrics
+  - [x] 16f. Add inclusion-rule labeling on transaction-derived metrics
     (`FUNC-REP-007`).
-  - [ ] 16g. Integrate drill-down into existing `App.tsx` transaction filter
+  - [x] 16g. Integrate drill-down into existing `App.tsx` transaction filter
     state.
-  - [ ] 16h. Add frontend tests for rendering, navigation, and drill-down.
+  - [x] 16h. Add frontend tests for rendering, navigation, and drill-down.
 
 - [ ] **M4 verification checklist (step-by-step to run)**
-  - [ ] 1. Activate env and run quality gates:
+  - [x] 1. Activate env and run quality gates:
     `source venv/bin/activate && nox -s lint && nox -s tests && nox -s build`
-  - [ ] 2. Run frontend tests/build:
+  - [x] 2. Run frontend tests/build:
     `cd ui && npm test && npm run build`
   - [ ] 3. Start API against a fresh DB:
     `export GODZILLA_DB_PATH=/tmp/m4-test.db`
@@ -158,10 +158,10 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     click monthly overview/top-category/cash-flow/category-trend metrics and
     confirm transaction filters auto-populate with matching
     dates/category/amount-direction.
-  - [ ] 11. Verify traceability completion:
+  - [x] 11. Verify traceability completion:
     `trace/requirements.yml` has populated `code_refs` + `test_refs` for
     `FUNC-REP-001..008`.
-  - [ ] 12. Mark M4 tasks complete and commit with Conventional Commit.
+  - [x] 12. Mark M4 tasks complete and commit with Conventional Commit.
 
 ---
 

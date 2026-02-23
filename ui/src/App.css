@@ -1,7 +1,9 @@
 /* Godzilla app styles
    REQ: FUNC-ACCT-003, FUNC-ACCT-004, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
    REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
-   REQ: FUNC-SYNC-007, FUNC-REP-006,
+   REQ: FUNC-SYNC-007,
+   REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
+   REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004 */
 
 *,
@@ -456,6 +458,103 @@ code {
   padding: 7px 8px;
   font: inherit;
   min-width: 120px;
+}
+
+/* ---- Reports panel ---- */
+
+.reports-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reports-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.reports-controls input {
+  border: 1px solid var(--color-border);
+  background: #111119;
+  color: var(--color-text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  min-width: 140px;
+}
+
+.reports-section + .reports-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.reports-section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-muted);
+}
+
+.reports-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.report-card-static {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.reports-category-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.reports-category-picker select {
+  min-height: 88px;
+  border: 1px solid var(--color-border);
+  background: #111119;
+  color: var(--color-text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.trend-series-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trend-series-row {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.trend-points {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 @media (max-width: 980px) {

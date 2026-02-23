@@ -1220,6 +1220,25 @@ async def test_reports_category_trends_supports_multi_category_selection(
     assert dining == {"2025-11": 20.0, "2025-12": 0.0, "2026-01": 90.0}
 
 
+async def test_reports_category_trends_respects_end_month(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify category trends can be anchored to a specific end month.
+
+    REQ: FUNC-REP-008
+    """
+    resp = await report_client.get(
+        "/reports/category-trends?categories=food_coffee&months=2&end_month=2025-12",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["start_month"] == "2025-11"
+    assert body["end_month"] == "2025-12"
+    points = body["series"][0]["points"]
+    assert [point["month"] for point in points] == ["2025-11", "2025-12"]
+
+
 async def test_reports_category_trends_unknown_category_returns_422(
     report_client: httpx.AsyncClient,
 ) -> None:
