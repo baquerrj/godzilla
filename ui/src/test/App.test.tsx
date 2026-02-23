@@ -2,7 +2,8 @@
  * Tests for the root App component: token gate and layout rendering.
  *
  * REQ: SEC-ACC-004, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007, FUNC-REP-006
+ * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007, FUNC-REP-006,
+ * REQ: SEC-DATA-001
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -41,10 +42,12 @@ vi.mock("../api/client", async () => {
 
 import { invoke } from "@tauri-apps/api/core";
 const mockInvoke = vi.mocked(invoke);
+const tauriWindow = window as Window & { __TAURI_INTERNALS__?: unknown };
 
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tauriWindow.__TAURI_INTERNALS__ = {};
   });
 
   it("shows loading state while fetching token", () => {
@@ -77,6 +80,17 @@ describe("App", () => {
       expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
       expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to dev proxy token when tauri runtime is unavailable  REQ: SEC-DATA-001", async () => {
+    delete tauriWindow.__TAURI_INTERNALS__;
+    mockInvoke.mockRejectedValue(new Error("No Tauri runtime"));
+
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("sync-state-panel")).toBeInTheDocument();
+      expect(mockInvoke).not.toHaveBeenCalled();
     });
   });
 });

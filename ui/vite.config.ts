@@ -1,9 +1,17 @@
+/**
+ * Vite development proxy configuration.
+ *
+ * REQ: SEC-ACC-004, SEC-DATA-001
+ */
+
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+// REQ: SEC-ACC-004, SEC-DATA-001
+const apiToken = process.env.GODZILLA_API_TOKEN ?? "";
 
 // Godzilla Python API sidecar runs on loopback port 8787.
 // In development the Vite proxy forwards /api/* to it so the frontend
@@ -46,6 +54,15 @@ export default defineConfig(async () => ({
         target: API_SIDECAR,
         changeOrigin: false,
         rewrite: (path) => path.replace(/^\/api/, ""),
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            // REQ: SEC-ACC-004, SEC-DATA-001
+            // Inject auth server-side so secrets are not embedded in browser bundles.
+            if (apiToken) {
+              proxyReq.setHeader("X-API-Key", apiToken);
+            }
+          });
+        },
       },
     },
   },

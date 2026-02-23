@@ -8,7 +8,7 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-SYNC-006,
- * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004
+ * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004, SEC-DATA-001
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,6 +25,8 @@ import { GodzillaApi } from "./api/client";
 import type { Account, Category, GetTransactionsParams } from "./api/types";
 import "./App.css";
 
+const DEV_PROXY_TOKEN = "__vite_dev_proxy_token__";
+
 export function App() {
   // null = still loading from Tauri; "" = token not configured
   const [token, setToken] = useState<string | null>(null);
@@ -35,8 +37,18 @@ export function App() {
   const [filterValues, setFilterValues] = useState<FilterValues>(EMPTY_FILTERS);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
 
-  // REQ: SEC-ACC-004 — obtain API token from the Tauri runtime
+  // REQ: SEC-ACC-004, SEC-DATA-001 — obtain token from Tauri at runtime, and
+  // fall back to a dev-only proxy token when running in a plain browser.
   useEffect(() => {
+    const hasTauriRuntime =
+      typeof window !== "undefined"
+      && "__TAURI_INTERNALS__" in (window as Window & Record<string, unknown>);
+
+    if (import.meta.env.DEV && !hasTauriRuntime) {
+      setToken(DEV_PROXY_TOKEN);
+      return;
+    }
+
     invoke<string>("get_api_token")
       .then((t) => setToken(t ?? ""))
       .catch(() => setToken(""));

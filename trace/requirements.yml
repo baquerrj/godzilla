@@ -7,6 +7,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/vite-vs-tauri.md
 - requirement_id: SYS-002
   title: Single-user scope
   parent_requirement_id: SYS-001
@@ -853,14 +854,18 @@
   - godzilla_core/api/app.py:require_api_key
   - ui/src-tauri/src/lib.rs:get_api_token
   - ui/src/App.tsx:App
+  - ui/vite.config.ts
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_auth_required_for_endpoints
   - ui/src/test/App.test.tsx:shows error when token is empty
+  - ui/src/test/App.test.tsx:falls back to dev proxy token when tauri runtime is unavailable
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/ui-frontend-scaffold.md
+  - docs/design/vite-vs-tauri.md
 - requirement_id: SEC-NET-001
   title: TLS enforcement
   parent_requirement_id: SYS-003
@@ -872,6 +877,7 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/design/vite-vs-tauri.md
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
@@ -885,6 +891,7 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/vite-vs-tauri.md
 - requirement_id: SEC-NET-003
   title: Rate limiting and backoff
   parent_requirement_id: FUNC-ACCT-007
@@ -898,14 +905,19 @@
 - requirement_id: SEC-DATA-001
   title: No secrets in client
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - ui/src-tauri/src/lib.rs:get_api_token
+  - ui/src/App.tsx:App
+  - ui/vite.config.ts
+  test_refs:
+  - ui/src/test/App.test.tsx:falls back to dev proxy token when tauri runtime is unavailable
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
   - docs/design/plaid-integration.md
+  - docs/design/ui-frontend-scaffold.md
 - requirement_id: SEC-DATA-002
   title: Logging policy
   parent_requirement_id: FUNC-AUD-002
@@ -953,6 +965,7 @@
   - docs/design/developer-tooling.md
   - docs/setup/dependencies.md
   - docs/setup/docker-development.md
+  - docs/design/vite-vs-tauri.md
 - requirement_id: SEC-DATA-005
   title: Data minimization
   parent_requirement_id: FUNC-SET-002

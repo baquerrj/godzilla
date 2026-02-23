@@ -164,6 +164,11 @@ const [result, execute] = useApiCall<Account[]>();
 React app via `invoke("get_api_token")`.  If the variable is unset the UI
 shows a configuration error screen.
 
+For browser-only Vite development (outside Tauri), `src/App.tsx` detects that
+the Tauri runtime is unavailable and uses a dev-only placeholder token.  The
+real API key is injected by the Vite dev proxy from `process.env.GODZILLA_API_TOKEN`
+in `vite.config.ts`, so secrets are not embedded in client bundles.
+
 ### Component hierarchy
 
 ```
