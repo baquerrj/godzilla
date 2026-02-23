@@ -73,14 +73,14 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 13e. Backend tests (15 tests) + `_seed_budget_data` helper
   - [x] 13f. Lint + full test suite green → commit
 
-- [~] **14. M3 UI**
-  - [ ] 14a. TypeScript types: `BudgetLine`, `CreateBudgetRequest`, `GetBudgetsParams`
-  - [ ] 14b. API client methods: `getBudgets`, `createBudget`, `deleteBudget`; 204 handling
-  - [ ] 14c. `BudgetPanel` component
-  - [ ] 14d. `App.tsx` integration + `handleBudgetDrillDown`
-  - [ ] 14e. CSS additions
-  - [ ] 14f. Frontend tests (8 tests in `BudgetPanel.test.tsx`, smoke in `App.test.tsx`)
-  - [ ] 14g. Traceability + design doc + mark plan complete → commit
+- [x] **14. M3 UI**
+  - [x] 14a. TypeScript types: `BudgetLine`, `CreateBudgetRequest`, `GetBudgetsParams`
+  - [x] 14b. API client methods: `getBudgets`, `createBudget`, `deleteBudget`; 204 handling
+  - [x] 14c. `BudgetPanel` component
+  - [x] 14d. `App.tsx` integration + `handleBudgetDrillDown`
+  - [x] 14e. CSS additions
+  - [x] 14f. Frontend tests (8 tests in `BudgetPanel.test.tsx`, smoke in `App.test.tsx`)
+  - [x] 14g. Traceability + design doc + mark plan complete → commit
 
 ---
 

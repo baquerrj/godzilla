@@ -9,7 +9,8 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006,
+ * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
 // Response models (read)
@@ -169,6 +170,28 @@ export interface GetBalancesParams {
   account_id?: string;
   limit?: number;
   offset?: number;
+}
+
+// Budget types
+// REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+export interface BudgetLine {
+  budget_id: string;
+  category_id: string;
+  month: string;
+  planned: number;
+  actual: number;
+  remaining: number;
+  is_overspent: boolean;
+}
+
+export interface CreateBudgetRequest {
+  month: string;
+  category_id: string;
+  amount: number;
+}
+
+export interface GetBudgetsParams {
+  month: string;
 }
 
 // Async operation state

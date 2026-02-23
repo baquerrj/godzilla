@@ -506,36 +506,90 @@
 - requirement_id: FUNC-BUD-001
   title: Monthly budgets
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:CreateBudgetRequest
+  - godzilla_core/api/app.py:BudgetLineResponse
+  - godzilla_core/api/app.py:get_budgets
+  - godzilla_core/api/app.py:create_budget
+  - godzilla_core/api/app.py:delete_budget
+  - ui/src/api/types.ts:BudgetLine
+  - ui/src/api/types.ts:CreateBudgetRequest
+  - ui/src/api/types.ts:GetBudgetsParams
+  - ui/src/api/client.ts:GodzillaApi.getBudgets
+  - ui/src/api/client.ts:GodzillaApi.createBudget
+  - ui/src/api/client.ts:GodzillaApi.deleteBudget
+  - ui/src/components/BudgetPanel.tsx:BudgetPanel
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_returns_empty_for_no_budgets
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_missing_month_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_invalid_month_format_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_returns_201
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_duplicate_returns_409
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_parent_category_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_unknown_category_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_negative_amount_returns_422
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_filters_by_month
+  - godzilla_core/tests/test_api_layer.py:test_delete_budget_returns_204
+  - godzilla_core/tests/test_api_layer.py:test_delete_budget_not_found_returns_404
+  - ui/src/test/BudgetPanel.test.tsx:renders empty state when no budgets
+  - ui/src/test/BudgetPanel.test.tsx:creates budget via form submit and clears inputs
+  - ui/src/test/BudgetPanel.test.tsx:shows error message on 409 duplicate budget
+  - ui/src/test/BudgetPanel.test.tsx:deletes budget when delete button clicked
+  - ui/src/test/App.test.tsx:renders budget-panel when token is present
   doc_refs:
+  - docs/design/budgets.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-002
   title: Budget performance
   parent_requirement_id: FUNC-BUD-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_budgets
+  - godzilla_core/api/app.py:_BUDGET_ACTUALS_CTE
+  - godzilla_core/api/app.py:BudgetLineResponse
+  - ui/src/api/types.ts:BudgetLine
+  - ui/src/components/BudgetPanel.tsx:BudgetPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_create_budget_returns_201
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_computes_actuals_correctly
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_overspent_flagged
+  - ui/src/test/BudgetPanel.test.tsx:renders rows with planned/actual/remaining amounts
   doc_refs:
+  - docs/design/budgets.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-003
   title: Overspend highlighting
   parent_requirement_id: FUNC-BUD-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:BudgetLineResponse
+  - godzilla_core/api/app.py:get_budgets
+  - ui/src/components/BudgetPanel.tsx:BudgetPanel
+  - ui/src/App.tsx:handleBudgetDrillDown
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_overspent_flagged
+  - ui/src/test/BudgetPanel.test.tsx:highlights overspent rows
+  - ui/src/test/BudgetPanel.test.tsx:calls onDrillDown with correct categoryId and month
   doc_refs:
+  - docs/design/budgets.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BUD-004
   title: Budget inclusion rules
   parent_requirement_id: FUNC-TXN-006
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_BUDGET_ACTUALS_CTE
+  - godzilla_core/api/app.py:get_budgets
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_computes_actuals_correctly
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_excludes_transfers_pending_excluded
+  - godzilla_core/tests/test_api_layer.py:test_get_budgets_uses_splits_not_parent
   doc_refs:
+  - docs/design/budgets.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md

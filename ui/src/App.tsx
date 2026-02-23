@@ -8,13 +8,15 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-SYNC-006,
- * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004, SEC-DATA-001
+ * REQ: FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004, SEC-DATA-001,
+ * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AccountsTable } from "./components/AccountsTable";
 import { BalancesTable } from "./components/BalancesTable";
+import { BudgetPanel } from "./components/BudgetPanel";
 import { ConflictQueue } from "./components/ConflictQueue";
 import { SyncStatePanel } from "./components/SyncStatePanel";
 import { TransactionDetailPanel } from "./components/TransactionDetailPanel";
@@ -76,6 +78,18 @@ export function App() {
     setRefreshKey((k) => k + 1);
   };
 
+  // REQ: FUNC-BUD-003 — drill-down from overspent budget row into transactions
+  const handleBudgetDrillDown = (categoryId: string, month: string) => {
+    const [year, monthNum] = month.split("-").map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    setFilterValues({
+      ...EMPTY_FILTERS,
+      category_id: categoryId,
+      date_from: `${month}-01`,
+      date_to: `${month}-${String(lastDay).padStart(2, "0")}`,
+    });
+  };
+
   // Build API filter params from controlled filter form values
   const activeFilters: GetTransactionsParams = useMemo(
     () => ({
@@ -125,6 +139,12 @@ export function App() {
         />
         <ConflictQueue token={token} refreshKey={refreshKey} />
         <AccountsTable token={token} refreshKey={refreshKey} />
+        <BudgetPanel
+          token={token}
+          refreshKey={refreshKey}
+          categories={categories}
+          onDrillDown={handleBudgetDrillDown}
+        />
         <TransactionFilters
           values={filterValues}
           accounts={accounts}

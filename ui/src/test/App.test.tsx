@@ -36,6 +36,9 @@ vi.mock("../api/client", async () => {
       resolveConflict: vi.fn(),
       plaidLink: vi.fn(),
       plaidSync: vi.fn(),
+      getBudgets: vi.fn().mockResolvedValue([]),
+      createBudget: vi.fn(),
+      deleteBudget: vi.fn(),
     },
   };
 });
@@ -91,6 +94,14 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("sync-state-panel")).toBeInTheDocument();
       expect(mockInvoke).not.toHaveBeenCalled();
+    });
+  });
+
+  it("renders budget-panel when token is present  REQ: FUNC-BUD-001", async () => {
+    mockInvoke.mockResolvedValue("test-token-abc");
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId("budget-panel")).toBeInTheDocument();
     });
   });
 });

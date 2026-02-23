@@ -5,7 +5,8 @@
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004
+ * REQ: FUNC-SYNC-006, FUNC-SYNC-007, FUNC-REP-006, SEC-ACC-004,
+ * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
 import { useCallback, useState } from "react";
@@ -13,10 +14,13 @@ import type {
   Account,
   ApiResult,
   BalanceSnapshot,
+  BudgetLine,
   Category,
   Conflict,
+  CreateBudgetRequest,
   CreateCategoryRequest,
   GetBalancesParams,
+  GetBudgetsParams,
   GetTransactionsParams,
   PatchCategoryRequest,
   PatchTransactionRequest,
@@ -72,6 +76,8 @@ async function request<T>(
     }
     throw new ApiError(response.status, message);
   }
+
+  if (response.status === 204) return undefined as unknown as T;
 
   return response.json() as Promise<T>;
 }
@@ -187,6 +193,26 @@ export const GodzillaApi = {
     return request<PlaidSyncResult>("/plaid/sync", token, {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  },
+
+  getBudgets(token: string, params: GetBudgetsParams): Promise<BudgetLine[]> {
+    const qs = buildQueryString(
+      params as Record<string, string | number | boolean | undefined>,
+    );
+    return request<BudgetLine[]>(`/budgets${qs}`, token);
+  },
+
+  createBudget(token: string, body: CreateBudgetRequest): Promise<BudgetLine> {
+    return request<BudgetLine>("/budgets", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteBudget(token: string, id: string): Promise<void> {
+    return request<void>(`/budgets/${encodeURIComponent(id)}`, token, {
+      method: "DELETE",
     });
   },
 } as const;
