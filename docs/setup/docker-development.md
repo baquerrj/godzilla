@@ -78,7 +78,7 @@ $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && nox -s build'
 Run the API server from inside the container (example):
 
 ```bash
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && godzilla-api --host 127.0.0.1 --port 8787'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && godzilla-api --host 127.0.0.1 --port 8787'
 ```
 
 Run the browser UI (Vite) and open it from the host:
