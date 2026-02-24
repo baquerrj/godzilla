@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import os
 import sys
+from csv import DictReader
+from io import StringIO
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
@@ -309,6 +311,7 @@ async def test_get_balances_returns_snapshots(api_client: httpx.AsyncClient) -> 
 
     assert len(payload) == 2
     assert payload[0]["snapshot_id"] == "bal-2"
+    assert payload[0]["account_name"] == "Checking"
     assert payload[0]["balance"] == 321.11
 
 
@@ -1082,6 +1085,7 @@ def _seed_report_data(db_path: str, db_key: str) -> None:
         ),
     ]
     conn.executemany(txn_insert, txns)
+    conn.execute("UPDATE transaction_record SET notes = ? WHERE id = ?", ("User note", "txn-r1"))
 
     conn.execute(
         "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes) "
@@ -1092,6 +1096,24 @@ def _seed_report_data(db_path: str, db_key: str) -> None:
         "INSERT OR IGNORE INTO transaction_split (id, transaction_id, amount, category_id, notes) "
         "VALUES (?, ?, ?, ?, ?)",
         ("split-r7-2", "txn-r7", 20.0, "food_dining", None),
+    )
+    conn.execute("INSERT OR IGNORE INTO tag (id, name, active) VALUES (?, ?, 1)", ("tag-r1", "morning"))
+    conn.execute(
+        "INSERT OR IGNORE INTO transaction_tag (transaction_id, tag_id) VALUES (?, ?)",
+        ("txn-r1", "tag-r1"),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO provider_raw ("
+        "id, transaction_id, raw_payload, created_at_utc, created_at_tz, created_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "raw-r1",
+            "txn-r1",
+            '{"provider_transaction_id":"prov-r1","merchant":"Cafe One"}',
+            "2026-01-05T10:00:00",
+            "UTC",
+            0,
+        ),
     )
 
     snapshots = [
@@ -1324,6 +1346,141 @@ async def test_reports_require_api_key(report_client: httpx.AsyncClient) -> None
     """
     resp = await report_client.get("/reports/monthly-overview?month=2026-01")
     assert resp.status_code == 401
+
+
+# ── Export tests (M5 Task 17) ────────────────────────────────────────────────
+
+
+async def test_export_transactions_csv_includes_splits_tags_and_user_fields(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify transaction CSV export includes split rows and editable fields.
+
+    REQ: FUNC-EXP-001
+    """
+    resp = await report_client.get("/export/transactions", headers=_HEADERS)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    rows = list(DictReader(StringIO(resp.text)))
+    assert len(rows) > 0
+
+    split_rows = [row for row in rows if row["transaction_id"] == "txn-r7"]
+    assert len(split_rows) == 2
+    assert {row["split_amount"] for row in split_rows} == {"40.0", "20.0"}
+
+    txn_r1 = next(row for row in rows if row["transaction_id"] == "txn-r1")
+    assert txn_r1["notes"] == "User note"
+    assert txn_r1["tags"] == "morning"
+    assert "raw_provider_payloads" not in txn_r1
+
+
+async def test_export_transactions_raw_payloads_default_is_excluded(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify raw provider payloads are excluded by default.
+
+    REQ: FUNC-EXP-003
+    """
+    resp = await report_client.get("/export/transactions", headers=_HEADERS)
+    assert resp.status_code == 200
+    rows = list(DictReader(StringIO(resp.text)))
+    assert rows
+    assert "raw_provider_payloads" not in rows[0]
+
+
+async def test_export_transactions_raw_payloads_can_be_included(
+    report_client: httpx.AsyncClient,
+) -> None:
+    """Verify explicit include_raw_payloads=true adds the raw payload column.
+
+    REQ: FUNC-EXP-001, FUNC-EXP-003
+    """
+    resp = await report_client.get(
+        "/export/transactions?include_raw_payloads=true",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    rows = list(DictReader(StringIO(resp.text)))
+    txn_r1 = next(row for row in rows if row["transaction_id"] == "txn-r1")
+    assert "raw_provider_payloads" in txn_r1
+    assert "prov-r1" in txn_r1["raw_provider_payloads"]
+
+
+async def test_export_transactions_respects_filters(report_client: httpx.AsyncClient) -> None:
+    """Verify transaction export applies transaction list filter semantics.
+
+    REQ: FUNC-EXP-001, FUNC-TXN-002
+    """
+    resp = await report_client.get(
+        "/export/transactions?merchant=Split",
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    rows = list(DictReader(StringIO(resp.text)))
+    assert len(rows) == 2
+    assert {row["transaction_id"] for row in rows} == {"txn-r7"}
+
+
+async def test_export_categories_budgets_json_and_csv(report_client: httpx.AsyncClient) -> None:
+    """Verify categories/budgets export supports JSON and CSV output.
+
+    REQ: FUNC-EXP-002
+    """
+    create_resp = await report_client.post(
+        "/budgets",
+        json={"month": "2026-01", "category_id": "food_coffee", "amount": 500.0},
+        headers=_HEADERS,
+    )
+    assert create_resp.status_code == 201
+
+    json_resp = await report_client.get(
+        "/export/categories-budgets?format=json&month=2026-01",
+        headers=_HEADERS,
+    )
+    assert json_resp.status_code == 200
+    body = json_resp.json()
+    assert "categories" in body
+    assert "budgets" in body
+    assert any(row["month"] == "2026-01" for row in body["budgets"])
+
+    csv_resp = await report_client.get(
+        "/export/categories-budgets?format=csv&month=2026-01",
+        headers=_HEADERS,
+    )
+    assert csv_resp.status_code == 200
+    rows = list(DictReader(StringIO(csv_resp.text)))
+    assert any(row["record_type"] == "category" for row in rows)
+    assert any(
+        row["record_type"] == "budget" and row["budget_month"] == "2026-01"
+        for row in rows
+    )
+
+
+async def test_export_endpoints_auth_and_validation(report_client: httpx.AsyncClient) -> None:
+    """Verify export endpoints enforce auth and input validation.
+
+    REQ: SEC-ACC-004, FUNC-EXP-001, FUNC-EXP-002
+    """
+    unauthorized = await report_client.get("/export/transactions")
+    assert unauthorized.status_code == 401
+
+    bad_date = await report_client.get(
+        "/export/transactions?date_from=2026/01/01",
+        headers=_HEADERS,
+    )
+    assert bad_date.status_code == 422
+
+    bad_month = await report_client.get(
+        "/export/categories-budgets?month=2026/01",
+        headers=_HEADERS,
+    )
+    assert bad_month.status_code == 422
+
+    bad_format = await report_client.get(
+        "/export/categories-budgets?format=xml",
+        headers=_HEADERS,
+    )
+    assert bad_format.status_code == 422
 
 
 # ── Budget tests (Task 13) ────────────────────────────────────────────────────

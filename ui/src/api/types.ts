@@ -81,7 +81,7 @@ export interface BalanceSnapshot {
   snapshot_id: string;
   account_id: string;
   provider_account_id: string;
-  // TODO(api+ui): add account_name when /balances exposes it for display use.
+  account_name: string;
   date: string;
   balance: number;
   currency: string;

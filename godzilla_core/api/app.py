@@ -8,12 +8,16 @@ REQ: FUNC-CAT-001, FUNC-CAT-002,
 REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
-REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, SEC-ACC-004, SEC-DATA-003
+REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+REQ: SEC-ACC-004, SEC-DATA-003
 """
 
 from __future__ import annotations
 
 import calendar
+import csv
+import io
 import json
 import logging
 import os
@@ -24,7 +28,7 @@ from pathlib import Path
 from typing import Any, Iterator, Literal
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, field_validator
 from sqlcipher3 import dbapi2 as sqlcipher
@@ -282,11 +286,10 @@ class BalanceResponse(BaseModel):
     REQ: FUNC-REP-006
     """
 
-    # TODO(api): Add account_name and populate it from account.name so
-    # balance views can display human-readable account labels.
     snapshot_id: str
     account_id: str
     provider_account_id: str
+    account_name: str
     date: str
     balance: float
     currency: str
@@ -786,6 +789,53 @@ def _row_to_transaction_response(row: tuple[Any, ...]) -> TransactionResponse:
     )
 
 
+def _build_transaction_filter_clause(  # noqa: PLR0913
+    *,
+    table_alias: str,
+    account_id: str | None,
+    date_from: str | None,
+    date_to: str | None,
+    category_id: str | None,
+    merchant: str | None,
+    amount_min: float | None,
+    amount_max: float | None,
+) -> tuple[str, list[Any]]:
+    """Build WHERE clause and bind parameters for transaction filters.
+
+    REQ: FUNC-TXN-002, FUNC-EXP-001
+    """
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if account_id:
+        conditions.append(f"{table_alias}.account_id = ?")
+        params.append(account_id)
+    if date_from:
+        conditions.append(f"{table_alias}.date >= ?")
+        params.append(date_from)
+    if date_to:
+        conditions.append(f"{table_alias}.date <= ?")
+        params.append(date_to)
+    if category_id:
+        conditions.append(f"{table_alias}.category_id = ?")
+        params.append(category_id)
+    if merchant:
+        conditions.append(
+            f"({table_alias}.merchant_name LIKE ?"
+            f" OR {table_alias}.display_name LIKE ?)"
+        )
+        params.extend([f"%{merchant}%", f"%{merchant}%"])
+    if amount_min is not None:
+        conditions.append(f"{table_alias}.amount >= ?")
+        params.append(amount_min)
+    if amount_max is not None:
+        conditions.append(f"{table_alias}.amount <= ?")
+        params.append(amount_max)
+
+    where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    return where_clause, params
+
+
 _TXN_SELECT = (
     "SELECT "
     "transaction_record.id, transaction_record.account_id, account.provider_account_id, "
@@ -955,6 +1005,40 @@ def _latest_included_transaction_date(conn: sqlcipher.Connection) -> date:
     return datetime.now().date()
 
 
+def _csv_attachment_response(
+    *,
+    filename: str,
+    fieldnames: list[str],
+    rows: list[dict[str, Any]],
+) -> Response:
+    """Create a CSV attachment response from row dictionaries.
+
+    REQ: FUNC-EXP-001, FUNC-EXP-002
+    """
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+def _export_default_include_raw_payloads(conn: sqlcipher.Connection) -> bool:
+    """Return default setting for raw payload inclusion in exports.
+
+    REQ: FUNC-EXP-003
+    """
+    row = conn.execute("SELECT include_raw_payloads FROM export_defaults LIMIT 1").fetchone()
+    if row is None:
+        return False
+    return bool(row[0])
+
+
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
@@ -962,7 +1046,8 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
     REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, FUNC-ACCT-004, FUNC-CAT-001,
     REQ: FUNC-SYNC-006, SEC-ACC-004,
-    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
+    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -1031,36 +1116,16 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
         """
         sort_direction = "ASC" if sort_order == "asc" else "DESC"
         sort_field = _SORT_FIELDS[sort_by]
-
-        conditions: list[str] = []
-        params: list[Any] = []
-
-        if account_id:
-            conditions.append("transaction_record.account_id = ?")
-            params.append(account_id)
-        if date_from:
-            conditions.append("transaction_record.date >= ?")
-            params.append(date_from)
-        if date_to:
-            conditions.append("transaction_record.date <= ?")
-            params.append(date_to)
-        if category_id:
-            conditions.append("transaction_record.category_id = ?")
-            params.append(category_id)
-        if merchant:
-            conditions.append(
-                "(transaction_record.merchant_name LIKE ?"
-                " OR transaction_record.display_name LIKE ?)"
-            )
-            params.extend([f"%{merchant}%", f"%{merchant}%"])
-        if amount_min is not None:
-            conditions.append("transaction_record.amount >= ?")
-            params.append(amount_min)
-        if amount_max is not None:
-            conditions.append("transaction_record.amount <= ?")
-            params.append(amount_max)
-
-        where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        where_clause, params = _build_transaction_filter_clause(
+            table_alias="transaction_record",
+            account_id=account_id,
+            date_from=date_from,
+            date_to=date_to,
+            category_id=category_id,
+            merchant=merchant,
+            amount_min=amount_min,
+            amount_max=amount_max,
+        )
         query = (
             f"{_TXN_SELECT}"
             f"{where_clause} "
@@ -1172,12 +1237,10 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             params.append(account_id)
 
         params.extend([limit, offset])
-        # TODO(api): Include account.name in this query and return it in
-        # BalanceResponse for UI display instead of raw IDs.
         query = (
             "SELECT "
             "balance_snapshot.id, balance_snapshot.account_id, account.provider_account_id, "
-            "balance_snapshot.date, balance_snapshot.balance, account.currency "
+            "account.name, balance_snapshot.date, balance_snapshot.balance, account.currency "
             "FROM balance_snapshot "
             "JOIN account ON account.id = balance_snapshot.account_id"
             f"{where_clause} "
@@ -1193,12 +1256,286 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 snapshot_id=row[0],
                 account_id=row[1],
                 provider_account_id=row[2],
-                date=row[3],
-                balance=float(row[4]),
-                currency=row[5],
+                account_name=row[3],
+                date=row[4],
+                balance=float(row[5]),
+                currency=row[6],
             )
             for row in rows
         ]
+
+    @app.get(
+        "/export/transactions",
+        dependencies=[Depends(require_api_key)],
+        response_model=None,
+    )
+    async def export_transactions(  # noqa: PLR0913
+        account_id: str | None = Query(default=None, min_length=1),
+        date_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        date_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        category_id: str | None = Query(default=None, min_length=1),
+        merchant: str | None = Query(default=None, min_length=1, max_length=128),
+        amount_min: float | None = Query(default=None),
+        amount_max: float | None = Query(default=None),
+        sort_by: Literal["date", "amount"] = Query(default="date"),
+        sort_order: Literal["asc", "desc"] = Query(default="desc"),
+        include_raw_payloads: bool | None = Query(default=None),
+    ) -> Response:
+        """Export transactions as CSV using the same filter semantics as /transactions.
+
+        REQ: FUNC-EXP-001, FUNC-EXP-003
+        """
+        sort_direction = "ASC" if sort_order == "asc" else "DESC"
+        sort_field = "tr.date" if sort_by == "date" else "tr.amount"
+        where_clause, params = _build_transaction_filter_clause(
+            table_alias="tr",
+            account_id=account_id,
+            date_from=date_from,
+            date_to=date_to,
+            category_id=category_id,
+            merchant=merchant,
+            amount_min=amount_min,
+            amount_max=amount_max,
+        )
+        query = (
+            "SELECT tr.id, tr.account_id, account.provider_account_id, account.name, "
+            "tr.date, tr.amount, tr.currency, tr.status, tr.merchant_name, tr.display_name, "
+            "tr.category_id, tr.notes, tr.is_transfer, tr.is_excluded "
+            "FROM transaction_record tr "
+            "JOIN account ON account.id = tr.account_id "
+            f"{where_clause} "
+            f"ORDER BY {sort_field} {sort_direction}, tr.id ASC"
+        )
+
+        with _db_connection() as conn:
+            include_raw = (
+                include_raw_payloads
+                if include_raw_payloads is not None
+                else _export_default_include_raw_payloads(conn)
+            )
+            tx_rows = conn.execute(query, params).fetchall()
+            tx_ids = [str(row[0]) for row in tx_rows]
+
+            tag_map: dict[str, list[str]] = {tx_id: [] for tx_id in tx_ids}
+            split_map: dict[str, list[tuple[str, float, str | None, str | None]]] = {
+                tx_id: [] for tx_id in tx_ids
+            }
+            raw_map: dict[str, list[str]] = {tx_id: [] for tx_id in tx_ids}
+            if tx_ids:
+                placeholders = ", ".join("?" for _ in tx_ids)
+                tag_rows = conn.execute(
+                    "SELECT transaction_tag.transaction_id, tag.name "
+                    "FROM transaction_tag "
+                    "JOIN tag ON tag.id = transaction_tag.tag_id "
+                    f"WHERE transaction_tag.transaction_id IN ({placeholders}) "  # noqa: S608
+                    "ORDER BY transaction_tag.transaction_id ASC, tag.name ASC",
+                    tx_ids,
+                ).fetchall()
+                split_rows = conn.execute(
+                    "SELECT id, transaction_id, amount, category_id, notes "
+                    "FROM transaction_split "
+                    f"WHERE transaction_id IN ({placeholders}) "  # noqa: S608
+                    "ORDER BY transaction_id ASC, rowid ASC",
+                    tx_ids,
+                ).fetchall()
+                for transaction_id, tag_name in tag_rows:
+                    tag_map[str(transaction_id)].append(str(tag_name))
+                for split_id, transaction_id, amount, split_category_id, split_notes in split_rows:
+                    split_map[str(transaction_id)].append(
+                        (
+                            str(split_id),
+                            float(amount),
+                            str(split_category_id) if split_category_id is not None else None,
+                            str(split_notes) if split_notes is not None else None,
+                        )
+                    )
+
+                if include_raw:
+                    raw_rows = conn.execute(
+                        "SELECT transaction_id, raw_payload FROM provider_raw "
+                        f"WHERE transaction_id IN ({placeholders}) "  # noqa: S608
+                        "ORDER BY transaction_id ASC, created_at_utc ASC",
+                        tx_ids,
+                    ).fetchall()
+                    for transaction_id, raw_payload in raw_rows:
+                        raw_map[str(transaction_id)].append(str(raw_payload))
+
+        fieldnames = [
+            "transaction_id",
+            "account_id",
+            "provider_account_id",
+            "account_name",
+            "date",
+            "amount",
+            "currency",
+            "status",
+            "merchant_name",
+            "display_name",
+            "category_id",
+            "notes",
+            "is_transfer",
+            "is_excluded",
+            "tags",
+            "split_id",
+            "split_amount",
+            "split_category_id",
+            "split_notes",
+        ]
+        if include_raw:
+            fieldnames.append("raw_provider_payloads")
+
+        csv_rows: list[dict[str, Any]] = []
+        for row in tx_rows:
+            transaction_id = str(row[0])
+            base = {
+                "transaction_id": transaction_id,
+                "account_id": str(row[1]),
+                "provider_account_id": str(row[2]),
+                "account_name": str(row[3]),
+                "date": str(row[4]),
+                "amount": float(row[5]),
+                "currency": str(row[6]),
+                "status": str(row[7]),
+                "merchant_name": str(row[8]) if row[8] is not None else "",
+                "display_name": str(row[9]),
+                "category_id": str(row[10]) if row[10] is not None else "",
+                "notes": str(row[11]) if row[11] is not None else "",
+                "is_transfer": bool(row[12]),
+                "is_excluded": bool(row[13]),
+                "tags": "|".join(tag_map.get(transaction_id, [])),
+            }
+            raw_payloads = raw_map.get(transaction_id, [])
+            if include_raw:
+                base["raw_provider_payloads"] = json.dumps(raw_payloads)
+            splits = split_map.get(transaction_id, [])
+            if splits:
+                for split_id, split_amount, split_category_id, split_notes in splits:
+                    split_row = dict(base)
+                    split_row["split_id"] = split_id
+                    split_row["split_amount"] = split_amount
+                    split_row["split_category_id"] = split_category_id or ""
+                    split_row["split_notes"] = split_notes or ""
+                    csv_rows.append(split_row)
+            else:
+                unsplit_row = dict(base)
+                unsplit_row["split_id"] = ""
+                unsplit_row["split_amount"] = ""
+                unsplit_row["split_category_id"] = ""
+                unsplit_row["split_notes"] = ""
+                csv_rows.append(unsplit_row)
+
+        return _csv_attachment_response(
+            filename=f"transactions-export-{datetime.now().strftime('%Y%m%d')}.csv",
+            fieldnames=fieldnames,
+            rows=csv_rows,
+        )
+
+    @app.get(
+        "/export/categories-budgets",
+        dependencies=[Depends(require_api_key)],
+        response_model=None,
+    )
+    async def export_categories_budgets(
+        format: Literal["csv", "json"] = Query(default="csv"),  # noqa: A002
+        month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
+    ) -> Response | dict[str, list[dict[str, Any]]]:
+        """Export categories and budgets in CSV or JSON format.
+
+        REQ: FUNC-EXP-002
+        """
+        with _db_connection() as conn:
+            category_rows = conn.execute(
+                "SELECT id, name, parent_id, active FROM category "
+                "ORDER BY parent_id NULLS FIRST, name ASC"
+            ).fetchall()
+            budget_params: list[Any] = []
+            budget_where = ""
+            if month is not None:
+                budget_where = " WHERE budget.month = ?"
+                budget_params.append(month)
+            budget_rows = conn.execute(
+                "SELECT budget.id, budget.month, budget.category_id, budget.amount, category.name "
+                "FROM budget "
+                "JOIN category ON category.id = budget.category_id"
+                f"{budget_where} "
+                "ORDER BY budget.month ASC, budget.category_id ASC",
+                budget_params,
+            ).fetchall()
+
+        categories_payload = [
+            {
+                "category_id": str(row[0]),
+                "name": str(row[1]),
+                "parent_id": str(row[2]) if row[2] is not None else None,
+                "active": bool(row[3]),
+            }
+            for row in category_rows
+        ]
+        budgets_payload = [
+            {
+                "budget_id": str(row[0]),
+                "month": str(row[1]),
+                "category_id": str(row[2]),
+                "amount": float(row[3]),
+                "category_name": str(row[4]),
+            }
+            for row in budget_rows
+        ]
+        if format == "json":
+            return {
+                "categories": categories_payload,
+                "budgets": budgets_payload,
+            }
+
+        csv_rows: list[dict[str, Any]] = []
+        for category in categories_payload:
+            csv_rows.append(
+                {
+                    "record_type": "category",
+                    "category_id": category["category_id"],
+                    "category_name": category["name"],
+                    "parent_id": category["parent_id"] or "",
+                    "category_active": category["active"],
+                    "budget_id": "",
+                    "budget_month": "",
+                    "budget_category_id": "",
+                    "budget_category_name": "",
+                    "budget_amount": "",
+                }
+            )
+        for budget in budgets_payload:
+            csv_rows.append(
+                {
+                    "record_type": "budget",
+                    "category_id": "",
+                    "category_name": "",
+                    "parent_id": "",
+                    "category_active": "",
+                    "budget_id": budget["budget_id"],
+                    "budget_month": budget["month"],
+                    "budget_category_id": budget["category_id"],
+                    "budget_category_name": budget["category_name"],
+                    "budget_amount": budget["amount"],
+                }
+            )
+
+        suffix = f"-{month}" if month else ""
+        return _csv_attachment_response(
+            filename=f"categories-budgets-export{suffix}.csv",
+            fieldnames=[
+                "record_type",
+                "category_id",
+                "category_name",
+                "parent_id",
+                "category_active",
+                "budget_id",
+                "budget_month",
+                "budget_category_id",
+                "budget_category_name",
+                "budget_amount",
+            ],
+            rows=csv_rows,
+        )
 
     @app.get(
         "/sync-state",

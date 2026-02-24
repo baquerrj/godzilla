@@ -294,7 +294,7 @@ class PlaidSandboxFlowTests(unittest.TestCase):
     REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
     """
 
-    @unittest.skip("SKIP: TODO(TASK-PLAID-SANDBOX) requires sandbox credentials and network")
+    @unittest.skip("SKIP(TASK-PLAID-SANDBOX): requires sandbox credentials/network")
     def test_link_sandbox_item(self) -> None:
         """Track skipped end-to-end sandbox link coverage.
 

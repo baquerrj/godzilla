@@ -46,6 +46,7 @@ describe("BalancesTable", () => {
         snapshot_id: "snap1",
         account_id: "acc1",
         provider_account_id: "prov-acc-1",
+        account_name: "Checking",
         date: "2025-01-15",
         balance: 4500.0,
         currency: "USD",
@@ -56,6 +57,7 @@ describe("BalancesTable", () => {
       expect(screen.getByTestId("balances-table")).toBeInTheDocument();
       expect(screen.getByText("2025-01-15")).toBeInTheDocument();
       expect(screen.getByText("4500.00")).toBeInTheDocument();
+      expect(screen.getByText("Checking")).toBeInTheDocument();
     });
   });
 
