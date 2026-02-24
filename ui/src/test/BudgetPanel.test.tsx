@@ -133,6 +133,27 @@ describe("BudgetPanel", () => {
     expect(onDrillDown).toHaveBeenCalledWith("food_coffee", expect.any(String));
   });
 
+  it("uses a constrained month selector and refetches for selected month  REQ: FUNC-BUD-001", async () => {
+    mockGetBudgets.mockResolvedValue([]);
+    render(
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
+    );
+
+    const monthSelect = await screen.findByTestId("budget-month-input");
+    expect(monthSelect.tagName).toBe("SELECT");
+
+    fireEvent.change(monthSelect, { target: { value: "2025-12" } });
+
+    await waitFor(() => {
+      expect(mockGetBudgets).toHaveBeenLastCalledWith(TOKEN, { month: "2025-12" });
+    });
+  });
+
   it("creates budget via form submit and clears inputs  REQ: FUNC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     const newLine = makeLine({ budget_id: "bud-new", category_id: "food_coffee", planned: 75 });

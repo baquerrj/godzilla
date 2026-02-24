@@ -192,40 +192,50 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
                 Savings Rate {(overviewResult.data.savings_rate * 100).toFixed(1)}%
               </div>
             </div>
-            <table className="data-table" data-testid="report-top-categories">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th className="amount">Spend</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewResult.data.top_categories.map((row) => (
-                  <tr key={row.category_id}>
-                    <td>{row.category_name}</td>
-                    <td className="amount">{row.amount.toFixed(2)}</td>
-                    <td>
-                      <button
-                        className="btn btn-sm"
-                        data-testid={`report-top-category-${row.category_id}`}
-                        onClick={() => {
-                          const bounds = monthBounds(selectedMonth);
-                          onDrillDown({
-                            startDate: bounds.start,
-                            endDate: bounds.end,
-                            categoryId: row.category_id,
-                            flow: "expense",
-                          });
-                        }}
-                      >
-                        View
-                      </button>
-                    </td>
+            <div className="table-scroll">
+              <table
+                className="data-table report-table report-table-top-categories"
+                data-testid="report-top-categories"
+              >
+                <colgroup>
+                  <col />
+                  <col className="report-col-amount" />
+                  <col className="report-col-actions" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th className="amount">Spend</th>
+                    <th className="actions-col">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {overviewResult.data.top_categories.map((row) => (
+                    <tr key={row.category_id}>
+                      <td>{row.category_name}</td>
+                      <td className="amount">{row.amount.toFixed(2)}</td>
+                      <td className="report-actions-cell">
+                        <button
+                          className="btn btn-sm"
+                          data-testid={`report-top-category-${row.category_id}`}
+                          onClick={() => {
+                            const bounds = monthBounds(selectedMonth);
+                            onDrillDown({
+                              startDate: bounds.start,
+                              endDate: bounds.end,
+                              categoryId: row.category_id,
+                              flow: "expense",
+                            });
+                          }}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </div>
@@ -238,58 +248,68 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
           <p className="error-text">Failed to load cash flow: {cashFlowResult.message}</p>
         )}
         {cashFlowResult.status === "success" && (
-          <table className="data-table" data-testid="report-cash-flow">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th className="amount">Income</th>
-                <th className="amount">Expenses</th>
-                <th className="amount">Net</th>
-                <th className="amount">Rate</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {cashFlowResult.data.points.map((point) => {
-                const bounds = monthBounds(point.month);
-                return (
-                  <tr key={point.month}>
-                    <td>{point.month}</td>
-                    <td className="amount">{point.income.toFixed(2)}</td>
-                    <td className="amount">{point.expenses.toFixed(2)}</td>
-                    <td className="amount">{point.net_savings.toFixed(2)}</td>
-                    <td className="amount">{(point.savings_rate * 100).toFixed(1)}%</td>
-                    <td className="report-actions">
-                      <button
-                        className="btn btn-sm"
-                        data-testid={`report-cashflow-income-${point.month}`}
-                        onClick={() =>
-                          onDrillDown({
-                            startDate: bounds.start,
-                            endDate: bounds.end,
-                            flow: "income",
-                          })}
-                      >
-                        Income
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        data-testid={`report-cashflow-expense-${point.month}`}
-                        onClick={() =>
-                          onDrillDown({
-                            startDate: bounds.start,
-                            endDate: bounds.end,
-                            flow: "expense",
-                          })}
-                      >
-                        Expenses
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="data-table report-table report-table-cash-flow" data-testid="report-cash-flow">
+              <colgroup>
+                <col className="report-col-month" />
+                <col className="report-col-amount" />
+                <col className="report-col-amount" />
+                <col className="report-col-amount" />
+                <col className="report-col-amount" />
+                <col className="report-col-actions-wide" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th className="amount">Income</th>
+                  <th className="amount">Expenses</th>
+                  <th className="amount">Net</th>
+                  <th className="amount">Rate</th>
+                  <th className="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashFlowResult.data.points.map((point) => {
+                  const bounds = monthBounds(point.month);
+                  return (
+                    <tr key={point.month}>
+                      <td>{point.month}</td>
+                      <td className="amount">{point.income.toFixed(2)}</td>
+                      <td className="amount">{point.expenses.toFixed(2)}</td>
+                      <td className="amount">{point.net_savings.toFixed(2)}</td>
+                      <td className="amount">{(point.savings_rate * 100).toFixed(1)}%</td>
+                      <td className="report-actions">
+                        <button
+                          className="btn btn-sm"
+                          data-testid={`report-cashflow-income-${point.month}`}
+                          onClick={() =>
+                            onDrillDown({
+                              startDate: bounds.start,
+                              endDate: bounds.end,
+                              flow: "income",
+                            })}
+                        >
+                          Income
+                        </button>
+                        <button
+                          className="btn btn-sm"
+                          data-testid={`report-cashflow-expense-${point.month}`}
+                          onClick={() =>
+                            onDrillDown({
+                              startDate: bounds.start,
+                              endDate: bounds.end,
+                              flow: "expense",
+                            })}
+                        >
+                          Expenses
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -355,26 +375,34 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
           <p className="error-text">Failed to load net worth: {netWorthResult.message}</p>
         )}
         {netWorthResult.status === "success" && (
-          <table className="data-table" data-testid="report-net-worth">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th className="amount">Assets</th>
-                <th className="amount">Liabilities</th>
-                <th className="amount">Net Worth</th>
-              </tr>
-            </thead>
-            <tbody>
-              {netWorthResult.data.points.map((point) => (
-                <tr key={point.date}>
-                  <td>{point.date}</td>
-                  <td className="amount">{point.assets.toFixed(2)}</td>
-                  <td className="amount">{point.liabilities.toFixed(2)}</td>
-                  <td className="amount">{point.net_worth.toFixed(2)}</td>
+          <div className="table-scroll">
+            <table className="data-table report-table report-table-net-worth" data-testid="report-net-worth">
+              <colgroup>
+                <col className="report-col-date" />
+                <col className="report-col-amount" />
+                <col className="report-col-amount" />
+                <col className="report-col-amount" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th className="amount">Assets</th>
+                  <th className="amount">Liabilities</th>
+                  <th className="amount">Net Worth</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {netWorthResult.data.points.map((point) => (
+                  <tr key={point.date}>
+                    <td>{point.date}</td>
+                    <td className="amount">{point.assets.toFixed(2)}</td>
+                    <td className="amount">{point.liabilities.toFixed(2)}</td>
+                    <td className="amount">{point.net_worth.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>

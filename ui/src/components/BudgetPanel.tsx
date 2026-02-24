@@ -4,7 +4,7 @@
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
 import { leafActiveCategories } from "./categoryUtils";
 import type { BudgetLine, Category } from "../api/types";
@@ -23,6 +23,24 @@ function defaultMonth(): string {
   return `${y}-${m}`;
 }
 
+function buildBudgetMonthOptions(monthsBack = 36, monthsForward = 24): Array<{ value: string; label: string }> {
+  const now = new Date();
+  const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
+  const options: Array<{ value: string; label: string }> = [];
+  for (let offset = -monthsBack; offset <= monthsForward; offset += 1) {
+    const index = currentMonthIndex + offset;
+    const year = Math.floor(index / 12);
+    const monthIndex = index % 12;
+    const value = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+    const label = new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    options.push({ value, label });
+  }
+  return options;
+}
+
 export function BudgetPanel({ token, refreshKey, categories, onDrillDown }: Props) {
   const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
   const [newAmount, setNewAmount] = useState<string>("");
@@ -38,6 +56,7 @@ export function BudgetPanel({ token, refreshKey, categories, onDrillDown }: Prop
   }, [token, selectedMonth, refreshKey, createResult, deleteResult]);
 
   const leafCategories = leafActiveCategories(categories);
+  const monthOptions = useMemo(() => buildBudgetMonthOptions(), []);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,12 +87,20 @@ export function BudgetPanel({ token, refreshKey, categories, onDrillDown }: Prop
     <section className="panel" data-testid="budget-panel">
       <div className="panel-header">
         <h2>Budgets</h2>
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          data-testid="budget-month-input"
-        />
+        <label className="budget-month-picker">
+          Month
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            data-testid="budget-month-input"
+          >
+            {monthOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {fetchResult.status === "loading" && <p className="muted">Loading…</p>}
