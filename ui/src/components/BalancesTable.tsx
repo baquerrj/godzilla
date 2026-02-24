@@ -45,7 +45,7 @@ export function BalancesTable({ token, refreshKey }: Props) {
             <tr>
               <th>Date</th>
               <th>Account</th>
-              <th>Balance</th>
+              <th className="amount">Balance</th>
               <th>Currency</th>
             </tr>
           </thead>

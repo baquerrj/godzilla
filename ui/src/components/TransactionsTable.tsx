@@ -122,7 +122,7 @@ export function TransactionsTable({
               <th>Category</th>
               <th>Status</th>
               <th
-                className="sortable"
+                className="sortable amount"
                 onClick={() => handleSortClick("amount")}
                 data-testid="sort-amount"
               >

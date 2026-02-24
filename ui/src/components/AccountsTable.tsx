@@ -45,7 +45,7 @@ export function AccountsTable({ token, refreshKey }: Props) {
               <th>Type</th>
               <th>Subtype</th>
               <th>Mask</th>
-              <th>Balance</th>
+              <th className="amount">Balance</th>
               <th>Currency</th>
               <th>Institution</th>
             </tr>
