@@ -502,7 +502,8 @@ code {
   font-size: 12px;
 }
 
-.reports-controls input {
+.reports-controls input,
+.reports-controls select {
   border: 1px solid var(--color-border);
   background: #111119;
   color: var(--color-text);

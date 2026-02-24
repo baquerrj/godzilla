@@ -117,6 +117,7 @@ describe("ReportsPanel", () => {
     );
     await waitFor(() => {
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("reports-month-input").tagName).toBe("SELECT");
       expect(screen.getByTestId("reports-help-summary")).toHaveTextContent(
         /click report values to open matching transactions/i,
       );

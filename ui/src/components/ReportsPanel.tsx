@@ -37,6 +37,24 @@ function defaultMonth(): string {
   return `${y}-${m}`;
 }
 
+function buildReportMonthOptions(monthsBack = 36, monthsForward = 24): Array<{ value: string; label: string }> {
+  const now = new Date();
+  const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
+  const options: Array<{ value: string; label: string }> = [];
+  for (let offset = -monthsBack; offset <= monthsForward; offset += 1) {
+    const index = currentMonthIndex + offset;
+    const year = Math.floor(index / 12);
+    const monthIndex = index % 12;
+    const value = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+    const label = new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    options.push({ value, label });
+  }
+  return options;
+}
+
 function monthBounds(month: string): { start: string; end: string } {
   const [year, monthNum] = month.split("-").map(Number);
   const endDay = new Date(year, monthNum, 0).getDate();
@@ -68,6 +86,7 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
   const [netWorthResult, executeNetWorth] = useApiCall<NetWorthReport>();
 
   const leafCategories = useMemo(() => leafActiveCategories(categories), [categories]);
+  const monthOptions = useMemo(() => buildReportMonthOptions(), []);
   const trendMonths = useMemo(() => monthSpan(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
 
   useEffect(() => {
@@ -124,12 +143,17 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
         <div className="reports-controls">
           <label>
             Month
-            <input
-              type="month"
+            <select
               value={selectedMonth}
               onChange={(event) => setSelectedMonth(event.target.value)}
               data-testid="reports-month-input"
-            />
+            >
+              {monthOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Start
