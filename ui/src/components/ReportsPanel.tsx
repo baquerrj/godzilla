@@ -151,9 +151,18 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
           </label>
         </div>
       </div>
+      <p className="reports-help" data-testid="reports-help-summary">
+        Use Month for the default reporting window. Start and End update cash flow, category trends,
+        and net worth. Click report values to open matching transactions.
+      </p>
+      <p className="reports-help">
+        Transaction-based metrics include posted transactions only, exclude transfers and excluded
+        records, and remain split-aware.
+      </p>
 
       <div className="reports-section">
         <h3>Monthly Overview</h3>
+        <p className="reports-help">Use Income, Expenses, or View to drill into filtered transactions.</p>
         {overviewResult.status === "loading" && <p className="muted">Loading…</p>}
         {overviewResult.status === "error" && (
           <p className="error-text">Failed to load monthly overview: {overviewResult.message}</p>
@@ -223,6 +232,7 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
 
       <div className="reports-section">
         <h3>Cash Flow</h3>
+        <p className="reports-help">Income and Expenses buttons apply month-specific transaction filters.</p>
         {cashFlowResult.status === "loading" && <p className="muted">Loading…</p>}
         {cashFlowResult.status === "error" && (
           <p className="error-text">Failed to load cash flow: {cashFlowResult.message}</p>
@@ -285,6 +295,7 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
 
       <div className="reports-section">
         <h3>Category Trends</h3>
+        <p className="reports-help">Select one or more categories. Use Ctrl/Cmd + click to multi-select.</p>
         <label className="reports-category-picker">
           Categories
           <select
@@ -338,6 +349,7 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
 
       <div className="reports-section">
         <h3>Net Worth</h3>
+        <p className="reports-help">Net worth equals assets minus liabilities from balance snapshots.</p>
         {netWorthResult.status === "loading" && <p className="muted">Loading…</p>}
         {netWorthResult.status === "error" && (
           <p className="error-text">Failed to load net worth: {netWorthResult.message}</p>

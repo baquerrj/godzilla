@@ -117,6 +117,10 @@ describe("ReportsPanel", () => {
     );
     await waitFor(() => {
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("reports-help-summary")).toHaveTextContent(
+        /click report values to open matching transactions/i,
+      );
+      expect(screen.getByText(/net worth equals assets minus liabilities/i)).toBeInTheDocument();
       expect(screen.getByTestId("report-top-categories")).toBeInTheDocument();
       expect(screen.getByTestId("report-cash-flow")).toBeInTheDocument();
       expect(screen.getByTestId("report-category-trends")).toBeInTheDocument();

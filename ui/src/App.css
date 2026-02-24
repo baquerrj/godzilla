@@ -486,6 +486,12 @@ code {
   min-width: 140px;
 }
 
+.reports-help {
+  margin: 0 0 8px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
 .reports-section + .reports-section {
   margin-top: 14px;
   padding-top: 14px;
