@@ -11,18 +11,18 @@ desktop packaging stay consistent with the MVP architecture.
 ```mermaid
 flowchart LR
   subgraph Dev["Development loop"]
-    VITE["Vite dev server\n(ui/vite.config.ts)"]
-    FE["React frontend\n(ui/src/*)"]
+    VITE["Vite dev server<br>(ui/vite.config.ts)"]
+    FE["React frontend<br>(ui/src/*)"]
     VITE --> FE
   end
 
   subgraph Desktop["Desktop runtime"]
-    TAURI["Tauri host/runtime\n(ui/src-tauri/*)"]
+    TAURI["Tauri host/runtime<br>(ui/src-tauri/*)"]
     WEBVIEW["Embedded WebView"]
     TAURI --> WEBVIEW
   end
 
-  SIDECAR["Python API sidecar\n127.0.0.1:8787"]
+  SIDECAR["Python API sidecar<br>127.0.0.1:8787"]
 
   FE -->|"DEV: /api/*"| VITE
   VITE -->|"proxy + X-API-Key"| SIDECAR

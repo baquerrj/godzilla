@@ -54,6 +54,8 @@ export function BalancesTable({ token, refreshKey }: Props) {
               <tr key={snap.snapshot_id}>
                 <td>{snap.date}</td>
                 <td>
+                  {/* TODO(ui): Display account_name here once /balances includes it,
+                      instead of showing provider_account_id identifiers. */}
                   <code title={snap.account_id}>
                     {snap.provider_account_id}
                   </code>
