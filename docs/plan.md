@@ -133,36 +133,36 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     `export GODZILLA_DB_KEY=m4-test-key`
     `export GODZILLA_API_TOKEN=m4-test-token`
     `source venv/bin/activate && migrations && godzilla-api`
-  - [ ] 4. Seed fresh DB with at least one linked/synced sandbox item:
+  - [x] 4. Seed fresh DB with at least one linked/synced sandbox item:
     `curl -s -X POST -H "X-API-Key: m4-test-token" -H "Content-Type: application/json" -d '{}' "http://127.0.0.1:8787/plaid/link"`
     Copy `item_id` from response, then:
     `curl -s -X POST -H "X-API-Key: m4-test-token" -H "Content-Type: application/json" -d '{"item_id":"<item_id>"}' "http://127.0.0.1:8787/plaid/sync"`
-  - [ ] 5. Verify monthly overview endpoint:
+  - [x] 5. Verify monthly overview endpoint:
     `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/monthly-overview?month=2026-01"`
     Expect HTTP 200 and keys: `income`, `expenses`, `net_savings`,
     `savings_rate`, `top_categories`.
-  - [ ] 6. Verify cash-flow endpoint:
+  - [x] 6. Verify cash-flow endpoint:
     `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/cash-flow?start=2025-01-01&end=2026-01-31"`
     Expect HTTP 200 monthly series with each point containing `month`, `income`,
     `expenses`, `net_savings`, `savings_rate`. For an unsynced/empty DB, `points: []`
     is expected.
-  - [ ] 7. Discover valid category IDs for this DB:
+  - [x] 7. Discover valid category IDs for this DB:
     `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/categories"`
     Choose two active leaf `category_id` values from the response.
-  - [ ] 8. Verify category-trends endpoint:
+  - [x] 8. Verify category-trends endpoint:
     `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/category-trends?categories=<cat_id_1>,<cat_id_2>&months=12"`
     Expect HTTP 200 with one series per requested category and <= 12 monthly
     points each. If IDs do not exist, expect HTTP 422 with `Unknown category id(s)`.
-  - [ ] 9. Verify net-worth endpoint:
+  - [x] 9. Verify net-worth endpoint:
     `curl -s -H "X-API-Key: m4-test-token" "http://127.0.0.1:8787/reports/net-worth?start=2025-01-01&end=2026-01-31"`
     Expect HTTP 200 points where `net_worth = assets - liabilities`.
-  - [ ] 10. Verify negative API cases:
+  - [x] 10. Verify negative API cases:
     missing token => HTTP 401 on all `/reports/*`;
     bad dates/month/months => HTTP 422.
-  - [ ] 11. Launch UI (`cd ui && npm run dev`) and verify:
+  - [x] 11. Launch UI (`cd ui && npm run dev`) and verify:
     reports panel renders, month/range changes refresh all report widgets, and
     inclusion-rule label is visible.
-  - [ ] 12. Verify drill-down UX:
+  - [x] 12. Verify drill-down UX:
     click monthly overview/top-category/cash-flow/category-trend metrics and
     confirm transaction filters auto-populate with matching
     dates/category/amount-direction.
