@@ -211,6 +211,12 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 21e. Integrated all panels in `App.tsx` refresh flow.
   - [x] 21f. Added frontend tests for render, request wiring, and file-operation flows.
 
+- [ ] **22. Post-wipe database re-initialization** (`FUNC-BKP-006`)
+  - [ ] 22a. Add authenticated API endpoint to re-run migrations on current DB path.
+  - [ ] 22b. Add Data Management UI action to trigger re-initialization after wipe.
+  - [ ] 22c. Add backend + frontend tests for wipe -> re-initialize -> recoverable clean state flow.
+  - [ ] 22d. Update traceability artifacts for new requirement coverage.
+
 - [ ] **M5 verification checklist (step-by-step to run)**
   - [ ] 1. Activate env and run quality gates:
     `. venv/bin/activate && nox -s lint && nox -s tests && nox -s build`

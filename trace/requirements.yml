@@ -878,6 +878,17 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+- requirement_id: FUNC-BKP-006
+  title: Database re-initialization
+  parent_requirement_id: FUNC-BKP-004
+  code_refs: []
+  test_refs: []
+  doc_refs:
+  - docs/product-requirements-document.md
+  - docs/plan.md
+  - docs/design/architecture-overview.md
+  - docs/design/architecture-components.md
+  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-001
   title: Timezone and currency
   parent_requirement_id: SYS-001
