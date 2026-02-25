@@ -239,7 +239,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/settings"
     ```
     Expect HTTP 200 with timezone/currency/retention/export/security/sync keys.
-  - [ ] 6. Verify settings update (without purging raw payloads yet):
+  - [x] 6. Verify settings update (without purging raw payloads yet):
     ```bash
     curl -s -X PUT -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"currency":"USD","retention":{"retain_raw_payloads":true,"retain_logs_days":30},"export_defaults":{"include_raw_payloads":false},"security":{"auto_lock_minutes":15},"sync":{"schedule_enabled":false,"frequency_minutes":360}}' "http://127.0.0.1:8787/settings"
     ```
@@ -252,40 +252,59 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     curl -s -D /tmp/m5-tx.hdr -o /tmp/m5-transactions.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions"
     ```
     Expect no `raw_provider_payloads` column.
-  - [ ] 9. Verify transaction export with raw payloads included:
+  - [x] 9. Verify transaction export with raw payloads included:
     ```bash
     curl -s -o /tmp/m5-transactions-raw.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions?include_raw_payloads=true"
     ```
     Expect `raw_provider_payloads` column present and populated for synced transactions.
-  - [ ] 10. Verify categories/budgets export CSV + JSON:
+  - [x] 10. Verify categories/budgets export CSV + JSON:
     ```bash
     curl -s -o /tmp/m5-categories-budgets.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=csv"
     curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=json"
     ```
-  - [ ] 11. Verify backup creation:
+  - [x] 11. Verify backup creation:
     ```bash
     curl -s -o /tmp/m5-backup.gzbk -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"passphrase":"m5-passphrase","include_secrets":true}' "http://127.0.0.1:8787/backup"
     ```
-  - [ ] 12. Verify integrity failure on tampered backup:
-    copy `/tmp/m5-backup.gzbk`, modify one byte, restore should fail with explicit integrity error.
-  - [ ] 13. Verify successful restore:
+  - [x] 12. Verify integrity failure on tampered backup:
+    Tamper encrypted ciphertext (not envelope JSON) so integrity failure is deterministic:
+    ```bash
+    cp /tmp/m5-backup.gzbk /tmp/m5-backup-tampered.gzbk
+    ```
+    ```bash
+    python3 - <<'PY'
+    import json
+    from base64 import urlsafe_b64decode, urlsafe_b64encode
+    p = "/tmp/m5-backup-tampered.gzbk"
+    env = json.loads(open(p, "rb").read().decode("utf-8"))
+    c = bytearray(urlsafe_b64decode(env["ciphertext_b64"].encode("ascii")))
+    c[len(c)//2] ^= 1
+    env["ciphertext_b64"] = urlsafe_b64encode(bytes(c)).decode("ascii")
+    open(p, "wb").write(json.dumps(env, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    PY
+    ```
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -F "passphrase=m5-passphrase" -F "backup_file=@/tmp/m5-backup-tampered.gzbk" "http://127.0.0.1:8787/restore"
+    ```
+    Expect HTTP 400 with `{"detail":"Backup integrity check failed"}`.
+  - [x] 13. Verify successful restore:
     ```bash
     curl -s -X POST -H "X-API-Key: m5-test-token" -F "passphrase=m5-passphrase" -F "backup_file=@/tmp/m5-backup.gzbk" "http://127.0.0.1:8787/restore"
     ```
-  - [ ] 14. Verify wipe flow:
-    ```bash
-    curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"
-    ```
-  - [ ] 15. Verify audit log JSON + CSV:
+  - [x] 14. Verify audit log JSON + CSV:
     ```bash
     curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=json&limit=50"
     curl -s -o /tmp/m5-audit.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=csv"
     ```
-  - [ ] 16. Verify UI (`cd ui && npm run dev`):
+  - [x] 15. Verify UI (`cd ui && npm run dev`):
     export downloads, settings save/reload, backup/restore/wipe confirmations, balances show account names.
-  - [ ] 17. Verify traceability:
+  - [x] 16. Verify traceability:
     `trace/requirements.yml` has populated `code_refs` + `test_refs` for M5 requirement IDs.
-  - [ ] 18. Mark M5 complete and finalize Conventional Commit checkpoints.
+  - [x] 17. Verify wipe flow (run last because it deletes local test data):
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"
+    ```
+  - [x] 18. Mark M5 complete and finalize Conventional Commit checkpoints.
 
 ---
 
