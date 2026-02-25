@@ -1164,7 +1164,9 @@ def _seed_report_data(db_path: str, db_key: str) -> None:
         "VALUES (?, ?, ?, ?, ?)",
         ("split-r7-2", "txn-r7", 20.0, "food_dining", None),
     )
-    conn.execute("INSERT OR IGNORE INTO tag (id, name, active) VALUES (?, ?, 1)", ("tag-r1", "morning"))
+    conn.execute(
+        "INSERT OR IGNORE INTO tag (id, name, active) VALUES (?, ?, 1)", ("tag-r1", "morning")
+    )
     conn.execute(
         "INSERT OR IGNORE INTO transaction_tag (transaction_id, tag_id) VALUES (?, ?)",
         ("txn-r1", "tag-r1"),
@@ -1517,10 +1519,7 @@ async def test_export_categories_budgets_json_and_csv(report_client: httpx.Async
     assert csv_resp.status_code == 200
     rows = list(DictReader(StringIO(csv_resp.text)))
     assert any(row["record_type"] == "category" for row in rows)
-    assert any(
-        row["record_type"] == "budget" and row["budget_month"] == "2026-01"
-        for row in rows
-    )
+    assert any(row["record_type"] == "budget" and row["budget_month"] == "2026-01" for row in rows)
 
 
 async def test_export_endpoints_auth_and_validation(report_client: httpx.AsyncClient) -> None:
@@ -1651,7 +1650,12 @@ async def test_wipe_removes_database_and_secrets_files(backup_client: httpx.Asyn
     """
     db_path = os.environ["GODZILLA_DB_PATH"]
     secrets_path = os.environ["GODZILLA_SECRETS_PATH"]
-    for sidecar in (f"{db_path}-wal", f"{db_path}-shm", f"{secrets_path}-wal", f"{secrets_path}-shm"):
+    for sidecar in (
+        f"{db_path}-wal",
+        f"{db_path}-shm",
+        f"{secrets_path}-wal",
+        f"{secrets_path}-shm",
+    ):
         with open(sidecar, "wb") as file_handle:
             file_handle.write(b"dummy")
 

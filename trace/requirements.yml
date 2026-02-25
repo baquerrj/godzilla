@@ -685,6 +685,7 @@
   title: Balance snapshotting
   parent_requirement_id: FUNC-ACCT-005
   code_refs:
+  - godzilla_core/api/app.py:BalanceResponse
   - godzilla_core/api/app.py:get_balances
   - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
   - godzilla_core/integrations/plaid_sync.py:_insert_balance_snapshot
@@ -695,7 +696,7 @@
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_balances_returns_snapshots
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_balance_snapshot_upserts_per_day
-  - ui/src/test/BalancesTable.test.tsx:BalancesTable
+  - ui/src/test/BalancesTable.test.tsx:renders balance rows
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -746,63 +747,125 @@
 - requirement_id: FUNC-EXP-001
   title: Transaction export CSV
   parent_requirement_id: FUNC-TXN-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_build_transaction_filter_clause
+  - godzilla_core/api/app.py:export_transactions
+  - ui/src/api/types.ts:ExportTransactionsParams
+  - ui/src/api/client.ts:GodzillaApi.exportTransactions
+  - ui/src/components/ExportPanel.tsx:ExportPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_export_transactions_csv_includes_splits_tags_and_user_fields
+  - godzilla_core/tests/test_api_layer.py:test_export_transactions_respects_filters
+  - ui/src/test/ExportPanel.test.tsx:uses settings default and exports filtered transactions
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-EXP-002
   title: Category and budget export
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:export_categories_budgets
+  - ui/src/api/types.ts:CategoriesBudgetsExportJson
+  - ui/src/api/client.ts:GodzillaApi.exportCategoriesBudgetsCsv
+  - ui/src/api/client.ts:GodzillaApi.exportCategoriesBudgetsJson
+  - ui/src/components/ExportPanel.tsx:ExportPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_export_categories_budgets_json_and_csv
+  - godzilla_core/tests/test_api_layer.py:test_export_endpoints_auth_and_validation
+  - ui/src/test/ExportPanel.test.tsx:exports categories/budgets json
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-EXP-003
   title: Export privacy controls
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_export_default_include_raw_payloads
+  - godzilla_core/api/app.py:export_transactions
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/api/client.ts:GodzillaApi.exportTransactions
+  - ui/src/components/ExportPanel.tsx:ExportPanel
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_export_transactions_raw_payloads_default_is_excluded
+  - godzilla_core/tests/test_api_layer.py:test_export_transactions_raw_payloads_can_be_included
+  - ui/src/test/ExportPanel.test.tsx:uses settings default and exports filtered transactions
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-001
   title: Encrypted backup creation
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/security/backup.py:create_backup_blob
+  - godzilla_core/api/app.py:create_backup
+  - ui/src/api/client.ts:GodzillaApi.createBackup
+  - ui/src/components/DataManagementPanel.tsx:DataManagementPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_backup_returns_encrypted_blob
+  - ui/src/test/DataManagementPanel.test.tsx:downloads encrypted backup
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-002
   title: Backup integrity check
   parent_requirement_id: FUNC-BKP-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/security/backup.py:decrypt_backup_blob
+  - godzilla_core/api/app.py:restore_backup
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_restore_rejects_tampered_backup
+  - godzilla_core/tests/test_api_layer.py:test_backup_returns_encrypted_blob
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-003
   title: Restore workflow
   parent_requirement_id: FUNC-SYNC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:restore_backup
+  - godzilla_core/api/app.py:_write_file_bytes_atomic
+  - ui/src/api/client.ts:GodzillaApi.restoreBackup
+  - ui/src/components/DataManagementPanel.tsx:DataManagementPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_restore_recovers_database_and_secrets
+  - ui/src/test/DataManagementPanel.test.tsx:restores backup file and notifies parent
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-BKP-004
   title: Wipe local data
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_best_effort_wipe
+  - godzilla_core/api/app.py:wipe_local_data
+  - ui/src/api/client.ts:GodzillaApi.wipeData
+  - ui/src/components/DataManagementPanel.tsx:DataManagementPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_wipe_removes_database_and_secrets_files
+  - godzilla_core/tests/test_api_layer.py:test_backup_restore_wipe_auth_and_validation
+  - ui/src/test/DataManagementPanel.test.tsx:requires confirmation token before wipe
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
@@ -818,54 +881,108 @@
 - requirement_id: FUNC-SET-001
   title: Timezone and currency
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_validate_timezone_name
+  - godzilla_core/api/app.py:_load_settings
+  - godzilla_core/api/app.py:get_settings
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/api/types.ts:SettingsResponse
+  - ui/src/api/client.ts:GodzillaApi.getSettings
+  - ui/src/api/client.ts:GodzillaApi.updateSettings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_settings_returns_bootstrap_defaults
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_rejects_invalid_values
+  - ui/src/test/SettingsPanel.test.tsx:loads settings values on mount
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-SET-002
   title: Retention settings
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_apply_retention_pruning
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_applies_retention_pruning
+  - ui/src/test/SettingsPanel.test.tsx:saves updated settings and notifies parent
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-SET-003
   title: Auto-lock and timeout
   parent_requirement_id: SEC-ACC-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - migrations/0003_m5_settings_extensions.sql
+  - godzilla_core/api/app.py:SecuritySettingsResponse
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_rejects_invalid_values
+  - ui/src/test/SettingsPanel.test.tsx:shows local validation error for invalid number fields
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-SET-004
   title: Sync configuration
   parent_requirement_id: FUNC-ACCT-006
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - migrations/0003_m5_settings_extensions.sql
+  - godzilla_core/api/app.py:SyncSettingsResponse
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_rejects_invalid_values
+  - ui/src/test/SettingsPanel.test.tsx:shows local validation error for invalid number fields
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-SET-005
   title: Export defaults
   parent_requirement_id: FUNC-EXP-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:ExportDefaultsResponse
+  - godzilla_core/api/app.py:update_settings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  - ui/src/components/ExportPanel.tsx:ExportPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
+  - godzilla_core/tests/test_api_layer.py:test_export_transactions_raw_payloads_default_is_excluded
+  - ui/src/test/SettingsPanel.test.tsx:saves updated settings and notifies parent
+  - ui/src/test/ExportPanel.test.tsx:uses settings default and exports filtered transactions
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-001
   title: Event audit log
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_log_event
+  - godzilla_core/api/app.py:get_audit_log
+  - ui/src/api/client.ts:GodzillaApi.getAuditLog
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_audit_log_records_events_and_supports_filters
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
@@ -888,18 +1005,33 @@
 - requirement_id: FUNC-AUD-003
   title: Log retention
   parent_requirement_id: FUNC-SET-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_prune_audit_log
+  - godzilla_core/api/app.py:_apply_retention_pruning
+  - godzilla_core/api/app.py:_log_event
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_applies_retention_pruning
+  - godzilla_core/tests/test_api_layer.py:test_audit_log_retention_pruned_on_write
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
 - requirement_id: FUNC-AUD-004
   title: Audit export (optional)
   parent_requirement_id: FUNC-AUD-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:get_audit_log
+  - ui/src/api/client.ts:GodzillaApi.exportAuditLogCsv
+  - ui/src/components/ExportPanel.tsx:ExportPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_audit_log_csv_export
+  - godzilla_core/tests/test_api_layer.py:test_audit_log_auth_and_validation
+  - ui/src/test/ExportPanel.test.tsx:exports audit csv with filters
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md

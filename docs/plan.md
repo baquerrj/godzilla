@@ -175,25 +175,90 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M5 — Export + encrypted backup/restore + settings + audit logging hardening
 
-- [ ] **17. Export endpoints** (`FUNC-EXP-001`–`FUNC-EXP-003`)
-  `GET /export/transactions` (CSV, filter-aware, raw payload excluded by default),
-  `GET /export/categories-budgets` (CSV/JSON).
+- [x] **17. Export endpoints** (`FUNC-EXP-001`–`FUNC-EXP-003`)
+  - [x] 17a. Shared export helpers (CSV attachment, transaction filter reuse from `/transactions`).
+  - [x] 17b. `GET /export/transactions` (filter-aware CSV, split-row expansion, tags/overrides/flags).
+  - [x] 17c. `GET /export/categories-budgets` (`format=csv|json`, optional `month=YYYY-MM`).
+  - [x] 17d. Backend tests for filter behavior, CSV/JSON shape, split behavior, defaults, auth/validation.
 
-- [ ] **18. Encrypted backup/restore + wipe** (`FUNC-BKP-001`–`FUNC-BKP-004`)
-  `POST /backup` (passphrase-encrypted, authenticated MAC),
-  `POST /restore` (verify MAC, fail on tamper),
-  `POST /wipe` (secure delete DB + secrets).
+- [x] **18. Encrypted backup/restore + wipe** (`FUNC-BKP-001`–`FUNC-BKP-004`)
+  - [x] 18a. Added `godzilla_core/security/backup.py` with Scrypt + AESGCM envelope.
+  - [x] 18b. Added `cryptography>=43` dependency.
+  - [x] 18c. `POST /backup` (encrypted downloadable blob).
+  - [x] 18d. `POST /restore` (multipart upload, integrity checks, atomic replace + migrations).
+  - [x] 18e. `POST /wipe` (DB + sidecars + secrets best-effort wipe).
+  - [x] 18f. Backend tests for encrypted output, tamper failure, restore correctness, wipe behavior.
 
-- [ ] **19. Settings endpoints** (`FUNC-SET-001`–`FUNC-SET-005`)
-  `GET /settings`, `PUT /settings` — timezone, currency, retention policy,
-  export defaults, sync config. Apply retention pruning.
+- [x] **19. Settings endpoints** (`FUNC-SET-001`–`FUNC-SET-005`)
+  - [x] 19a. Added migration `0003_m5_settings_extensions.sql`.
+  - [x] 19b. Added consolidated settings models and defaults bootstrap.
+  - [x] 19c. `GET /settings` and partial `PUT /settings`.
+  - [x] 19d. Retention pruning on update (`provider_raw`, `audit_log`).
+  - [x] 19e. Backend tests for defaults, updates, validation, and pruning side effects.
 
-- [ ] **20. Audit log enforcement** (`FUNC-AUD-001`, `FUNC-AUD-003`, `FUNC-AUD-004`)
-  Write to `audit_log` for major events, enforce retention/pruning,
-  `GET /audit-log` (redacted export).
+- [x] **20. Audit log enforcement** (`FUNC-AUD-001`, `FUNC-AUD-003`, `FUNC-AUD-004`)
+  - [x] 20a. Persist redacted events in `audit_log` while retaining structured logger output.
+  - [x] 20b. Added major workflow events: link/sync/backup/restore/wipe/settings.
+  - [x] 20c. Retention pruning enforced both on settings update and on audit write path.
+  - [x] 20d. `GET /audit-log` with filters, pagination, and `format=json|csv`.
+  - [x] 20e. Backend tests for event presence, filtering/export, retention, auth/validation.
 
-- [ ] **21. M5 UI**
-  Export buttons, backup/restore/wipe dialogs, settings page.
+- [x] **21. M5 UI**
+  - [x] 21a. Extended `ui/src/api/types.ts` and `ui/src/api/client.ts` for M5 endpoints.
+  - [x] 21b. Added `ExportPanel` with filtered transaction export, category/budget export, audit export.
+  - [x] 21c. Added `DataManagementPanel` for backup/restore/wipe workflows.
+  - [x] 21d. Added `SettingsPanel` for timezone/currency/retention/export-default/security/sync config.
+  - [x] 21e. Integrated all panels in `App.tsx` refresh flow.
+  - [x] 21f. Added frontend tests for render, request wiring, and file-operation flows.
+
+- [ ] **M5 verification checklist (step-by-step to run)**
+  - [ ] 1. Activate env and run quality gates:
+    `. venv/bin/activate && nox -s lint && nox -s tests && nox -s build`
+  - [ ] 2. Run frontend tests/build:
+    `cd ui && npm test && npm run build`
+  - [ ] 3. Start API against a fresh DB/secrets set:
+    `export GODZILLA_DB_PATH=/tmp/m5-test.db`
+    `export GODZILLA_DB_KEY=m5-test-key`
+    `export GODZILLA_SECRETS_PATH=/tmp/m5-secrets.db`
+    `export GODZILLA_SECRETS_KEY=m5-secrets-key`
+    `export GODZILLA_API_TOKEN=m5-test-token`
+    `. venv/bin/activate && migrations && godzilla-api`
+  - [ ] 4. Seed data with one sandbox item + sync:
+    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{}' "http://127.0.0.1:8787/plaid/link"`
+    Then sync returned `item_id`:
+    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"item_id":"<item_id>"}' "http://127.0.0.1:8787/plaid/sync"`
+  - [ ] 5. Verify `/settings` defaults:
+    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/settings"`
+    Expect HTTP 200 with timezone/currency/retention/export/security/sync keys.
+  - [ ] 6. Verify settings update + retention application:
+    `curl -s -X PUT -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"currency":"USD","retention":{"retain_raw_payloads":false,"retain_logs_days":30},"export_defaults":{"include_raw_payloads":false},"security":{"auto_lock_minutes":15},"sync":{"schedule_enabled":false,"frequency_minutes":360}}' "http://127.0.0.1:8787/settings"`
+  - [ ] 7. Verify `/balances` includes `account_name`:
+    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/balances?limit=5"`
+  - [ ] 8. Verify transaction export privacy default:
+    `curl -s -D /tmp/m5-tx.hdr -o /tmp/m5-transactions.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions"`
+    Expect no `raw_provider_payloads` column.
+  - [ ] 9. Verify transaction export with raw payloads included:
+    `curl -s -o /tmp/m5-transactions-raw.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions?include_raw_payloads=true"`
+    Expect `raw_provider_payloads` column present.
+  - [ ] 10. Verify categories/budgets export CSV + JSON:
+    `curl -s -o /tmp/m5-categories-budgets.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=csv"`
+    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=json"`
+  - [ ] 11. Verify backup creation:
+    `curl -s -o /tmp/m5-backup.gzbk -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"passphrase":"m5-passphrase","include_secrets":true}' "http://127.0.0.1:8787/backup"`
+  - [ ] 12. Verify integrity failure on tampered backup:
+    copy `/tmp/m5-backup.gzbk`, modify one byte, restore should fail with explicit integrity error.
+  - [ ] 13. Verify successful restore:
+    `curl -s -X POST -H "X-API-Key: m5-test-token" -F "passphrase=m5-passphrase" -F "backup_file=@/tmp/m5-backup.gzbk" "http://127.0.0.1:8787/restore"`
+  - [ ] 14. Verify wipe flow:
+    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"`
+  - [ ] 15. Verify audit log JSON + CSV:
+    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=json&limit=50"`
+    `curl -s -o /tmp/m5-audit.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=csv"`
+  - [ ] 16. Verify UI (`cd ui && npm run dev`):
+    export downloads, settings save/reload, backup/restore/wipe confirmations, balances show account names.
+  - [ ] 17. Verify traceability:
+    `trace/requirements.yml` has populated `code_refs` + `test_refs` for M5 requirement IDs.
+  - [ ] 18. Mark M5 complete and finalize Conventional Commit checkpoints.
 
 ---
 

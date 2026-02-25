@@ -1054,8 +1054,7 @@ def _build_transaction_filter_clause(  # noqa: PLR0913
         params.append(category_id)
     if merchant:
         conditions.append(
-            f"({table_alias}.merchant_name LIKE ?"
-            f" OR {table_alias}.display_name LIKE ?)"
+            f"({table_alias}.merchant_name LIKE ?" f" OR {table_alias}.display_name LIKE ?)"
         )
         params.extend([f"%{merchant}%", f"%{merchant}%"])
     if amount_min is not None:
@@ -1409,12 +1408,8 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     timezone = str(settings_row[0]) if settings_row else default.timezone
     currency = str(settings_row[1]) if settings_row else default.currency
     auto_lock_minutes = int(settings_row[2]) if settings_row else default.security.auto_lock_minutes
-    schedule_enabled = (
-        bool(settings_row[3]) if settings_row else default.sync.schedule_enabled
-    )
-    frequency_minutes = (
-        int(settings_row[4]) if settings_row else default.sync.frequency_minutes
-    )
+    schedule_enabled = bool(settings_row[3]) if settings_row else default.sync.schedule_enabled
+    frequency_minutes = int(settings_row[4]) if settings_row else default.sync.frequency_minutes
     retain_raw_payloads = (
         bool(retention_row[0]) if retention_row else default.retention.retain_raw_payloads
     )
@@ -3018,9 +3013,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
         secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
         secrets_path = _expand_path(secrets_path_raw) if secrets_path_raw else None
         old_secrets_bytes = (
-            _read_file_bytes(secrets_path)
-            if secrets_path and secrets_path.exists()
-            else None
+            _read_file_bytes(secrets_path) if secrets_path and secrets_path.exists() else None
         )
 
         try:
