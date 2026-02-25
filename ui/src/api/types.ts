@@ -12,7 +12,11 @@
  * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
  * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
  * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
- * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+ * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
+ * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+ * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+ * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+ * REQ: FUNC-AUD-001, FUNC-AUD-004
  */
 
 // Response models (read)
@@ -222,6 +226,101 @@ export interface ResolveConflictRequest {
   resolution_choice: "local" | "provider";
 }
 
+export interface BackupRequest {
+  passphrase: string;
+  include_secrets?: boolean;
+}
+
+export interface RestoreResponse {
+  restored_database: boolean;
+  restored_secrets: boolean;
+  schema_version: number;
+}
+
+export interface WipeRequest {
+  confirm: "WIPE_LOCAL_DATA";
+}
+
+export interface WipeResponse {
+  deleted_files: string[];
+  missing_files: string[];
+  failed_files: string[];
+}
+
+export interface RetentionSettings {
+  retain_raw_payloads: boolean;
+  retain_logs_days: number;
+}
+
+export interface ExportDefaults {
+  include_raw_payloads: boolean;
+}
+
+export interface SecuritySettings {
+  auto_lock_minutes: number;
+}
+
+export interface SyncSettings {
+  schedule_enabled: boolean;
+  frequency_minutes: number;
+  scheduler_supported: boolean;
+}
+
+export interface SettingsResponse {
+  timezone: string;
+  currency: string;
+  retention: RetentionSettings;
+  export_defaults: ExportDefaults;
+  security: SecuritySettings;
+  sync: SyncSettings;
+}
+
+export interface UpdateSettingsRequest {
+  timezone?: string;
+  currency?: string;
+  retention?: Partial<RetentionSettings>;
+  export_defaults?: Partial<ExportDefaults>;
+  security?: Partial<Omit<SecuritySettings, "scheduler_supported">>;
+  sync?: Partial<Omit<SyncSettings, "scheduler_supported">>;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  event_type: string;
+  timestamp_utc: string;
+  timestamp_tz: string;
+  timestamp_offset_minutes: number;
+  redacted_payload: Record<string, unknown>;
+}
+
+export interface AuditLogResponse {
+  entries: AuditLogEntry[];
+  limit: number;
+  offset: number;
+}
+
+export interface CategoriesBudgetsExportJson {
+  categories: Array<{
+    category_id: string;
+    name: string;
+    parent_id: string | null;
+    active: boolean;
+  }>;
+  budgets: Array<{
+    budget_id: string;
+    month: string;
+    category_id: string;
+    amount: number;
+    category_name: string;
+  }>;
+}
+
+export interface BlobDownload {
+  blob: Blob;
+  filename: string | null;
+  contentType: string;
+}
+
 // Query parameter shapes
 export interface GetTransactionsParams {
   account_id?: string;
@@ -235,6 +334,10 @@ export interface GetTransactionsParams {
   offset?: number;
   sort_by?: "date" | "amount";
   sort_order?: "asc" | "desc";
+}
+
+export interface ExportTransactionsParams extends GetTransactionsParams {
+  include_raw_payloads?: boolean;
 }
 
 export interface GetBalancesParams {
@@ -261,6 +364,18 @@ export interface GetCategoryTrendsParams {
 export interface GetNetWorthParams {
   start: string;
   end: string;
+}
+
+export interface ExportCategoriesBudgetsParams {
+  month?: string;
+}
+
+export interface GetAuditLogParams {
+  event_type?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  offset?: number;
 }
 
 // Budget types

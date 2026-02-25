@@ -4,7 +4,11 @@
    REQ: FUNC-SYNC-007,
    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
    REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
-   REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004 */
+   REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
+   REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+   REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+   REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+   REQ: FUNC-AUD-004 */
 
 *,
 *::before,
@@ -638,6 +642,69 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* ---- M5 panels ---- */
+
+.m5-section + .m5-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.m5-section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-muted);
+}
+
+.m5-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.m5-grid-compact {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.m5-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.m5-grid input,
+.m5-grid select {
+  border: 1px solid var(--color-border);
+  background: #111119;
+  color: var(--color-text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.m5-inline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.m5-inline-toggle input[type="checkbox"] {
+  width: auto;
+}
+
+.m5-static-label {
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 @media (max-width: 980px) {

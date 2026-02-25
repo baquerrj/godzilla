@@ -8,25 +8,36 @@
  * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
  * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
  * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
- * REQ: SEC-ACC-004,
- * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+ * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
+ * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+ * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+ * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+ * REQ: FUNC-AUD-001, FUNC-AUD-004,
+ * REQ: SEC-ACC-004
  */
 
 import { useCallback, useState } from "react";
 import type {
   Account,
   ApiResult,
+  AuditLogResponse,
+  BackupRequest,
   BalanceSnapshot,
+  BlobDownload,
   BudgetLine,
   CashFlowReport,
+  CategoriesBudgetsExportJson,
   Category,
   CategoryTrendsReport,
   Conflict,
   CreateBudgetRequest,
   CreateCategoryRequest,
-  GetCashFlowParams,
+  ExportCategoriesBudgetsParams,
+  ExportTransactionsParams,
+  GetAuditLogParams,
   GetBalancesParams,
   GetBudgetsParams,
+  GetCashFlowParams,
   GetCategoryTrendsParams,
   GetMonthlyOverviewParams,
   GetNetWorthParams,
@@ -40,10 +51,15 @@ import type {
   PlaidSyncRequest,
   PlaidSyncResult,
   ResolveConflictRequest,
+  RestoreResponse,
+  SettingsResponse,
   SplitItem,
   SyncState,
   Transaction,
   TransactionDetail,
+  UpdateSettingsRequest,
+  WipeRequest,
+  WipeResponse,
 } from "./types";
 
 // Internal helpers
@@ -62,6 +78,28 @@ export class ApiError extends Error {
   }
 }
 
+function buildHeaders(apiToken: string, options: RequestInit): Headers {
+  const headers = new Headers(options.headers);
+  headers.set("X-API-Key", apiToken);
+  const hasBody = options.body !== undefined;
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (hasBody && !isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
+
+async function parseError(response: Response): Promise<never> {
+  let message = `HTTP ${response.status}`;
+  try {
+    const body = (await response.json()) as { detail?: string };
+    if (body.detail) message = body.detail;
+  } catch {
+    // Ignore JSON parse failure.
+  }
+  throw new ApiError(response.status, message);
+}
+
 async function request<T>(
   path: string,
   apiToken: string,
@@ -70,22 +108,11 @@ async function request<T>(
   const url = `${API_BASE}${path}`;
   const response = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": apiToken,
-      ...options.headers,
-    },
+    headers: buildHeaders(apiToken, options),
   });
 
   if (!response.ok) {
-    let message = `HTTP ${response.status}`;
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) message = body.detail;
-    } catch {
-      // Ignore JSON parse failure
-    }
-    throw new ApiError(response.status, message);
+    await parseError(response);
   }
 
   if (response.status === 204) return undefined as unknown as T;
@@ -93,12 +120,51 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
+function parseFilename(contentDisposition: string | null): string | null {
+  if (!contentDisposition) return null;
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const simpleMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  if (simpleMatch?.[1]) {
+    return simpleMatch[1];
+  }
+
+  return null;
+}
+
+async function requestBlob(
+  path: string,
+  apiToken: string,
+  options: RequestInit = {},
+): Promise<BlobDownload> {
+  const url = `${API_BASE}${path}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: buildHeaders(apiToken, options),
+  });
+
+  if (!response.ok) {
+    await parseError(response);
+  }
+
+  const blob = await response.blob();
+  return {
+    blob,
+    filename: parseFilename(response.headers.get("Content-Disposition")),
+    contentType: response.headers.get("Content-Type") ?? "application/octet-stream",
+  };
+}
+
 function buildQueryString<T extends object>(params: T): string {
-  const entries = Object.entries(params as Record<string, unknown>).filter(([, v]) =>
-    typeof v === "string" || typeof v === "number" || typeof v === "boolean",
+  const entries = Object.entries(params as Record<string, unknown>).filter(([, value]) =>
+    typeof value === "string" || typeof value === "number" || typeof value === "boolean",
   );
   if (entries.length === 0) return "";
-  const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)]));
+  const qs = new URLSearchParams(entries.map(([key, value]) => [key, String(value)]));
   return `?${qs.toString()}`;
 }
 
@@ -244,6 +310,75 @@ export const GodzillaApi = {
     return request<void>(`/budgets/${encodeURIComponent(id)}`, token, {
       method: "DELETE",
     });
+  },
+
+  exportTransactions(token: string, params: ExportTransactionsParams = {}): Promise<BlobDownload> {
+    const qs = buildQueryString(params);
+    return requestBlob(`/export/transactions${qs}`, token);
+  },
+
+  exportCategoriesBudgetsCsv(
+    token: string,
+    params: ExportCategoriesBudgetsParams = {},
+  ): Promise<BlobDownload> {
+    const qs = buildQueryString({ format: "csv", month: params.month });
+    return requestBlob(`/export/categories-budgets${qs}`, token);
+  },
+
+  exportCategoriesBudgetsJson(
+    token: string,
+    params: ExportCategoriesBudgetsParams = {},
+  ): Promise<CategoriesBudgetsExportJson> {
+    const qs = buildQueryString({ format: "json", month: params.month });
+    return request<CategoriesBudgetsExportJson>(`/export/categories-budgets${qs}`, token);
+  },
+
+  createBackup(token: string, body: BackupRequest): Promise<BlobDownload> {
+    return requestBlob("/backup", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  restoreBackup(
+    token: string,
+    payload: { passphrase: string; file: File },
+  ): Promise<RestoreResponse> {
+    const body = new FormData();
+    body.append("passphrase", payload.passphrase);
+    body.append("backup_file", payload.file);
+    return request<RestoreResponse>("/restore", token, {
+      method: "POST",
+      body,
+    });
+  },
+
+  wipeData(token: string, body: WipeRequest): Promise<WipeResponse> {
+    return request<WipeResponse>("/wipe", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  getSettings(token: string): Promise<SettingsResponse> {
+    return request<SettingsResponse>("/settings", token);
+  },
+
+  updateSettings(token: string, body: UpdateSettingsRequest): Promise<SettingsResponse> {
+    return request<SettingsResponse>("/settings", token, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  getAuditLog(token: string, params: GetAuditLogParams = {}): Promise<AuditLogResponse> {
+    const qs = buildQueryString({ format: "json", ...params });
+    return request<AuditLogResponse>(`/audit-log${qs}`, token);
+  },
+
+  exportAuditLogCsv(token: string, params: GetAuditLogParams = {}): Promise<BlobDownload> {
+    const qs = buildQueryString({ format: "csv", ...params });
+    return requestBlob(`/audit-log${qs}`, token);
   },
 } as const;
 

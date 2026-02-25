@@ -11,6 +11,10 @@
  * REQ: FUNC-SYNC-007,
  * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
  * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+ * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+ * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+ * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+ * REQ: FUNC-AUD-004,
  * REQ: SEC-ACC-004, SEC-DATA-001,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
@@ -21,8 +25,11 @@ import { AccountsTable } from "./components/AccountsTable";
 import { BalancesTable } from "./components/BalancesTable";
 import { BudgetPanel } from "./components/BudgetPanel";
 import { ConflictQueue } from "./components/ConflictQueue";
+import { DataManagementPanel } from "./components/DataManagementPanel";
+import { ExportPanel } from "./components/ExportPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
 import type { ReportDrillDown } from "./components/ReportsPanel";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { SyncStatePanel } from "./components/SyncStatePanel";
 import { TransactionDetailPanel } from "./components/TransactionDetailPanel";
 import { TransactionFilters, EMPTY_FILTERS } from "./components/TransactionFilters";
@@ -167,6 +174,20 @@ export function App() {
           refreshKey={refreshKey}
           categories={categories}
           onDrillDown={handleReportDrillDown}
+        />
+        <SettingsPanel
+          token={token}
+          refreshKey={refreshKey}
+          onSaved={handleRefresh}
+        />
+        <ExportPanel
+          token={token}
+          refreshKey={refreshKey}
+          filters={activeFilters}
+        />
+        <DataManagementPanel
+          token={token}
+          onDataChanged={handleRefresh}
         />
         <TransactionFilters
           values={filterValues}
