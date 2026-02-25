@@ -11,6 +11,8 @@ REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+REQ: FUNC-AUD-003,
 REQ: SEC-ACC-004, SEC-DATA-003
 """
 
@@ -23,11 +25,12 @@ import json
 import logging
 import os
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from hmac import compare_digest
 from pathlib import Path
 from typing import Annotated, Any, Iterator, Literal
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Response, UploadFile
 from fastapi import Path as FastAPIPath
@@ -498,6 +501,111 @@ class WipeResponse(BaseModel):
     deleted_files: list[str]
     missing_files: list[str]
     failed_files: list[str]
+
+
+class RetentionSettingsResponse(BaseModel):
+    """Retention policy settings payload.
+
+    REQ: FUNC-SET-002
+    """
+
+    retain_raw_payloads: bool
+    retain_logs_days: int
+
+
+class ExportDefaultsResponse(BaseModel):
+    """Export default settings payload.
+
+    REQ: FUNC-SET-005
+    """
+
+    include_raw_payloads: bool
+
+
+class SecuritySettingsResponse(BaseModel):
+    """Security settings payload persisted in M5.
+
+    REQ: FUNC-SET-003
+    """
+
+    auto_lock_minutes: int
+
+
+class SyncSettingsResponse(BaseModel):
+    """Sync settings payload persisted in M5.
+
+    REQ: FUNC-SET-004
+    """
+
+    schedule_enabled: bool
+    frequency_minutes: int
+    scheduler_supported: bool
+
+
+class SettingsResponse(BaseModel):
+    """Consolidated settings read model.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+
+    timezone: str
+    currency: str
+    retention: RetentionSettingsResponse
+    export_defaults: ExportDefaultsResponse
+    security: SecuritySettingsResponse
+    sync: SyncSettingsResponse
+
+
+class RetentionSettingsPatch(BaseModel):
+    """Partial update for retention settings.
+
+    REQ: FUNC-SET-002
+    """
+
+    retain_raw_payloads: bool | None = None
+    retain_logs_days: int | None = Field(default=None, ge=1, le=3650)
+
+
+class ExportDefaultsPatch(BaseModel):
+    """Partial update for export defaults.
+
+    REQ: FUNC-SET-005
+    """
+
+    include_raw_payloads: bool | None = None
+
+
+class SecuritySettingsPatch(BaseModel):
+    """Partial update for security settings.
+
+    REQ: FUNC-SET-003
+    """
+
+    auto_lock_minutes: int | None = Field(default=None, ge=1, le=1440)
+
+
+class SyncSettingsPatch(BaseModel):
+    """Partial update for sync settings.
+
+    REQ: FUNC-SET-004
+    """
+
+    schedule_enabled: bool | None = None
+    frequency_minutes: int | None = Field(default=None, ge=5, le=10080)
+
+
+class UpdateSettingsRequest(BaseModel):
+    """Partial settings update payload.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+
+    timezone: str | None = None
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    retention: RetentionSettingsPatch | None = None
+    export_defaults: ExportDefaultsPatch | None = None
+    security: SecuritySettingsPatch | None = None
+    sync: SyncSettingsPatch | None = None
 
 
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
@@ -1145,6 +1253,211 @@ def _best_effort_wipe(path: Path) -> bool:
     return True
 
 
+def _validate_timezone_name(timezone_name: str) -> None:
+    """Validate IANA timezone name.
+
+    REQ: FUNC-SET-001
+    """
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as exc:
+        raise HTTPException(status_code=422, detail="Invalid timezone") from exc
+
+
+def _default_settings_payload() -> SettingsResponse:
+    """Return default settings payload used for bootstrap reads.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    return SettingsResponse(
+        timezone="UTC",
+        currency="USD",
+        retention=RetentionSettingsResponse(
+            retain_raw_payloads=True,
+            retain_logs_days=90,
+        ),
+        export_defaults=ExportDefaultsResponse(include_raw_payloads=False),
+        security=SecuritySettingsResponse(auto_lock_minutes=15),
+        sync=SyncSettingsResponse(
+            schedule_enabled=False,
+            frequency_minutes=360,
+            scheduler_supported=False,
+        ),
+    )
+
+
+def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
+    """Load consolidated settings from DB, falling back to defaults.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    default = _default_settings_payload()
+    settings_row = conn.execute(
+        "SELECT timezone, currency, auto_lock_minutes, sync_schedule_enabled, "
+        "sync_frequency_minutes "
+        "FROM settings ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+    retention_row = conn.execute(
+        "SELECT retain_raw_payloads, retain_logs_days FROM retention_policy "
+        "ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+    export_row = conn.execute(
+        "SELECT include_raw_payloads FROM export_defaults ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+
+    timezone = str(settings_row[0]) if settings_row else default.timezone
+    currency = str(settings_row[1]) if settings_row else default.currency
+    auto_lock_minutes = int(settings_row[2]) if settings_row else default.security.auto_lock_minutes
+    schedule_enabled = (
+        bool(settings_row[3]) if settings_row else default.sync.schedule_enabled
+    )
+    frequency_minutes = (
+        int(settings_row[4]) if settings_row else default.sync.frequency_minutes
+    )
+    retain_raw_payloads = (
+        bool(retention_row[0]) if retention_row else default.retention.retain_raw_payloads
+    )
+    retain_logs_days = (
+        int(retention_row[1]) if retention_row else default.retention.retain_logs_days
+    )
+    include_raw_payloads = (
+        bool(export_row[0]) if export_row else default.export_defaults.include_raw_payloads
+    )
+    return SettingsResponse(
+        timezone=timezone,
+        currency=currency,
+        retention=RetentionSettingsResponse(
+            retain_raw_payloads=retain_raw_payloads,
+            retain_logs_days=retain_logs_days,
+        ),
+        export_defaults=ExportDefaultsResponse(include_raw_payloads=include_raw_payloads),
+        security=SecuritySettingsResponse(auto_lock_minutes=auto_lock_minutes),
+        sync=SyncSettingsResponse(
+            schedule_enabled=schedule_enabled,
+            frequency_minutes=frequency_minutes,
+            scheduler_supported=False,
+        ),
+    )
+
+
+def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse) -> None:
+    """Persist consolidated settings across singleton settings tables.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    utc, tz, offset = local_timestamp_metadata()
+    settings_row = conn.execute(
+        "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes "
+        "FROM settings ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+    retention_row = conn.execute(
+        "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes FROM retention_policy "
+        "ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+    export_row = conn.execute(
+        "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes FROM export_defaults "
+        "ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+
+    settings_id = str(settings_row[0]) if settings_row else "settings-default"
+    settings_created = (
+        (str(settings_row[1]), str(settings_row[2]), int(settings_row[3]))
+        if settings_row
+        else (utc, tz, offset)
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO settings ("
+        "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+        "created_at_utc, created_at_tz, created_at_offset_minutes, "
+        "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            settings_id,
+            settings.timezone,
+            settings.currency,
+            settings.security.auto_lock_minutes,
+            1 if settings.sync.schedule_enabled else 0,
+            settings.sync.frequency_minutes,
+            settings_created[0],
+            settings_created[1],
+            settings_created[2],
+            utc,
+            tz,
+            offset,
+        ),
+    )
+
+    retention_id = str(retention_row[0]) if retention_row else "retention-default"
+    retention_created = (
+        (str(retention_row[1]), str(retention_row[2]), int(retention_row[3]))
+        if retention_row
+        else (utc, tz, offset)
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO retention_policy ("
+        "id, retain_raw_payloads, retain_logs_days, created_at_utc, created_at_tz, "
+        "created_at_offset_minutes, updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            retention_id,
+            1 if settings.retention.retain_raw_payloads else 0,
+            settings.retention.retain_logs_days,
+            retention_created[0],
+            retention_created[1],
+            retention_created[2],
+            utc,
+            tz,
+            offset,
+        ),
+    )
+
+    export_id = str(export_row[0]) if export_row else "export-default"
+    export_created = (
+        (str(export_row[1]), str(export_row[2]), int(export_row[3]))
+        if export_row
+        else (utc, tz, offset)
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO export_defaults ("
+        "id, include_raw_payloads, created_at_utc, created_at_tz, created_at_offset_minutes, "
+        "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            export_id,
+            1 if settings.export_defaults.include_raw_payloads else 0,
+            export_created[0],
+            export_created[1],
+            export_created[2],
+            utc,
+            tz,
+            offset,
+        ),
+    )
+
+
+def _apply_retention_pruning(
+    conn: sqlcipher.Connection,
+    *,
+    retain_raw_payloads: bool,
+    retain_logs_days: int,
+) -> dict[str, int]:
+    """Apply configured retention pruning to raw payloads and audit log rows.
+
+    REQ: FUNC-SET-002, FUNC-AUD-003, SEC-DATA-005
+    """
+    purged_raw = 0
+    if not retain_raw_payloads:
+        purged_raw = conn.execute("DELETE FROM provider_raw").rowcount
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retain_logs_days)
+    cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
+    purged_audit = conn.execute(
+        "DELETE FROM audit_log WHERE timestamp_utc < ?",
+        (cutoff_iso,),
+    ).rowcount
+    return {"purged_raw_payloads": purged_raw, "purged_audit_rows": purged_audit}
+
+
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
@@ -1153,7 +1466,8 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, FUNC-ACCT-004, FUNC-CAT-001,
     REQ: FUNC-SYNC-006, SEC-ACC-004,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
-    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003
+    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -1644,6 +1958,19 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
         )
 
     @app.get(
+        "/settings",
+        response_model=SettingsResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_settings() -> SettingsResponse:
+        """Return consolidated application settings.
+
+        REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+        """
+        with _db_connection() as conn:
+            return _load_settings(conn)
+
+    @app.get(
         "/sync-state",
         response_model=list[SyncStateResponse],
         dependencies=[Depends(require_api_key)],
@@ -2017,7 +2344,8 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
 
     REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
     REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004,
-    REQ: FUNC-BUD-001, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004
+    REQ: FUNC-BUD-001, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -2607,6 +2935,72 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
             failed_files=failed_files,
         )
 
+    @app.put(
+        "/settings",
+        response_model=SettingsResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def update_settings(request: UpdateSettingsRequest) -> SettingsResponse:
+        """Partially update consolidated settings and apply retention pruning.
+
+        REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+        """
+        with _db_connection() as conn:
+            current = _load_settings(conn)
+            updated = current.model_copy(deep=True)
+
+            if request.timezone is not None:
+                _validate_timezone_name(request.timezone)
+                updated.timezone = request.timezone
+            if request.currency is not None:
+                updated.currency = request.currency
+
+            if request.retention is not None:
+                if request.retention.retain_raw_payloads is not None:
+                    updated.retention.retain_raw_payloads = request.retention.retain_raw_payloads
+                if request.retention.retain_logs_days is not None:
+                    updated.retention.retain_logs_days = request.retention.retain_logs_days
+
+            if request.export_defaults is not None:
+                if request.export_defaults.include_raw_payloads is not None:
+                    updated.export_defaults.include_raw_payloads = (
+                        request.export_defaults.include_raw_payloads
+                    )
+
+            if request.security is not None and request.security.auto_lock_minutes is not None:
+                updated.security.auto_lock_minutes = request.security.auto_lock_minutes
+
+            if request.sync is not None:
+                if request.sync.schedule_enabled is not None:
+                    updated.sync.schedule_enabled = request.sync.schedule_enabled
+                if request.sync.frequency_minutes is not None:
+                    updated.sync.frequency_minutes = request.sync.frequency_minutes
+
+            _upsert_settings_row(conn, updated)
+            prune_result = _apply_retention_pruning(
+                conn,
+                retain_raw_payloads=updated.retention.retain_raw_payloads,
+                retain_logs_days=updated.retention.retain_logs_days,
+            )
+            conn.commit()
+
+        _log_event(
+            logging.INFO,
+            "settings_updated",
+            {
+                "timezone": updated.timezone,
+                "currency": updated.currency,
+                "retain_raw_payloads": updated.retention.retain_raw_payloads,
+                "retain_logs_days": updated.retention.retain_logs_days,
+                "include_raw_payloads": updated.export_defaults.include_raw_payloads,
+                "auto_lock_minutes": updated.security.auto_lock_minutes,
+                "sync_schedule_enabled": updated.sync.schedule_enabled,
+                "sync_frequency_minutes": updated.sync.frequency_minutes,
+                **prune_result,
+            },
+        )
+        return updated
+
 
 async def get_transaction_detail_internal(
     conn_factory: Any,
@@ -2697,6 +3091,7 @@ def create_app() -> FastAPI:
     REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
     REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
     REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")

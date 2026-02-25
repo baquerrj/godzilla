@@ -10,6 +10,7 @@ REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
 REQ: FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
@@ -20,6 +21,7 @@ import os
 import sys
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from csv import DictReader
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -188,6 +190,17 @@ def _seed_secrets_database(secrets_path: str, secrets_key: str) -> None:
     """
     store = SecretStore(db_path=secrets_path, db_key=secrets_key)
     store.set_secret("plaid_access_token:item-provider-1", "secret-token-1")
+
+
+def _open_env_db() -> sqlcipher.Connection:
+    """Open test database configured in current environment variables.
+
+    REQ: FUNC-SET-002
+    """
+    conn = sqlcipher.connect(os.environ["GODZILLA_DB_PATH"])
+    conn.execute(f"PRAGMA key = '{os.environ['GODZILLA_DB_KEY']}';")
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
 
 
 @pytest.fixture
@@ -1681,6 +1694,152 @@ async def test_backup_restore_wipe_auth_and_validation(
         headers=_HEADERS,
     )
     assert restore_missing_fields.status_code == 422
+
+
+# ── Settings tests (M5 Task 19) ───────────────────────────────────────────────
+
+
+async def test_get_settings_returns_bootstrap_defaults(api_client: httpx.AsyncClient) -> None:
+    """Verify GET /settings returns defaults when no settings rows exist.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    resp = await api_client.get("/settings", headers=_HEADERS)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["timezone"] == "UTC"
+    assert body["currency"] == "USD"
+    assert body["retention"] == {"retain_raw_payloads": True, "retain_logs_days": 90}
+    assert body["export_defaults"] == {"include_raw_payloads": False}
+    assert body["security"] == {"auto_lock_minutes": 15}
+    assert body["sync"] == {
+        "schedule_enabled": False,
+        "frequency_minutes": 360,
+        "scheduler_supported": False,
+    }
+
+
+async def test_put_settings_updates_and_persists(api_client: httpx.AsyncClient) -> None:
+    """Verify PUT /settings applies updates across all persisted groups.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    payload = {
+        "timezone": "America/New_York",
+        "currency": "EUR",
+        "retention": {"retain_raw_payloads": False, "retain_logs_days": 30},
+        "export_defaults": {"include_raw_payloads": True},
+        "security": {"auto_lock_minutes": 20},
+        "sync": {"schedule_enabled": True, "frequency_minutes": 120},
+    }
+    update_resp = await api_client.put("/settings", json=payload, headers=_HEADERS)
+    assert update_resp.status_code == 200
+    updated = update_resp.json()
+    assert updated["timezone"] == "America/New_York"
+    assert updated["currency"] == "EUR"
+    assert updated["retention"] == {"retain_raw_payloads": False, "retain_logs_days": 30}
+    assert updated["export_defaults"] == {"include_raw_payloads": True}
+    assert updated["security"] == {"auto_lock_minutes": 20}
+    assert updated["sync"] == {
+        "schedule_enabled": True,
+        "frequency_minutes": 120,
+        "scheduler_supported": False,
+    }
+
+    read_resp = await api_client.get("/settings", headers=_HEADERS)
+    assert read_resp.status_code == 200
+    assert read_resp.json() == updated
+
+
+async def test_put_settings_rejects_invalid_values(api_client: httpx.AsyncClient) -> None:
+    """Verify settings update validation rejects invalid inputs.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004
+    """
+    bad_timezone = await api_client.put(
+        "/settings",
+        json={"timezone": "No/Such_Zone"},
+        headers=_HEADERS,
+    )
+    assert bad_timezone.status_code == 422
+
+    bad_currency = await api_client.put(
+        "/settings",
+        json={"currency": "usd"},
+        headers=_HEADERS,
+    )
+    assert bad_currency.status_code == 422
+
+    bad_retention_days = await api_client.put(
+        "/settings",
+        json={"retention": {"retain_logs_days": 0}},
+        headers=_HEADERS,
+    )
+    assert bad_retention_days.status_code == 422
+
+    bad_sync_frequency = await api_client.put(
+        "/settings",
+        json={"sync": {"frequency_minutes": 1}},
+        headers=_HEADERS,
+    )
+    assert bad_sync_frequency.status_code == 422
+
+
+async def test_put_settings_applies_retention_pruning(api_client: httpx.AsyncClient) -> None:
+    """Verify retention updates prune raw payload and old audit rows.
+
+    REQ: FUNC-SET-002
+    """
+    old_ts = (datetime.now(timezone.utc) - timedelta(days=120)).strftime("%Y-%m-%dT%H:%M:%S")
+    fresh_ts = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S")
+    conn = _open_env_db()
+    try:
+        conn.execute(
+            "INSERT INTO provider_raw ("
+            "id, transaction_id, raw_payload, created_at_utc, created_at_tz, created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("raw-prune-1", "txn-1", '{"x":1}', fresh_ts, "UTC", 0),
+        )
+        conn.execute(
+            "INSERT INTO audit_log ("
+            "id, event_type, timestamp_utc, timestamp_tz, timestamp_offset_minutes, redacted_payload"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("audit-old", "settings_update", old_ts, "UTC", 0, '{"a":"old"}'),
+        )
+        conn.execute(
+            "INSERT INTO audit_log ("
+            "id, event_type, timestamp_utc, timestamp_tz, timestamp_offset_minutes, redacted_payload"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("audit-fresh", "settings_update", fresh_ts, "UTC", 0, '{"a":"new"}'),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    update_resp = await api_client.put(
+        "/settings",
+        json={"retention": {"retain_raw_payloads": False, "retain_logs_days": 30}},
+        headers=_HEADERS,
+    )
+    assert update_resp.status_code == 200
+
+    verify_conn = _open_env_db()
+    try:
+        provider_raw_count = verify_conn.execute("SELECT COUNT(*) FROM provider_raw").fetchone()[0]
+        audit_old = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE id = ?",
+            ("audit-old",),
+        ).fetchone()[0]
+        audit_fresh = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE id = ?",
+            ("audit-fresh",),
+        ).fetchone()[0]
+    finally:
+        verify_conn.close()
+
+    assert provider_raw_count == 0
+    assert audit_old == 0
+    assert audit_fresh == 1
 
 
 # ── Budget tests (Task 13) ────────────────────────────────────────────────────

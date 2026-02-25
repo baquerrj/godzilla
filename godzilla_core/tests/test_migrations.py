@@ -41,7 +41,7 @@ class MigrationRunnerTests(unittest.TestCase):
         REQ: SEC-CRY-001, SYS-004
         """
         version = run_migrations(db_path=self.db_path, db_key=self.db_key)
-        self.assertEqual(version, 2)
+        self.assertEqual(version, 3)
 
         conn = sqlcipher.connect(self.db_path)
         conn.execute("PRAGMA key = 'test-key';")
@@ -49,7 +49,6 @@ class MigrationRunnerTests(unittest.TestCase):
             row[0]
             for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         }
-        conn.close()
 
         for expected in (
             "schema_version",
@@ -64,6 +63,12 @@ class MigrationRunnerTests(unittest.TestCase):
             "audit_log",
         ):
             self.assertIn(expected, tables)
+
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(settings)").fetchall()}
+        self.assertIn("auto_lock_minutes", columns)
+        self.assertIn("sync_schedule_enabled", columns)
+        self.assertIn("sync_frequency_minutes", columns)
+        conn.close()
 
     def test_migration_is_idempotent(self) -> None:
         """Re-running migrations does not change the schema version.
