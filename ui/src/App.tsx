@@ -15,13 +15,14 @@
  * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
  * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
  * REQ: FUNC-AUD-004,
- * REQ: SEC-ACC-004, SEC-DATA-001,
+ * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-DATA-001,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AccountsTable } from "./components/AccountsTable";
+import { AuthGatePanel } from "./components/AuthGatePanel";
 import { BalancesTable } from "./components/BalancesTable";
 import { BudgetPanel } from "./components/BudgetPanel";
 import { ConflictQueue } from "./components/ConflictQueue";
@@ -50,6 +51,7 @@ export function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [filterValues, setFilterValues] = useState<FilterValues>(EMPTY_FILTERS);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   // REQ: SEC-ACC-004, SEC-DATA-001 — obtain token from Tauri at runtime, and
   // fall back to a dev-only proxy token when running in a plain browser.
@@ -68,9 +70,27 @@ export function App() {
       .catch(() => setToken(""));
   }, []);
 
+  useEffect(() => {
+    GodzillaApi.setUnlockToken(null);
+    setAuthReady(false);
+    setSelectedTxnId(null);
+    setFilterValues(EMPTY_FILTERS);
+  }, [token]);
+
+  useEffect(() => {
+    const onLocked = () => {
+      GodzillaApi.setUnlockToken(null);
+      setAuthReady(false);
+      setSelectedTxnId(null);
+      setFilterValues(EMPTY_FILTERS);
+    };
+    window.addEventListener("godzilla-lock", onLocked);
+    return () => window.removeEventListener("godzilla-lock", onLocked);
+  }, []);
+
   // Load filter lookup data whenever token/refresh changes.
   useEffect(() => {
-    if (!token) return;
+    if (!token || !authReady) return;
     const loadLookups = async () => {
       const [accountsResult, categoriesResult] = await Promise.allSettled([
         GodzillaApi.getAccounts(token),
@@ -84,7 +104,7 @@ export function App() {
       }
     };
     void loadLookups();
-  }, [token, refreshKey]);
+  }, [token, refreshKey, authReady]);
 
   const handleRefresh = () => {
     setRefreshKey((k) => k + 1);
@@ -146,6 +166,26 @@ export function App() {
           Start the sidecar with the required environment variables and
           relaunch the app.
         </p>
+      </div>
+    );
+  }
+
+  if (!authReady) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>Godzilla</h1>
+        </header>
+        <main className="app-main">
+          <AuthGatePanel
+            token={token}
+            onAuthenticated={(unlockToken) => {
+              GodzillaApi.setUnlockToken(unlockToken);
+              setAuthReady(true);
+              setRefreshKey((key) => key + 1);
+            }}
+          />
+        </main>
       </div>
     );
   }

@@ -2,7 +2,7 @@
  * Tests for SyncStatePanel: connect, sync actions, state display.
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-SYNC-001
+ * REQ: FUNC-ACCT-008, FUNC-SYNC-001
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -19,6 +19,7 @@ vi.mock("../api/client", async () => {
       getSyncState: vi.fn(),
       plaidLink: vi.fn(),
       plaidSync: vi.fn(),
+      unlinkItem: vi.fn(),
       getAccounts: vi.fn(),
       getTransactions: vi.fn(),
       getBalances: vi.fn(),
@@ -30,12 +31,16 @@ import { GodzillaApi } from "../api/client";
 const mockGetSyncState = vi.mocked(GodzillaApi.getSyncState);
 const mockPlaidLink = vi.mocked(GodzillaApi.plaidLink);
 const mockPlaidSync = vi.mocked(GodzillaApi.plaidSync);
+const mockUnlinkItem = vi.mocked(GodzillaApi.unlinkItem);
 
 const TOKEN = "tok";
 const defaultProps = { token: TOKEN, refreshKey: 0, onRefresh: vi.fn() };
 
 describe("SyncStatePanel", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+  });
 
   it("shows empty state when no items  REQ: FUNC-ACCT-004", async () => {
     mockGetSyncState.mockResolvedValue([]);
@@ -128,6 +133,38 @@ describe("SyncStatePanel", () => {
       expect(onRefresh).toHaveBeenCalled();
       expect(screen.getByTestId("sync-success")).toBeInTheDocument();
       expect(screen.getByText(/added 5/i)).toBeInTheDocument();
+    });
+  });
+
+  it("calls unlink endpoint and refreshes on keep mode  REQ: FUNC-ACCT-008", async () => {
+    const item = {
+      item_id: "item-xyz",
+      institution_id: "ins_2",
+      status: "linked",
+      last_sync_at_utc: null,
+      last_sync_at_tz: null,
+      last_sync_at_offset_minutes: null,
+      last_sync_status: null,
+      cursor: null,
+    };
+    mockGetSyncState.mockResolvedValue([item]);
+    mockUnlinkItem.mockResolvedValue({
+      item_id: "item-xyz",
+      mode: "keep",
+      token_removed: true,
+      remote_revoked: true,
+      raw_payload_rows_deleted: 0,
+      local_data_purged: false,
+    });
+    const onRefresh = vi.fn();
+    render(<SyncStatePanel {...defaultProps} onRefresh={onRefresh} />);
+    await waitFor(() => screen.getByTestId("unlink-keep-btn-item-xyz"));
+
+    await userEvent.click(screen.getByTestId("unlink-keep-btn-item-xyz"));
+    await waitFor(() => {
+      expect(mockUnlinkItem).toHaveBeenCalledWith(TOKEN, "item-xyz", "keep");
+      expect(onRefresh).toHaveBeenCalled();
+      expect(screen.getByTestId("unlink-success")).toBeInTheDocument();
     });
   });
 });

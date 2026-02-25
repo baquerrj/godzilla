@@ -2,7 +2,7 @@
  * Typed HTTP client for the Godzilla local API sidecar.
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
+ * REQ: FUNC-ACCT-005, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
  * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
@@ -13,7 +13,7 @@
  * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
  * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
  * REQ: FUNC-AUD-001, FUNC-AUD-004,
- * REQ: SEC-ACC-004
+ * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-NET-001
  */
 
 import { useCallback, useState } from "react";
@@ -44,20 +44,26 @@ import type {
   GetTransactionsParams,
   MonthlyOverview,
   NetWorthReport,
+  AuthStatus,
   PatchCategoryRequest,
   PatchTransactionRequest,
   PlaidLinkRequest,
   PlaidLinkResult,
   PlaidSyncRequest,
   PlaidSyncResult,
+  SetupPinRequest,
+  SetupPinResponse,
   ReinitializeResponse,
   ResolveConflictRequest,
   RestoreResponse,
   SettingsResponse,
   SplitItem,
   SyncState,
+  UnlockRequest,
+  UnlockResponse,
   Transaction,
   TransactionDetail,
+  UnlinkItemResult,
   UpdateSettingsRequest,
   WipeRequest,
   WipeResponse,
@@ -67,7 +73,9 @@ import type {
 
 const API_BASE: string = import.meta.env.DEV
   ? "/api"
-  : "http://127.0.0.1:8787";
+  : "https://127.0.0.1:8787";
+
+let unlockToken: string | null = null;
 
 export class ApiError extends Error {
   constructor(
@@ -82,6 +90,9 @@ export class ApiError extends Error {
 function buildHeaders(apiToken: string, options: RequestInit): Headers {
   const headers = new Headers(options.headers);
   headers.set("X-API-Key", apiToken);
+  if (unlockToken) {
+    headers.set("X-App-Unlock-Token", unlockToken);
+  }
   const hasBody = options.body !== undefined;
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   if (hasBody && !isFormData && !headers.has("Content-Type")) {
@@ -97,6 +108,12 @@ async function parseError(response: Response): Promise<never> {
     if (body.detail) message = body.detail;
   } catch {
     // Ignore JSON parse failure.
+  }
+  if (response.status === 423) {
+    unlockToken = null;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("godzilla-lock"));
+    }
   }
   throw new ApiError(response.status, message);
 }
@@ -172,6 +189,28 @@ function buildQueryString<T extends object>(params: T): string {
 // Public API client
 
 export const GodzillaApi = {
+  setUnlockToken(token: string | null): void {
+    unlockToken = token;
+  },
+
+  getAuthStatus(token: string): Promise<AuthStatus> {
+    return request<AuthStatus>("/auth/status", token);
+  },
+
+  setupPin(token: string, body: SetupPinRequest): Promise<SetupPinResponse> {
+    return request<SetupPinResponse>("/auth/setup-pin", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  unlock(token: string, body: UnlockRequest): Promise<UnlockResponse> {
+    return request<UnlockResponse>("/auth/unlock", token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   getAccounts(token: string): Promise<Account[]> {
     return request<Account[]>("/accounts", token);
   },
@@ -293,6 +332,18 @@ export const GodzillaApi = {
       method: "POST",
       body: JSON.stringify(body),
     });
+  },
+
+  unlinkItem(
+    token: string,
+    itemId: string,
+    mode: "keep" | "purge",
+  ): Promise<UnlinkItemResult> {
+    return request<UnlinkItemResult>(
+      `/plaid/items/${encodeURIComponent(itemId)}?mode=${encodeURIComponent(mode)}`,
+      token,
+      { method: "DELETE" },
+    );
   },
 
   getBudgets(token: string, params: GetBudgetsParams): Promise<BudgetLine[]> {

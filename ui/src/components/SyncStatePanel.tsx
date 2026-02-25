@@ -3,12 +3,17 @@
  * and "Run Sync" actions.
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-SYNC-001
+ * REQ: FUNC-ACCT-008, FUNC-SYNC-001
  */
 
 import { useEffect } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
-import type { PlaidLinkResult, PlaidSyncResult, SyncState } from "../api/types";
+import type {
+  PlaidLinkResult,
+  PlaidSyncResult,
+  SyncState,
+  UnlinkItemResult,
+} from "../api/types";
 
 interface Props {
   token: string;
@@ -22,6 +27,7 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
   const [stateResult, fetchState] = useApiCall<SyncState[]>();
   const [linkResult, executeLink] = useApiCall<PlaidLinkResult>();
   const [syncResult, executeSync] = useApiCall<PlaidSyncResult>();
+  const [unlinkResult, executeUnlink] = useApiCall<UnlinkItemResult>();
 
   // REQ: FUNC-ACCT-004 — load sync state on mount and on every refresh
   useEffect(() => {
@@ -47,8 +53,25 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
     });
   };
 
+  // REQ: FUNC-ACCT-008 — unlink institution with keep/purge modes.
+  const handleUnlink = (itemId: string, mode: "keep" | "purge") => {
+    const warning = mode === "purge"
+      ? "Unlink and purge will delete linked local records. Continue?"
+      : "Unlink and keep preserves local ledger data but disables sync. Continue?";
+    if (!window.confirm(warning)) {
+      return;
+    }
+    executeUnlink(async () => {
+      const result = await GodzillaApi.unlinkItem(token, itemId, mode);
+      onRefresh();
+      return result;
+    });
+  };
+
   const isBusy =
-    linkResult.status === "loading" || syncResult.status === "loading";
+    linkResult.status === "loading"
+    || syncResult.status === "loading"
+    || unlinkResult.status === "loading";
 
   return (
     <section className="panel" data-testid="sync-state-panel">
@@ -85,6 +108,17 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
           Sync failed: {syncResult.message}
         </div>
       )}
+      {unlinkResult.status === "success" && (
+        <div className="alert alert-success" data-testid="unlink-success">
+          Unlinked <code>{unlinkResult.data.item_id}</code> with mode{" "}
+          <strong>{unlinkResult.data.mode}</strong>.
+        </div>
+      )}
+      {unlinkResult.status === "error" && (
+        <div className="alert alert-error" data-testid="unlink-error">
+          Unlink failed: {unlinkResult.message}
+        </div>
+      )}
 
       {stateResult.status === "loading" && (
         <p className="muted">Loading…</p>
@@ -108,7 +142,7 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
               <th>Status</th>
               <th>Last Sync</th>
               <th>Result</th>
-              <th></th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -131,10 +165,26 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
                   <button
                     className="btn btn-sm"
                     onClick={() => handleSync(item.item_id)}
-                    disabled={isBusy}
+                    disabled={isBusy || item.status === "unlinked"}
                     data-testid={`sync-btn-${item.item_id}`}
                   >
                     {syncResult.status === "loading" ? "Syncing…" : "Run Sync"}
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => handleUnlink(item.item_id, "keep")}
+                    disabled={isBusy}
+                    data-testid={`unlink-keep-btn-${item.item_id}`}
+                  >
+                    Unlink (Keep)
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => handleUnlink(item.item_id, "purge")}
+                    disabled={isBusy}
+                    data-testid={`unlink-purge-btn-${item.item_id}`}
+                  >
+                    Unlink + Purge
                   </button>
                 </td>
               </tr>

@@ -6,7 +6,7 @@
  * same field names and optionality as the backend.
  *
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
+ * REQ: FUNC-ACCT-005, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
  * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-CAT-002,
  * REQ: FUNC-SYNC-006, FUNC-SYNC-007,
@@ -16,7 +16,8 @@
  * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
  * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
  * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
- * REQ: FUNC-AUD-001, FUNC-AUD-004
+ * REQ: FUNC-AUD-001, FUNC-AUD-004,
+ * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001
  */
 
 // Response models (read)
@@ -183,6 +184,48 @@ export interface PlaidSyncResult {
   removed: number;
   balance_accounts: number;
   cursor: string;
+}
+
+export interface UnlinkItemResult {
+  item_id: string;
+  mode: "keep" | "purge";
+  token_removed: boolean;
+  remote_revoked: boolean;
+  raw_payload_rows_deleted: number;
+  local_data_purged: boolean;
+}
+
+export interface AuthStatusTls {
+  enabled: boolean;
+  cert_fingerprint_sha256: string | null;
+}
+
+export interface AuthStatus {
+  pin_configured: boolean;
+  setup_required: boolean;
+  locked: boolean;
+  auto_lock_minutes: number;
+  unlock_expires_at_utc: string | null;
+  dev_bypass_enabled: boolean;
+  tls: AuthStatusTls;
+}
+
+export interface SetupPinRequest {
+  new_pin: string;
+  current_pin?: string;
+}
+
+export interface SetupPinResponse {
+  pin_configured: boolean;
+}
+
+export interface UnlockRequest {
+  pin: string;
+}
+
+export interface UnlockResponse {
+  unlock_token: string;
+  expires_at_utc: string;
 }
 
 // Request payloads (write)

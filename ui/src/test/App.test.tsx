@@ -5,7 +5,7 @@
  * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007,
  * REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-006,
  * REQ: FUNC-EXP-001, FUNC-BKP-001, FUNC-SET-001,
- * REQ: SEC-DATA-001
+ * REQ: SEC-ACC-001, SEC-DATA-001
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -70,6 +70,7 @@ vi.mock("../api/client", async () => {
       resolveConflict: vi.fn(),
       plaidLink: vi.fn(),
       plaidSync: vi.fn(),
+      unlinkItem: vi.fn(),
       getBudgets: vi.fn().mockResolvedValue([]),
       createBudget: vi.fn(),
       deleteBudget: vi.fn(),
@@ -92,6 +93,18 @@ vi.mock("../api/client", async () => {
           scheduler_supported: false,
         },
       }),
+      setUnlockToken: vi.fn(),
+      getAuthStatus: vi.fn().mockResolvedValue({
+        pin_configured: false,
+        setup_required: false,
+        locked: false,
+        auto_lock_minutes: 15,
+        unlock_expires_at_utc: null,
+        dev_bypass_enabled: true,
+        tls: { enabled: false, cert_fingerprint_sha256: null },
+      }),
+      setupPin: vi.fn(),
+      unlock: vi.fn(),
       updateSettings: vi.fn(),
       getAuditLog: vi.fn().mockResolvedValue({ entries: [], limit: 50, offset: 0 }),
       exportAuditLogCsv: vi.fn(),
