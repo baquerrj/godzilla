@@ -320,78 +320,78 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M6 — Security review pass
 
-- [ ] **23. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
-  - [ ] 23a. Extend API server runner to accept TLS cert/key from CLI and env (`GODZILLA_TLS_CERT`, `GODZILLA_TLS_KEY`) and run uvicorn in TLS mode when both are provided.
-  - [ ] 23b. Enforce loopback bind only (`127.0.0.1`, `localhost`, `::1`) and reject non-loopback hosts.
-  - [ ] 23c. Add `/auth/status` TLS diagnostics with `tls.enabled` + `tls.cert_fingerprint_sha256` (fingerprint only, no private material).
-  - [ ] 23d. Implement Tauri runtime pinned transport path (command/proxy flow) that validates API cert fingerprint against `GODZILLA_TLS_CERT_SHA256`.
-  - [ ] 23e. Preserve browser dev path using Vite `/api` HTTP proxy for local dev velocity.
-  - [ ] 23f. Update Tauri CSP/connect-src and frontend transport wiring for runtime HTTPS + pinning behavior.
-  - [ ] 23g. Add backend/frontend/Tauri tests for TLS success path and pin mismatch failure path.
+- [x] **23. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
+  - [x] 23a. Extend API server runner to accept TLS cert/key from CLI and env (`GODZILLA_TLS_CERT`, `GODZILLA_TLS_KEY`) and run uvicorn in TLS mode when both are provided.
+  - [x] 23b. Enforce loopback bind only (`127.0.0.1`, `localhost`, `::1`) and reject non-loopback hosts.
+  - [x] 23c. Add `/auth/status` TLS diagnostics with `tls.enabled` + `tls.cert_fingerprint_sha256` (fingerprint only, no private material).
+  - [x] 23d. Implement Tauri runtime pinned transport path (command/proxy flow) that validates API cert fingerprint against `GODZILLA_TLS_CERT_SHA256`.
+  - [x] 23e. Preserve browser dev path using Vite `/api` HTTP proxy for local dev velocity.
+  - [x] 23f. Update Tauri CSP/connect-src and frontend transport wiring for runtime HTTPS + pinning behavior.
+  - [x] 23g. Add backend/frontend/Tauri tests for TLS success path and pin mismatch failure path.
 
-- [ ] **24. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
-  - [ ] 24a. Add auth models/endpoints: `GET /auth/status`, `POST /auth/setup-pin`, `POST /auth/unlock`.
-  - [ ] 24b. Persist PIN verification material only in secure secrets storage.
-  - [ ] 24c. Enforce unlock-session header (`X-App-Unlock-Token`) for sensitive API routes.
-  - [ ] 24d. Enforce inactivity lock using persisted `settings.security.auto_lock_minutes`; return HTTP `423` when locked.
-  - [ ] 24e. Add first-run PIN setup + unlock UI gate before rendering financial panels.
-  - [ ] 24f. Add dev-only bypass switch (`GODZILLA_DEV_BYPASS_PIN=1`) for local development/testing.
-  - [ ] 24g. Clear sensitive UI state on lock or timeout event.
+- [x] **24. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
+  - [x] 24a. Add auth models/endpoints: `GET /auth/status`, `POST /auth/setup-pin`, `POST /auth/unlock`.
+  - [x] 24b. Persist PIN verification material only in secure secrets storage.
+  - [x] 24c. Enforce unlock-session header (`X-App-Unlock-Token`) for sensitive API routes.
+  - [x] 24d. Enforce inactivity lock using persisted `settings.security.auto_lock_minutes`; return HTTP `423` when locked.
+  - [x] 24e. Add first-run PIN setup + unlock UI gate before rendering financial panels.
+  - [x] 24f. Add dev-only bypass switch (`GODZILLA_DEV_BYPASS_PIN=1`) for local development/testing.
+  - [x] 24g. Clear sensitive UI state on lock or timeout event.
 
-- [ ] **25. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
-  - [ ] 25a. Implement retry in `PlaidClient._post` for transient failures (`429`, transient `5xx`, network errors).
-  - [ ] 25b. Use bounded exponential backoff + jitter and honor `Retry-After` when present.
-  - [ ] 25c. Keep non-retriable `4xx` fail-fast behavior.
-  - [ ] 25d. Add deterministic tests with mocked sleep/jitter and status-code scenarios.
+- [x] **25. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
+  - [x] 25a. Implement retry in `PlaidClient._post` for transient failures (`429`, transient `5xx`, network errors).
+  - [x] 25b. Use bounded exponential backoff + jitter and honor `Retry-After` when present.
+  - [x] 25c. Keep non-retriable `4xx` fail-fast behavior.
+  - [x] 25d. Add deterministic tests with mocked sleep/jitter and status-code scenarios.
 
-- [ ] **26. Unlink institution** (`FUNC-ACCT-008`)
-  - [ ] 26a. Add Plaid client method for `/item/remove`.
-  - [ ] 26b. Add `DELETE /plaid/items/{item_id}?mode=keep|purge` with auth + validation.
-  - [ ] 26c. `mode=keep`: remove/revoke token, clear raw payload cache for item, preserve ledger history.
-  - [ ] 26d. `mode=purge`: remove/revoke token, delete item-linked local data through cascade policy.
-  - [ ] 26e. Add unlinked item state and block sync for unlinked items.
-  - [ ] 26f. Add UI unlink controls in sync panel with explicit mode and destructive confirmation for purge.
-  - [ ] 26g. Add audit events and tests for unlink start/success/failure in both modes.
+- [x] **26. Unlink institution** (`FUNC-ACCT-008`)
+  - [x] 26a. Add Plaid client method for `/item/remove`.
+  - [x] 26b. Add `DELETE /plaid/items/{item_id}?mode=keep|purge` with auth + validation.
+  - [x] 26c. `mode=keep`: remove/revoke token, clear raw payload cache for item, preserve ledger history.
+  - [x] 26d. `mode=purge`: remove/revoke token, delete item-linked local data through cascade policy.
+  - [x] 26e. Add unlinked item state and block sync for unlinked items.
+  - [x] 26f. Add UI unlink controls in sync panel with explicit mode and destructive confirmation for purge.
+  - [x] 26g. Add audit events and tests for unlink start/success/failure in both modes.
 
-- [ ] **27. Dependency vulnerability scanning** (`SEC-DATA-004`)
-  - [ ] 27a. Add dedicated `nox -s security` session.
-  - [ ] 27b. Run `pip-audit` and `npm audit` (high severity threshold).
-  - [ ] 27c. Add tooling tests to ensure security session wiring remains intact.
-  - [ ] 27d. Update setup docs with security scan workflow and failure/triage expectations.
+- [x] **27. Dependency vulnerability scanning** (`SEC-DATA-004`)
+  - [x] 27a. Add dedicated `nox -s security` session.
+  - [x] 27b. Run `pip-audit` and `npm audit` (high severity threshold).
+  - [x] 27c. Add tooling tests to ensure security session wiring remains intact.
+  - [x] 27d. Update setup docs with security scan workflow and failure/triage expectations.
 
-- [ ] **28. Final security review pass**
+- [~] **28. Final security review pass**
   - [ ] 28a. Verify redaction coverage for new TLS/auth/unlink/backoff paths.
   - [ ] 28b. Verify no token/PIN leakage in logs or client artifacts.
   - [ ] 28c. Verify Tauri pinning end-to-end (success and mismatch failure).
-  - [ ] 28d. Verify dependency scan output is clean or triaged with documented remediation decisions.
+  - [x] 28d. Verify dependency scan output is clean or triaged with documented remediation decisions.
 
-- [ ] **29. Traceability maintenance**
-  - [ ] 29a. Update `trace/requirements.yml` `code_refs`/`test_refs`/`doc_refs` for all M6 IDs.
-  - [ ] 29b. Ensure coverage for `FUNC-ACCT-008`, `SEC-ACC-001..003`, `SEC-NET-001..003`, `SEC-DATA-004`.
+- [x] **29. Traceability maintenance**
+  - [x] 29a. Update `trace/requirements.yml` `code_refs`/`test_refs`/`doc_refs` for all M6 IDs.
+  - [x] 29b. Ensure coverage for `FUNC-ACCT-008`, `SEC-ACC-001..003`, `SEC-NET-001..003`, `SEC-DATA-004`.
 
-- [ ] **30. Design doc updates**
-  - [ ] 30a. Add `docs/design/m6-security-review-pass.md`.
-  - [ ] 30b. Add `docs/test-strategy/m6-security-review-pass.md`.
-  - [ ] 30c. Document dev-vs-prod TLS transport behavior and Tauri pinning tradeoffs.
+- [x] **30. Design doc updates**
+  - [x] 30a. Add `docs/design/m6-security-review-pass.md`.
+  - [x] 30b. Add `docs/test-strategy/m6-security-review-pass.md`.
+  - [x] 30c. Document dev-vs-prod TLS transport behavior and Tauri pinning tradeoffs.
 
-- [ ] **M6 checkpoint commits (required while implementing)**
-  - [ ] 1. `feat(m6): add tls sidecar enforcement and auth status tls diagnostics` (Task 23 core)
-  - [ ] 2. `feat(m6): add pin setup unlock gate and session timeout enforcement` (Task 24)
-  - [ ] 3. `feat(m6): add plaid retry backoff and unlink institution workflows` (Tasks 25–26 backend)
-  - [ ] 4. `feat(ui): add auth gate lock handling and unlink controls for m6` (Tasks 24e/24g/26f + transport wiring)
-  - [ ] 5. `chore(m6): add dependency security scan session and tooling coverage` (Task 27)
-  - [ ] 6. `docs(m6): update trace design and test strategy for security pass` (Tasks 28–30)
-  - [ ] 7. `docs(plan): mark m6 tasks and checklist status` (final bookkeeping)
+- [x] **M6 checkpoint commits (required while implementing)**
+  - [x] 1. `feat(m6): add tls sidecar enforcement and auth status tls diagnostics` (Task 23 core)
+  - [x] 2. `feat(m6): add pin setup unlock gate and session timeout enforcement` (Task 24)
+  - [x] 3. `feat(m6): add plaid retry backoff and unlink institution workflows` (Tasks 25–26 backend)
+  - [x] 4. `feat(ui): add auth gate lock handling and unlink controls for m6` (Tasks 24e/24g/26f + transport wiring)
+  - [x] 5. `chore(m6): add dependency security scan session and tooling coverage` (Task 27)
+  - [x] 6. `docs(m6): update trace design and test strategy for security pass` (Tasks 28–30)
+  - [x] 7. `docs(plan): mark m6 tasks and checklist status` (final bookkeeping)
 
 - [ ] **M6 verification checklist (step-by-step to run)**
-  - [ ] 1. Activate environment and run core quality gates:
+  - [x] 1. Activate environment and run core quality gates:
     ```bash
     . venv/bin/activate
     nox -s lint
     nox -s tests
     nox -s build
     ```
-  - [ ] 2. Run frontend tests/build:
+  - [x] 2. Run frontend tests/build:
     ```bash
     cd ui
     npm test
@@ -498,12 +498,12 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     npm run tauri dev
     ```
     Expect API transport failure on mismatch.
-  - [ ] 16. Run dependency vulnerability scan:
+  - [x] 16. Run dependency vulnerability scan:
     ```bash
     . venv/bin/activate
     nox -s security
     ```
-  - [ ] 17. Verify traceability coverage for all M6 IDs:
+  - [x] 17. Verify traceability coverage for all M6 IDs:
     ```bash
     rg -n "FUNC-ACCT-008|SEC-ACC-001|SEC-ACC-002|SEC-ACC-003|SEC-NET-001|SEC-NET-002|SEC-NET-003|SEC-DATA-004" trace/requirements.yml
     ```
