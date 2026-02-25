@@ -4,6 +4,7 @@
  * REQ: SEC-ACC-004, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
  * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007,
  * REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-006,
+ * REQ: FUNC-EXP-001, FUNC-BKP-001, FUNC-SET-001,
  * REQ: SEC-DATA-001
  */
 
@@ -72,6 +73,27 @@ vi.mock("../api/client", async () => {
       getBudgets: vi.fn().mockResolvedValue([]),
       createBudget: vi.fn(),
       deleteBudget: vi.fn(),
+      exportTransactions: vi.fn(),
+      exportCategoriesBudgetsCsv: vi.fn(),
+      exportCategoriesBudgetsJson: vi.fn(),
+      createBackup: vi.fn(),
+      restoreBackup: vi.fn(),
+      wipeData: vi.fn(),
+      getSettings: vi.fn().mockResolvedValue({
+        timezone: "UTC",
+        currency: "USD",
+        retention: { retain_raw_payloads: true, retain_logs_days: 90 },
+        export_defaults: { include_raw_payloads: false },
+        security: { auto_lock_minutes: 15 },
+        sync: {
+          schedule_enabled: false,
+          frequency_minutes: 360,
+          scheduler_supported: false,
+        },
+      }),
+      updateSettings: vi.fn(),
+      getAuditLog: vi.fn().mockResolvedValue({ entries: [], limit: 50, offset: 0 }),
+      exportAuditLogCsv: vi.fn(),
     },
   };
 });
@@ -116,6 +138,9 @@ describe("App", () => {
       expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("export-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("data-management-panel")).toBeInTheDocument();
       expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
     });
   });
