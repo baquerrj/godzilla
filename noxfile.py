@@ -51,3 +51,15 @@ def build(session: nox.Session) -> None:
     """
     session.install("build")
     session.run("python", "-m", "build", "--wheel")
+
+
+@nox.session(python="3.12")
+def security(session: nox.Session) -> None:
+    """Run dependency vulnerability checks for backend and UI.
+
+    REQ: SEC-DATA-004
+    """
+    session.install("pip-audit")
+    session.run("pip-audit")
+    with session.chdir("ui"):
+        session.run("npm", "audit", "--audit-level=high", external=True)

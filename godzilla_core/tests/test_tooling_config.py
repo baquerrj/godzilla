@@ -70,6 +70,18 @@ class ToolingConfigTests(unittest.TestCase):
 
         self.assertIn('session.run("npm", "run", "lint", external=True)', nox_text)
 
+    def test_nox_security_session_runs_vulnerability_scans(self) -> None:
+        """Ensure nox security session executes pip-audit and npm audit.
+
+        REQ: SEC-DATA-004
+        """
+        noxfile_path = Path(__file__).resolve().parents[2] / "noxfile.py"
+        nox_text = noxfile_path.read_text(encoding="utf-8")
+
+        self.assertIn("def security(session: nox.Session)", nox_text)
+        self.assertIn('session.run("pip-audit")', nox_text)
+        self.assertIn('session.run("npm", "audit", "--audit-level=high", external=True)', nox_text)
+
     def test_devcontainer_targets_dev_compose_service(self) -> None:
         """Ensure VS Code devcontainer settings point to the Docker dev service.
 
