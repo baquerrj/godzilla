@@ -42,6 +42,13 @@ import "./App.css";
 
 const DEV_PROXY_TOKEN = "__vite_dev_proxy_token__";
 type AppTab = "overview" | "transactions" | "reports" | "data";
+type MountedTabs = Record<AppTab, boolean>;
+const INITIAL_MOUNTED_TABS: MountedTabs = {
+  overview: true,
+  transactions: false,
+  reports: false,
+  data: false,
+};
 
 export function App() {
   // null = still loading from Tauri; "" = token not configured
@@ -55,6 +62,7 @@ export function App() {
   const [reportTrendCategoryIds, setReportTrendCategoryIds] = useState<string[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<AppTab>("overview");
+  const [mountedTabs, setMountedTabs] = useState<MountedTabs>(INITIAL_MOUNTED_TABS);
 
   // REQ: SEC-ACC-004, SEC-DATA-001 — obtain token from Tauri at runtime, and
   // fall back to a dev-only proxy token when running in a plain browser.
@@ -77,6 +85,7 @@ export function App() {
     GodzillaApi.setUnlockToken(null);
     setAuthReady(false);
     setActiveTab("overview");
+    setMountedTabs(INITIAL_MOUNTED_TABS);
     setSelectedTxnId(null);
     setReportTrendCategoryIds([]);
     setFilterValues(EMPTY_FILTERS);
@@ -87,6 +96,7 @@ export function App() {
       GodzillaApi.setUnlockToken(null);
       setAuthReady(false);
       setActiveTab("overview");
+      setMountedTabs(INITIAL_MOUNTED_TABS);
       setSelectedTxnId(null);
       setReportTrendCategoryIds([]);
       setFilterValues(EMPTY_FILTERS);
@@ -118,6 +128,7 @@ export function App() {
   };
 
   const switchTab = (tab: AppTab) => {
+    setMountedTabs((current) => (current[tab] ? current : { ...current, [tab]: true }));
     setActiveTab(tab);
     if (tab !== "transactions") {
       setSelectedTxnId(null);
@@ -215,30 +226,38 @@ export function App() {
           <h1>Godzilla</h1>
           <nav className="app-nav" aria-label="Primary navigation" data-testid="app-tabs">
             <button
+              id="tab-button-overview"
               className={`btn btn-sm ${activeTab === "overview" ? "btn-primary" : ""}`}
               onClick={() => switchTab("overview")}
               data-testid="tab-overview"
+              aria-controls="tab-panel-overview"
             >
               Overview
             </button>
             <button
+              id="tab-button-transactions"
               className={`btn btn-sm ${activeTab === "transactions" ? "btn-primary" : ""}`}
               onClick={() => switchTab("transactions")}
               data-testid="tab-transactions"
+              aria-controls="tab-panel-transactions"
             >
               Transactions
             </button>
             <button
+              id="tab-button-reports"
               className={`btn btn-sm ${activeTab === "reports" ? "btn-primary" : ""}`}
               onClick={() => switchTab("reports")}
               data-testid="tab-reports"
+              aria-controls="tab-panel-reports"
             >
               Reports
             </button>
             <button
+              id="tab-button-data"
               className={`btn btn-sm ${activeTab === "data" ? "btn-primary" : ""}`}
               onClick={() => switchTab("data")}
               data-testid="tab-data"
+              aria-controls="tab-panel-data"
             >
               Data
             </button>
@@ -246,8 +265,15 @@ export function App() {
         </div>
       </header>
       <main className="app-main">
-        {activeTab === "overview" && (
-          <>
+        {mountedTabs.overview && (
+          <section
+            id="tab-panel-overview"
+            role="tabpanel"
+            aria-labelledby="tab-button-overview"
+            hidden={activeTab !== "overview"}
+            className="tab-panel"
+            data-testid="tab-panel-overview"
+          >
             <SyncStatePanel
               token={token}
               refreshKey={refreshKey}
@@ -256,10 +282,17 @@ export function App() {
             <ConflictQueue token={token} refreshKey={refreshKey} />
             <AccountsTable token={token} refreshKey={refreshKey} />
             <BalancesTable token={token} refreshKey={refreshKey} />
-          </>
+          </section>
         )}
-        {activeTab === "transactions" && (
-          <>
+        {mountedTabs.transactions && (
+          <section
+            id="tab-panel-transactions"
+            role="tabpanel"
+            aria-labelledby="tab-button-transactions"
+            hidden={activeTab !== "transactions"}
+            className="tab-panel"
+            data-testid="tab-panel-transactions"
+          >
             <TransactionFilters
               values={filterValues}
               accounts={accounts}
@@ -280,10 +313,17 @@ export function App() {
               onClose={() => setSelectedTxnId(null)}
               onUpdated={handleRefresh}
             />
-          </>
+          </section>
         )}
-        {activeTab === "reports" && (
-          <>
+        {mountedTabs.reports && (
+          <section
+            id="tab-panel-reports"
+            role="tabpanel"
+            aria-labelledby="tab-button-reports"
+            hidden={activeTab !== "reports"}
+            className="tab-panel"
+            data-testid="tab-panel-reports"
+          >
             <BudgetPanel
               token={token}
               refreshKey={refreshKey}
@@ -298,10 +338,17 @@ export function App() {
               trendCategoryIds={reportTrendCategoryIds}
               onTrendCategoryIdsChange={setReportTrendCategoryIds}
             />
-          </>
+          </section>
         )}
-        {activeTab === "data" && (
-          <>
+        {mountedTabs.data && (
+          <section
+            id="tab-panel-data"
+            role="tabpanel"
+            aria-labelledby="tab-button-data"
+            hidden={activeTab !== "data"}
+            className="tab-panel"
+            data-testid="tab-panel-data"
+          >
             <SettingsPanel
               token={token}
               refreshKey={refreshKey}
@@ -316,7 +363,7 @@ export function App() {
               token={token}
               onDataChanged={handleRefresh}
             />
-          </>
+          </section>
         )}
       </main>
     </div>

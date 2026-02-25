@@ -117,6 +117,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { GodzillaApi } from "../api/client";
 const mockInvoke = vi.mocked(invoke);
 const mockGetCategories = vi.mocked(GodzillaApi.getCategories);
+const mockGetMonthlyOverview = vi.mocked(GodzillaApi.getMonthlyOverview);
 const tauriWindow = window as Window & { __TAURI_INTERNALS__?: unknown };
 
 describe("App", () => {
@@ -160,7 +161,7 @@ describe("App", () => {
     });
   });
 
-  it("switches tabs and mounts only active section panels  REQ: FUNC-TXN-001, FUNC-REP-001, FUNC-SET-001", async () => {
+  it("switches tabs while keeping visited section panels mounted  REQ: FUNC-TXN-001, FUNC-REP-001, FUNC-SET-001", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
 
@@ -168,25 +169,50 @@ describe("App", () => {
 
     await userEvent.click(screen.getByTestId("tab-transactions"));
     await waitFor(() => {
+      expect(screen.getByTestId("tab-panel-overview")).toHaveAttribute("hidden");
+      expect(screen.getByTestId("tab-panel-transactions")).not.toHaveAttribute("hidden");
       expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
-      expect(screen.queryByTestId("sync-state-panel")).not.toBeInTheDocument();
+      expect(screen.getByTestId("sync-state-panel")).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByTestId("tab-reports"));
     await waitFor(() => {
+      expect(screen.getByTestId("tab-panel-transactions")).toHaveAttribute("hidden");
+      expect(screen.getByTestId("tab-panel-reports")).not.toHaveAttribute("hidden");
       expect(screen.getByTestId("budget-panel")).toBeInTheDocument();
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
-      expect(screen.queryByTestId("transactions-panel")).not.toBeInTheDocument();
+      expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByTestId("tab-data"));
     await waitFor(() => {
+      expect(screen.getByTestId("tab-panel-reports")).toHaveAttribute("hidden");
+      expect(screen.getByTestId("tab-panel-data")).not.toHaveAttribute("hidden");
       expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
       expect(screen.getByTestId("export-panel")).toBeInTheDocument();
       expect(screen.getByTestId("data-management-panel")).toBeInTheDocument();
-      expect(screen.queryByTestId("reports-panel")).not.toBeInTheDocument();
+      expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
     });
+  });
+
+  it("does not refetch reports when returning to an already mounted reports tab  REQ: FUNC-REP-008", async () => {
+    mockInvoke.mockResolvedValue("test-token-abc");
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByTestId("tab-reports")).toBeInTheDocument());
+    await userEvent.click(screen.getByTestId("tab-reports"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+      expect(mockGetMonthlyOverview).toHaveBeenCalledTimes(1);
+    });
+
+    await userEvent.click(screen.getByTestId("tab-transactions"));
+    await userEvent.click(screen.getByTestId("tab-reports"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+    });
+    expect(mockGetMonthlyOverview).toHaveBeenCalledTimes(1);
   });
 
   it("falls back to dev proxy token when tauri runtime is unavailable  REQ: SEC-DATA-001", async () => {

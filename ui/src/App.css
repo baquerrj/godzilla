@@ -89,6 +89,12 @@ body {
   gap: 18px;
 }
 
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 /* ---- Panels ---- */
 
 .panel {
