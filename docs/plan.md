@@ -233,6 +233,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     ```bash
     curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"item_id":"<item_id>"}' "http://127.0.0.1:8787/plaid/sync"
     ```
+    Confirm sync response shows `added > 0` or `modified > 0`; otherwise raw export values can remain `[]`.
   - [x] 5. Verify `/settings` defaults:
     ```bash
     curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/settings"

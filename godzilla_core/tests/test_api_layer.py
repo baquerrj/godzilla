@@ -1847,6 +1847,168 @@ async def test_put_settings_applies_retention_pruning(api_client: httpx.AsyncCli
     assert audit_fresh == 1
 
 
+async def test_put_settings_deduplicates_singleton_settings_tables(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify PUT /settings normalizes settings singleton tables to one row each.
+
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    """
+    conn = _open_env_db()
+    try:
+        conn.execute(
+            "INSERT INTO settings ("
+            "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "settings-old",
+                "UTC",
+                "USD",
+                15,
+                0,
+                360,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO settings ("
+            "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "settings-new",
+                "America/Chicago",
+                "CAD",
+                20,
+                1,
+                120,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO retention_policy ("
+            "id, retain_raw_payloads, retain_logs_days, created_at_utc, created_at_tz, "
+            "created_at_offset_minutes, updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "retention-old",
+                0,
+                30,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO retention_policy ("
+            "id, retain_raw_payloads, retain_logs_days, created_at_utc, created_at_tz, "
+            "created_at_offset_minutes, updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "retention-new",
+                1,
+                180,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO export_defaults ("
+            "id, include_raw_payloads, created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "export-old",
+                0,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.execute(
+            "INSERT INTO export_defaults ("
+            "id, include_raw_payloads, created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "export-new",
+                1,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    update_resp = await api_client.put(
+        "/settings",
+        json={
+            "timezone": "America/New_York",
+            "currency": "EUR",
+            "retention": {"retain_raw_payloads": True, "retain_logs_days": 120},
+            "export_defaults": {"include_raw_payloads": True},
+            "security": {"auto_lock_minutes": 25},
+            "sync": {"schedule_enabled": True, "frequency_minutes": 240},
+        },
+        headers=_HEADERS,
+    )
+    assert update_resp.status_code == 200
+
+    verify_conn = _open_env_db()
+    try:
+        settings_count = verify_conn.execute("SELECT COUNT(*) FROM settings").fetchone()[0]
+        retention_count = verify_conn.execute("SELECT COUNT(*) FROM retention_policy").fetchone()[0]
+        export_count = verify_conn.execute("SELECT COUNT(*) FROM export_defaults").fetchone()[0]
+    finally:
+        verify_conn.close()
+
+    assert settings_count == 1
+    assert retention_count == 1
+    assert export_count == 1
+
+    read_resp = await api_client.get("/settings", headers=_HEADERS)
+    assert read_resp.status_code == 200
+    payload = read_resp.json()
+    assert payload["timezone"] == "America/New_York"
+    assert payload["currency"] == "EUR"
+    assert payload["retention"] == {"retain_raw_payloads": True, "retain_logs_days": 120}
+    assert payload["export_defaults"] == {"include_raw_payloads": True}
+    assert payload["security"] == {"auto_lock_minutes": 25}
+    assert payload["sync"] == {
+        "schedule_enabled": True,
+        "frequency_minutes": 240,
+        "scheduler_supported": False,
+    }
+
+
 # ── Audit-log tests (M5 Task 20) ──────────────────────────────────────────────
 
 

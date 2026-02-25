@@ -94,7 +94,10 @@ def _retention_enabled(conn: sqlcipher.Connection) -> bool:
 
     REQ: FUNC-SYNC-003
     """
-    row = conn.execute("SELECT retain_raw_payloads FROM retention_policy LIMIT 1").fetchone()
+    row = conn.execute(
+        "SELECT retain_raw_payloads FROM retention_policy "
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
+    ).fetchone()
     if row is None:
         return True
     return bool(row[0])

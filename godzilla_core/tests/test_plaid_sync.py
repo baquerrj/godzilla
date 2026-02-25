@@ -358,6 +358,50 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         self.conn.commit()
         self.assertFalse(_retention_enabled(self.conn))
 
+    def test_retention_enabled_prefers_most_recent_policy_row(self) -> None:
+        """_retention_enabled uses the most recently updated policy row.
+
+        REQ: FUNC-SYNC-003
+        """
+        self.conn.execute(
+            "INSERT INTO retention_policy ("
+            "id, retain_raw_payloads, retain_logs_days, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "retain-old",
+                0,
+                90,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        self.conn.execute(
+            "INSERT INTO retention_policy ("
+            "id, retain_raw_payloads, retain_logs_days, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes, "
+            "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "retain-new",
+                1,
+                90,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+                "2026-02-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        self.conn.commit()
+        self.assertTrue(_retention_enabled(self.conn))
+
     def test_apply_transaction_stores_raw_payload_when_enabled(self) -> None:
         """_apply_transaction persists provider_raw when retention is enabled.
 

@@ -1265,7 +1265,10 @@ def _export_default_include_raw_payloads(conn: sqlcipher.Connection) -> bool:
 
     REQ: FUNC-EXP-003
     """
-    row = conn.execute("SELECT include_raw_payloads FROM export_defaults LIMIT 1").fetchone()
+    row = conn.execute(
+        "SELECT include_raw_payloads FROM export_defaults "
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
+    ).fetchone()
     if row is None:
         return False
     return bool(row[0])
@@ -1366,7 +1369,8 @@ def _load_retain_logs_days(conn: sqlcipher.Connection) -> int:
     REQ: FUNC-SET-002, FUNC-AUD-003
     """
     row = conn.execute(
-        "SELECT retain_logs_days FROM retention_policy ORDER BY rowid ASC LIMIT 1"
+        "SELECT retain_logs_days FROM retention_policy "
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     if row is None:
         return _default_settings_payload().retention.retain_logs_days
@@ -1395,14 +1399,15 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     settings_row = conn.execute(
         "SELECT timezone, currency, auto_lock_minutes, sync_schedule_enabled, "
         "sync_frequency_minutes "
-        "FROM settings ORDER BY rowid ASC LIMIT 1"
+        "FROM settings ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     retention_row = conn.execute(
         "SELECT retain_raw_payloads, retain_logs_days FROM retention_policy "
-        "ORDER BY rowid ASC LIMIT 1"
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     export_row = conn.execute(
-        "SELECT include_raw_payloads FROM export_defaults ORDER BY rowid ASC LIMIT 1"
+        "SELECT include_raw_payloads FROM export_defaults "
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
 
     timezone = str(settings_row[0]) if settings_row else default.timezone
@@ -1444,15 +1449,15 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
     utc, tz, offset = local_timestamp_metadata()
     settings_row = conn.execute(
         "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes "
-        "FROM settings ORDER BY rowid ASC LIMIT 1"
+        "FROM settings ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     retention_row = conn.execute(
         "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes FROM retention_policy "
-        "ORDER BY rowid ASC LIMIT 1"
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     export_row = conn.execute(
         "SELECT id, created_at_utc, created_at_tz, created_at_offset_minutes FROM export_defaults "
-        "ORDER BY rowid ASC LIMIT 1"
+        "ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
 
     settings_id = str(settings_row[0]) if settings_row else "settings-default"
@@ -1482,6 +1487,7 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
             offset,
         ),
     )
+    conn.execute("DELETE FROM settings WHERE id <> ?", (settings_id,))
 
     retention_id = str(retention_row[0]) if retention_row else "retention-default"
     retention_created = (
@@ -1506,6 +1512,7 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
             offset,
         ),
     )
+    conn.execute("DELETE FROM retention_policy WHERE id <> ?", (retention_id,))
 
     export_id = str(export_row[0]) if export_row else "export-default"
     export_created = (
@@ -1529,6 +1536,7 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
             offset,
         ),
     )
+    conn.execute("DELETE FROM export_defaults WHERE id <> ?", (export_id,))
 
 
 def _apply_retention_pruning(
