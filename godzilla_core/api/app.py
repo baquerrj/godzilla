@@ -12,7 +12,7 @@ REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-REQ: FUNC-AUD-003,
+REQ: FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004,
 REQ: SEC-ACC-004, SEC-DATA-003
 """
 
@@ -608,10 +608,35 @@ class UpdateSettingsRequest(BaseModel):
     sync: SyncSettingsPatch | None = None
 
 
+class AuditLogEntryResponse(BaseModel):
+    """Audit log entry payload.
+
+    REQ: FUNC-AUD-001, FUNC-AUD-004
+    """
+
+    id: str
+    event_type: str
+    timestamp_utc: str
+    timestamp_tz: str
+    timestamp_offset_minutes: int
+    redacted_payload: dict[str, Any]
+
+
+class AuditLogResponse(BaseModel):
+    """JSON audit log response with pagination metadata.
+
+    REQ: FUNC-AUD-004
+    """
+
+    entries: list[AuditLogEntryResponse]
+    limit: int
+    offset: int
+
+
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
     """Write a structured log event after redacting sensitive content.
 
-    REQ: FUNC-AUD-002, SEC-DATA-002
+    REQ: FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, SEC-DATA-002
 
     Args:
         level: Logging level to emit.
@@ -621,6 +646,28 @@ def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
     redacted_payload = redact_sensitive(payload)
     entry = {"event": event, **redacted_payload}
     logger.log(level, json.dumps(entry, sort_keys=True, default=str))
+    try:
+        timestamp_utc, timestamp_tz, timestamp_offset = local_timestamp_metadata()
+        with _db_connection() as conn:
+            conn.execute(
+                "INSERT INTO audit_log ("
+                "id, event_type, timestamp_utc, timestamp_tz, timestamp_offset_minutes, "
+                "redacted_payload"
+                ") VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    str(uuid4()),
+                    event,
+                    timestamp_utc,
+                    timestamp_tz,
+                    timestamp_offset,
+                    json.dumps(redacted_payload, sort_keys=True, default=str),
+                ),
+            )
+            retain_logs_days = _load_retain_logs_days(conn)
+            _prune_audit_log(conn, retain_logs_days)
+            conn.commit()
+    except Exception:
+        logger.debug("Failed to persist audit event", exc_info=True)
 
 
 def _expand_path(path_value: str) -> Path:
@@ -804,6 +851,14 @@ def _register_plaid_routes(app: FastAPI) -> None:
 
         REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004
         """
+        _log_event(
+            logging.INFO,
+            "link_started",
+            {
+                "institution_id": request.institution_id,
+                "products": request.products or [],
+            },
+        )
         try:
             config = PlaidConfig.from_env()
             if config.env != "sandbox":
@@ -828,6 +883,11 @@ def _register_plaid_routes(app: FastAPI) -> None:
                     plaid_institution_id=institution_id,
                 )
                 conn.commit()
+            _log_event(
+                logging.INFO,
+                "link_success",
+                {"item_id": link_result["item_id"], "institution_id": institution_id},
+            )
             return PlaidLinkResponse(
                 item_id=link_result["item_id"],
                 institution_id=institution_id,
@@ -838,7 +898,7 @@ def _register_plaid_routes(app: FastAPI) -> None:
         except (PlaidConfigError, SecretStoreError) as exc:
             _log_event(
                 logging.ERROR,
-                "plaid_link_config_error",
+                "link_failed",
                 {"error": str(exc)},
             )
             raise HTTPException(
@@ -848,7 +908,7 @@ def _register_plaid_routes(app: FastAPI) -> None:
         except PlaidApiError as exc:
             _log_event(
                 logging.ERROR,
-                "plaid_link_failed",
+                "link_failed",
                 {
                     "status_code": exc.status_code,
                     "error": str(exc),
@@ -867,10 +927,25 @@ def _register_plaid_routes(app: FastAPI) -> None:
 
         REQ: FUNC-ACCT-005, FUNC-SYNC-001
         """
+        _log_event(
+            logging.INFO,
+            "sync_started",
+            {"item_id": request.item_id, "institution_id": request.institution_id},
+        )
         try:
             result = sync_item_transactions_and_balances(
                 provider_item_id=request.item_id,
                 plaid_institution_id=request.institution_id,
+            )
+            _log_event(
+                logging.INFO,
+                "sync_success",
+                {
+                    "item_id": result.item_id,
+                    "added": result.added,
+                    "modified": result.modified,
+                    "removed": result.removed,
+                },
             )
             return PlaidSyncResponse(
                 item_id=result.item_id,
@@ -883,7 +958,7 @@ def _register_plaid_routes(app: FastAPI) -> None:
         except SyncError as exc:
             _log_event(
                 logging.ERROR,
-                "plaid_sync_failed",
+                "sync_failed",
                 {"item_id": request.item_id, "error": str(exc)},
             )
             raise HTTPException(status_code=400, detail="Plaid sync failed") from exc
@@ -1286,6 +1361,32 @@ def _default_settings_payload() -> SettingsResponse:
     )
 
 
+def _load_retain_logs_days(conn: sqlcipher.Connection) -> int:
+    """Return configured audit-log retention days.
+
+    REQ: FUNC-SET-002, FUNC-AUD-003
+    """
+    row = conn.execute(
+        "SELECT retain_logs_days FROM retention_policy ORDER BY rowid ASC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        return _default_settings_payload().retention.retain_logs_days
+    return int(row[0])
+
+
+def _prune_audit_log(conn: sqlcipher.Connection, retain_logs_days: int) -> int:
+    """Prune audit rows older than configured retention window.
+
+    REQ: FUNC-AUD-003
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retain_logs_days)
+    cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
+    return conn.execute(
+        "DELETE FROM audit_log WHERE timestamp_utc < ?",
+        (cutoff_iso,),
+    ).rowcount
+
+
 def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     """Load consolidated settings from DB, falling back to defaults.
 
@@ -1449,12 +1550,7 @@ def _apply_retention_pruning(
     if not retain_raw_payloads:
         purged_raw = conn.execute("DELETE FROM provider_raw").rowcount
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=retain_logs_days)
-    cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
-    purged_audit = conn.execute(
-        "DELETE FROM audit_log WHERE timestamp_utc < ?",
-        (cutoff_iso,),
-    ).rowcount
+    purged_audit = _prune_audit_log(conn, retain_logs_days)
     return {"purged_raw_payloads": purged_raw, "purged_audit_rows": purged_audit}
 
 
@@ -1467,7 +1563,8 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     REQ: FUNC-SYNC-006, SEC-ACC-004,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
     REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+    REQ: FUNC-AUD-001, FUNC-AUD-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -1969,6 +2066,90 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
         """
         with _db_connection() as conn:
             return _load_settings(conn)
+
+    @app.get(
+        "/audit-log",
+        dependencies=[Depends(require_api_key)],
+        response_model=None,
+    )
+    async def get_audit_log(  # noqa: PLR0913
+        format: Literal["json", "csv"] = Query(default="json"),  # noqa: A002
+        event_type: str | None = Query(default=None, min_length=1, max_length=128),
+        start: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        end: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        limit: int = Query(default=50, ge=1, le=_MAX_PAGE_SIZE),
+        offset: int = Query(default=0, ge=0),
+    ) -> Response | AuditLogResponse:
+        """Fetch audit log entries with optional filters and CSV export.
+
+        REQ: FUNC-AUD-001, FUNC-AUD-004
+        """
+        conditions: list[str] = []
+        params: list[Any] = []
+        if event_type:
+            conditions.append("event_type = ?")
+            params.append(event_type)
+        if start:
+            conditions.append("timestamp_utc >= ?")
+            params.append(f"{start}T00:00:00")
+        if end:
+            conditions.append("timestamp_utc <= ?")
+            params.append(f"{end}T23:59:59")
+        where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        query = (
+            "SELECT id, event_type, timestamp_utc, timestamp_tz, timestamp_offset_minutes, "
+            "redacted_payload "
+            "FROM audit_log "
+            f"{where_clause} "
+            "ORDER BY timestamp_utc DESC, id DESC "
+            "LIMIT ? OFFSET ?"
+        )
+
+        with _db_connection() as conn:
+            rows = conn.execute(query, [*params, limit, offset]).fetchall()
+        entries: list[AuditLogEntryResponse] = []
+        for row in rows:
+            payload: dict[str, Any]
+            try:
+                parsed = json.loads(str(row[5]))
+                payload = parsed if isinstance(parsed, dict) else {"raw": parsed}
+            except (TypeError, ValueError):
+                payload = {"raw": str(row[5])}
+            entries.append(
+                AuditLogEntryResponse(
+                    id=str(row[0]),
+                    event_type=str(row[1]),
+                    timestamp_utc=str(row[2]),
+                    timestamp_tz=str(row[3]),
+                    timestamp_offset_minutes=int(row[4]),
+                    redacted_payload=payload,
+                )
+            )
+
+        if format == "csv":
+            return _csv_attachment_response(
+                filename="audit-log-export.csv",
+                fieldnames=[
+                    "id",
+                    "event_type",
+                    "timestamp_utc",
+                    "timestamp_tz",
+                    "timestamp_offset_minutes",
+                    "redacted_payload",
+                ],
+                rows=[
+                    {
+                        "id": entry.id,
+                        "event_type": entry.event_type,
+                        "timestamp_utc": entry.timestamp_utc,
+                        "timestamp_tz": entry.timestamp_tz,
+                        "timestamp_offset_minutes": entry.timestamp_offset_minutes,
+                        "redacted_payload": json.dumps(entry.redacted_payload, sort_keys=True),
+                    }
+                    for entry in entries
+                ],
+            )
+        return AuditLogResponse(entries=entries, limit=limit, offset=offset)
 
     @app.get(
         "/sync-state",
@@ -2920,14 +3101,22 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
             else:
                 failed_files.append(str(path))
 
-        _log_event(
-            logging.WARNING,
-            "wipe_finished",
-            {
-                "deleted_count": len(deleted_files),
-                "missing_count": len(missing_files),
-                "failed_count": len(failed_files),
-            },
+        event_name = "wipe_failure" if failed_files else "wipe_success"
+        event_level = logging.ERROR if failed_files else logging.WARNING
+        logger.log(
+            event_level,
+            json.dumps(
+                redact_sensitive(
+                    {
+                        "event": event_name,
+                        "deleted_count": len(deleted_files),
+                        "missing_count": len(missing_files),
+                        "failed_count": len(failed_files),
+                    }
+                ),
+                sort_keys=True,
+                default=str,
+            ),
         )
         return WipeResponse(
             deleted_files=deleted_files,

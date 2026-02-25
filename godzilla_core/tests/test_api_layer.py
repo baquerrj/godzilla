@@ -11,7 +11,8 @@ REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-REQ: FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
+REQ: FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, FUNC-AUD-004,
+REQ: SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
 from __future__ import annotations
@@ -1840,6 +1841,132 @@ async def test_put_settings_applies_retention_pruning(api_client: httpx.AsyncCli
     assert provider_raw_count == 0
     assert audit_old == 0
     assert audit_fresh == 1
+
+
+# ── Audit-log tests (M5 Task 20) ──────────────────────────────────────────────
+
+
+async def test_audit_log_records_events_and_supports_filters(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Verify audit log entries are persisted and filterable in JSON mode.
+
+    REQ: FUNC-AUD-001, FUNC-AUD-004
+    """
+    backup_resp = await api_client.post(
+        "/backup",
+        json={"passphrase": "audit-passphrase", "include_secrets": False},
+        headers=_HEADERS,
+    )
+    assert backup_resp.status_code == 200
+
+    settings_resp = await api_client.put(
+        "/settings",
+        json={"currency": "USD"},
+        headers=_HEADERS,
+    )
+    assert settings_resp.status_code == 200
+
+    audit_resp = await api_client.get("/audit-log?format=json&limit=50", headers=_HEADERS)
+    assert audit_resp.status_code == 200
+    body = audit_resp.json()
+    assert body["limit"] == 50
+    assert body["offset"] == 0
+    assert len(body["entries"]) > 0
+    event_types = {entry["event_type"] for entry in body["entries"]}
+    assert "backup_created" in event_types
+    assert "settings_updated" in event_types
+    assert isinstance(body["entries"][0]["redacted_payload"], dict)
+
+    filtered_resp = await api_client.get(
+        "/audit-log?format=json&event_type=settings_updated&limit=5",
+        headers=_HEADERS,
+    )
+    assert filtered_resp.status_code == 200
+    filtered_entries = filtered_resp.json()["entries"]
+    assert len(filtered_entries) >= 1
+    assert all(entry["event_type"] == "settings_updated" for entry in filtered_entries)
+
+
+async def test_audit_log_csv_export(api_client: httpx.AsyncClient) -> None:
+    """Verify audit log endpoint supports CSV export format.
+
+    REQ: FUNC-AUD-004
+    """
+    await api_client.post(
+        "/backup",
+        json={"passphrase": "audit-passphrase", "include_secrets": False},
+        headers=_HEADERS,
+    )
+    csv_resp = await api_client.get("/audit-log?format=csv&limit=10", headers=_HEADERS)
+    assert csv_resp.status_code == 200
+    assert csv_resp.headers["content-type"].startswith("text/csv")
+    rows = list(DictReader(StringIO(csv_resp.text)))
+    assert len(rows) >= 1
+    assert "event_type" in rows[0]
+    assert "redacted_payload" in rows[0]
+
+
+async def test_audit_log_retention_pruned_on_write(api_client: httpx.AsyncClient) -> None:
+    """Verify audit write path enforces retention pruning.
+
+    REQ: FUNC-AUD-003
+    """
+    await api_client.put(
+        "/settings",
+        json={"retention": {"retain_logs_days": 1}},
+        headers=_HEADERS,
+    )
+    old_ts = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S")
+    conn = _open_env_db()
+    try:
+        conn.execute(
+            "INSERT INTO audit_log ("
+            "id, event_type, timestamp_utc, timestamp_tz, timestamp_offset_minutes, redacted_payload"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("audit-very-old", "manual", old_ts, "UTC", 0, '{"x":"old"}'),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    write_resp = await api_client.post(
+        "/backup",
+        json={"passphrase": "audit-passphrase", "include_secrets": False},
+        headers=_HEADERS,
+    )
+    assert write_resp.status_code == 200
+
+    verify_conn = _open_env_db()
+    try:
+        old_count = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE id = ?",
+            ("audit-very-old",),
+        ).fetchone()[0]
+    finally:
+        verify_conn.close()
+    assert old_count == 0
+
+
+async def test_audit_log_auth_and_validation(api_client: httpx.AsyncClient) -> None:
+    """Verify audit endpoint enforces auth and validates query params.
+
+    REQ: SEC-ACC-004, FUNC-AUD-004
+    """
+    unauthorized = await api_client.get("/audit-log")
+    assert unauthorized.status_code == 401
+
+    bad_date = await api_client.get(
+        "/audit-log?start=2026/01/01",
+        headers=_HEADERS,
+    )
+    assert bad_date.status_code == 422
+
+    bad_format = await api_client.get(
+        "/audit-log?format=xml",
+        headers=_HEADERS,
+    )
+    assert bad_format.status_code == 422
 
 
 # ── Budget tests (Task 13) ────────────────────────────────────────────────────
