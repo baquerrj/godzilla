@@ -14,7 +14,7 @@
  * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
  * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
  * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
- * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+ * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
  * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
  * REQ: FUNC-AUD-001, FUNC-AUD-004
  */
@@ -245,6 +245,10 @@ export interface WipeResponse {
   deleted_files: string[];
   missing_files: string[];
   failed_files: string[];
+}
+
+export interface ReinitializeResponse {
+  schema_version: number;
 }
 
 export interface RetentionSettings {

@@ -211,11 +211,11 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 21e. Integrated all panels in `App.tsx` refresh flow.
   - [x] 21f. Added frontend tests for render, request wiring, and file-operation flows.
 
-- [ ] **22. Post-wipe database re-initialization** (`FUNC-BKP-006`)
-  - [ ] 22a. Add authenticated API endpoint to re-run migrations on current DB path.
-  - [ ] 22b. Add Data Management UI action to trigger re-initialization after wipe.
-  - [ ] 22c. Add backend + frontend tests for wipe -> re-initialize -> recoverable clean state flow.
-  - [ ] 22d. Update traceability artifacts for new requirement coverage.
+- [x] **22. Post-wipe database re-initialization** (`FUNC-BKP-006`)
+  - [x] 22a. Added authenticated `POST /reinitialize` endpoint to re-run migrations on current DB path.
+  - [x] 22b. Added Data Management UI action to trigger re-initialization after wipe.
+  - [x] 22c. Added backend + frontend tests for wipe -> re-initialize -> recoverable clean state flow.
+  - [x] 22d. Updated traceability and M5 design/test docs for new requirement coverage.
 
 - [ ] **M5 verification checklist (step-by-step to run)**
   - [ ] 1. Activate env and run quality gates:
@@ -310,29 +310,33 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     ```bash
     curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"
     ```
-  - [x] 18. Mark M5 complete and finalize Conventional Commit checkpoints.
+  - [x] 18. Verify post-wipe re-initialize flow:
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/reinitialize"
+    ```
+  - [x] 19. Mark M5 complete and finalize Conventional Commit checkpoints.
 
 ---
 
 ## M6 — Security review pass
 
-- [ ] **22. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
+- [ ] **23. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
   Per-install self-signed cert, uvicorn TLS config, Tauri WebView cert pinning.
 
-- [ ] **23. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
+- [ ] **24. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
   `POST /auth/setup-pin`, `POST /auth/unlock`, inactivity lock + clear UI state.
 
-- [ ] **24. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
+- [ ] **25. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
   Exponential backoff with jitter in `PlaidClient._post` for 429/5xx.
 
-- [ ] **25. Unlink institution** (`FUNC-ACCT-008`)
+- [ ] **26. Unlink institution** (`FUNC-ACCT-008`)
   `DELETE /plaid/items/{item_id}` — call Plaid `/item/remove`, delete token,
   handle data per retention policy.
 
-- [ ] **26. Dependency vulnerability scanning** (`SEC-DATA-004`)
+- [ ] **27. Dependency vulnerability scanning** (`SEC-DATA-004`)
   Add `pip-audit` to `nox -s lint` or a new `nox -s security` session.
 
-- [ ] **27. Final security review pass**
+- [ ] **28. Final security review pass**
   Audit log redaction completeness, no secrets in client artifacts,
   TLS cert pinning end-to-end, dependency audit resolved.
 
@@ -340,8 +344,8 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Cross-cutting (ongoing throughout)
 
-- [ ] **28. Traceability maintenance**
+- [ ] **29. Traceability maintenance**
   Keep `trace/requirements.yml` `code_refs` and `test_refs` current after every task.
 
-- [ ] **29. Design doc updates**
+- [ ] **30. Design doc updates**
   Create/update `docs/design/` docs with Mermaid diagrams for M2–M6 features.

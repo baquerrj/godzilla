@@ -79,6 +79,7 @@ vi.mock("../api/client", async () => {
       createBackup: vi.fn(),
       restoreBackup: vi.fn(),
       wipeData: vi.fn(),
+      reinitializeDatabase: vi.fn(),
       getSettings: vi.fn().mockResolvedValue({
         timezone: "UTC",
         currency: "USD",

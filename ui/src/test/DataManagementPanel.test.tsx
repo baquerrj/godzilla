@@ -1,7 +1,7 @@
 /**
  * Tests for DataManagementPanel component.
  *
- * REQ: FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004
+ * REQ: FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,6 +21,7 @@ vi.mock("../api/client", async () => {
       createBackup: vi.fn(),
       restoreBackup: vi.fn(),
       wipeData: vi.fn(),
+      reinitializeDatabase: vi.fn(),
     },
   };
 });
@@ -33,6 +34,7 @@ const TOKEN = "tok";
 const mockCreateBackup = vi.mocked(GodzillaApi.createBackup);
 const mockRestoreBackup = vi.mocked(GodzillaApi.restoreBackup);
 const mockWipeData = vi.mocked(GodzillaApi.wipeData);
+const mockReinitializeDatabase = vi.mocked(GodzillaApi.reinitializeDatabase);
 const mockDownloadBlob = vi.mocked(downloadBlob);
 
 describe("DataManagementPanel", () => {
@@ -52,6 +54,9 @@ describe("DataManagementPanel", () => {
       deleted_files: ["/tmp/db"],
       missing_files: [],
       failed_files: [],
+    });
+    mockReinitializeDatabase.mockResolvedValue({
+      schema_version: 3,
     });
   });
 
@@ -109,6 +114,19 @@ describe("DataManagementPanel", () => {
 
     await waitFor(() => {
       expect(mockWipeData).toHaveBeenCalledWith(TOKEN, { confirm: "WIPE_LOCAL_DATA" });
+    });
+  });
+
+  it("re-initializes database and notifies parent  REQ: FUNC-BKP-006", async () => {
+    const onDataChanged = vi.fn();
+    render(<DataManagementPanel token={TOKEN} onDataChanged={onDataChanged} />);
+
+    fireEvent.click(screen.getByTestId("reinitialize-submit-btn"));
+
+    await waitFor(() => {
+      expect(mockReinitializeDatabase).toHaveBeenCalledWith(TOKEN);
+      expect(onDataChanged).toHaveBeenCalled();
+      expect(screen.getByText(/Database re-initialized/i)).toBeInTheDocument();
     });
   });
 });

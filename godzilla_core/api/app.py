@@ -11,6 +11,7 @@ REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+REQ: FUNC-BKP-006,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
 REQ: FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004,
 REQ: SEC-ACC-004, SEC-DATA-003
@@ -501,6 +502,15 @@ class WipeResponse(BaseModel):
     deleted_files: list[str]
     missing_files: list[str]
     failed_files: list[str]
+
+
+class ReinitializeResponse(BaseModel):
+    """Re-initialization operation result details.
+
+    REQ: FUNC-BKP-006
+    """
+
+    schema_version: int
 
 
 class RetentionSettingsResponse(BaseModel):
@@ -2529,6 +2539,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
     REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004,
     REQ: FUNC-BUD-001, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+    REQ: FUNC-BKP-006,
     REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
 
     Args:
@@ -3125,6 +3136,30 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
             failed_files=failed_files,
         )
 
+    @app.post(
+        "/reinitialize",
+        dependencies=[Depends(require_api_key)],
+        response_model=ReinitializeResponse,
+    )
+    async def reinitialize_local_database() -> ReinitializeResponse:
+        """Recreate local encrypted DB schema in place after wipe.
+
+        REQ: FUNC-BKP-006
+        """
+        db_path_raw, db_key = _read_database_settings()
+        db_path = _expand_path(db_path_raw)
+        try:
+            schema_version = run_migrations(db_path=str(db_path), db_key=db_key)
+        except Exception as exc:
+            _log_event(logging.ERROR, "reinitialize_failed", {"error": str(exc)})
+            raise HTTPException(
+                status_code=500,
+                detail="Database re-initialization failed",
+            ) from exc
+
+        _log_event(logging.INFO, "reinitialize_success", {"schema_version": schema_version})
+        return ReinitializeResponse(schema_version=schema_version)
+
     @app.put(
         "/settings",
         response_model=SettingsResponse,
@@ -3280,7 +3315,7 @@ def create_app() -> FastAPI:
     REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
     REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
     REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
     REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
     """

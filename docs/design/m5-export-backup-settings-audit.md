@@ -1,6 +1,6 @@
 # M5 Design — Export, Backup/Restore, Settings, Audit
 
-Requirements: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004, FUNC-REP-006
+Requirements: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004, FUNC-REP-006
 
 ## Problem statement
 
@@ -22,7 +22,7 @@ flowchart LR
   BKP[security/backup.py]
 
   UI -->|GET /export/*| API
-  UI -->|POST /backup, /restore, /wipe| API
+  UI -->|POST /backup, /restore, /wipe, /reinitialize| API
   UI -->|GET/PUT /settings| API
   UI -->|GET /audit-log| API
 
@@ -62,12 +62,15 @@ flowchart LR
    - Decrypts + verifies envelope integrity, atomically replaces DB files, reruns migrations.
 5. `POST /wipe`
    - Requires `confirm=WIPE_LOCAL_DATA`; best-effort overwrite and unlink for DB/secrets sidecars.
-6. `GET /settings` and `PUT /settings`
+6. `POST /reinitialize`
+   - Re-runs SQL migrations against configured DB path to recreate schema after wipe.
+   - Returns `schema_version` so UI can confirm initialized state.
+7. `GET /settings` and `PUT /settings`
    - Consolidated settings payload across settings/retention/export_defaults.
    - PUT applies retention side effects (`provider_raw`, `audit_log` pruning).
-7. `GET /audit-log`
+8. `GET /audit-log`
    - Supports filters, pagination, and `format=json|csv`.
-8. `/balances`
+9. `/balances`
    - Includes `account_name` for user-friendly display.
 
 ## Security considerations
@@ -76,7 +79,8 @@ flowchart LR
 2. Backup/restore failures return explicit integrity/format errors; tampered payloads are rejected.
 3. Audit payloads are redacted before logging and persistence.
 4. Wipe path clears DB/secrets sidecars (`-wal`, `-shm`) in addition to primary files.
-5. Export privacy defaults are conservative (`include_raw_payloads=false`).
+5. Re-initialize path only recreates schema and does not recreate deleted secrets.
+6. Export privacy defaults are conservative (`include_raw_payloads=false`).
 
 ## Tradeoffs and alternatives
 
@@ -89,6 +93,7 @@ flowchart LR
 1. Backend endpoint tests in `godzilla_core/tests/test_api_layer.py` validate:
    - Export correctness and validation paths.
    - Backup encryption, tamper detection, restore, wipe.
+   - Post-wipe re-initialization behavior.
    - Settings defaults/updates/validation/pruning.
    - Audit persistence/filtering/export/retention.
 2. Frontend tests validate:

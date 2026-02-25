@@ -9,7 +9,7 @@ REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
+REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
 REQ: FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, FUNC-AUD-004,
 REQ: SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
@@ -240,7 +240,7 @@ async def api_client() -> httpx.AsyncClient:
 async def backup_client() -> httpx.AsyncClient:
     """Provide authenticated ASGI client configured with DB and secrets paths.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, SEC-ACC-004
+    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006, SEC-ACC-004
     """
     env_backup = {
         "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
@@ -1676,12 +1676,44 @@ async def test_wipe_removes_database_and_secrets_files(backup_client: httpx.Asyn
     assert len(payload["deleted_files"]) >= 2
 
 
+async def test_reinitialize_recreates_schema_after_wipe(backup_client: httpx.AsyncClient) -> None:
+    """Verify reinitialize recreates schema in-place after wipe.
+
+    REQ: FUNC-BKP-006
+    """
+    wipe_resp = await backup_client.post(
+        "/wipe",
+        json={"confirm": "WIPE_LOCAL_DATA"},
+        headers=_HEADERS,
+    )
+    assert wipe_resp.status_code == 200
+
+    reinitialize_resp = await backup_client.post("/reinitialize", headers=_HEADERS)
+    assert reinitialize_resp.status_code == 200
+    body = reinitialize_resp.json()
+    assert body["schema_version"] >= 1
+
+    # Fresh schema should allow read endpoints to return clean-state payloads.
+    sync_state_resp = await backup_client.get("/sync-state", headers=_HEADERS)
+    assert sync_state_resp.status_code == 200
+    assert sync_state_resp.json() == []
+
+    with _open_env_db() as conn:
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+    assert "schema_version" in tables
+    assert "plaid_item" in tables
+    assert "sync_state" in tables
+
+
 async def test_backup_restore_wipe_auth_and_validation(
     backup_client: httpx.AsyncClient,
 ) -> None:
     """Verify backup/restore/wipe endpoints enforce auth and validation.
 
-    REQ: SEC-ACC-004, FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004
+    REQ: SEC-ACC-004, FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006
     """
     unauthorized = await backup_client.post("/backup", json={"passphrase": "p"})
     assert unauthorized.status_code == 401
@@ -1692,6 +1724,9 @@ async def test_backup_restore_wipe_auth_and_validation(
         headers=_HEADERS,
     )
     assert invalid_confirm.status_code == 422
+
+    unauthorized_reinitialize = await backup_client.post("/reinitialize")
+    assert unauthorized_reinitialize.status_code == 401
 
     restore_missing_fields = await backup_client.post(
         "/restore",

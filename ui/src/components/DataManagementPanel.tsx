@@ -1,7 +1,7 @@
 /**
  * DataManagementPanel: encrypted backup download, restore upload, and wipe.
  *
- * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004
+ * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006
  */
 
 import { type FormEvent, useState } from "react";
@@ -55,6 +55,14 @@ export function DataManagementPanel({ token, onDataChanged }: Props) {
       onDataChanged();
       setWipeConfirm("");
       return `Wipe complete. Deleted ${result.deleted_files.length} file(s).`;
+    });
+  };
+
+  const handleReinitialize = () => {
+    void executeAction(async () => {
+      const result = await GodzillaApi.reinitializeDatabase(token);
+      onDataChanged();
+      return `Database re-initialized (schema v${result.schema_version}).`;
     });
   };
 
@@ -152,6 +160,21 @@ export function DataManagementPanel({ token, onDataChanged }: Props) {
           data-testid="wipe-submit-btn"
         >
           Wipe Local Data
+        </button>
+      </div>
+
+      <div className="m5-section">
+        <h3>Re-initialize Database</h3>
+        <p className="muted">
+          Recreates the encrypted schema after wipe so link/sync can start from a clean state.
+        </p>
+        <button
+          className="btn btn-sm"
+          onClick={handleReinitialize}
+          disabled={actionResult.status === "loading"}
+          data-testid="reinitialize-submit-btn"
+        >
+          Re-initialize Database
         </button>
       </div>
 

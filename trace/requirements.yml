@@ -881,14 +881,21 @@
 - requirement_id: FUNC-BKP-006
   title: Database re-initialization
   parent_requirement_id: FUNC-BKP-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:ReinitializeResponse
+  - godzilla_core/api/app.py:reinitialize_local_database
+  - ui/src/api/types.ts:ReinitializeResponse
+  - ui/src/api/client.ts:GodzillaApi.reinitializeDatabase
+  - ui/src/components/DataManagementPanel.tsx:DataManagementPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_reinitialize_recreates_schema_after_wipe
+  - godzilla_core/tests/test_api_layer.py:test_backup_restore_wipe_auth_and_validation
+  - ui/src/test/DataManagementPanel.test.tsx:re-initializes database and notifies parent
   doc_refs:
+  - docs/design/m5-export-backup-settings-audit.md
+  - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/product-requirements-document.md
   - docs/plan.md
-  - docs/design/architecture-overview.md
-  - docs/design/architecture-components.md
-  - docs/design/database-schema.md
 - requirement_id: FUNC-SET-001
   title: Timezone and currency
   parent_requirement_id: SYS-001

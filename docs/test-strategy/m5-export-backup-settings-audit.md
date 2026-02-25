@@ -1,6 +1,6 @@
 # M5 Test Strategy — Export, Backup/Restore, Settings, Audit
 
-Requirements covered: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004, FUNC-REP-006
+Requirements covered: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004, FUNC-REP-006
 
 ## Automated tests
 
@@ -18,6 +18,7 @@ Backend (`godzilla_core/tests/test_api_layer.py`):
    - `test_restore_rejects_tampered_backup`
    - `test_restore_recovers_database_and_secrets`
    - `test_wipe_removes_database_and_secrets_files`
+   - `test_reinitialize_recreates_schema_after_wipe`
    - `test_backup_restore_wipe_auth_and_validation`
 3. Settings:
    - `test_get_settings_returns_bootstrap_defaults`
@@ -51,6 +52,7 @@ Frontend (`ui/src/test/*.test.tsx`):
 | FUNC-BKP-002 | Tampered backup integrity failure path |
 | FUNC-BKP-003 | Restore workflow recovers DB and secrets |
 | FUNC-BKP-004 | Confirmed wipe removes DB/secrets and sidecars |
+| FUNC-BKP-006 | Reinitialize endpoint recreates schema after wipe and UI can trigger it |
 | FUNC-SET-001 | Settings bootstrap + timezone/currency update validation |
 | FUNC-SET-002 | Retention config persistence and pruning side effects |
 | FUNC-SET-003 | Auto-lock persistence and validation bounds |
