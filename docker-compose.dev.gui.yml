@@ -5,5 +5,12 @@ services:
     environment:
       # Forward host X11 display into the container for GUI apps such as Tauri.
       DISPLAY: ${DISPLAY:-:0}
+      # Force stable X11 + software rendering path for WebKitGTK in containers.
+      # This avoids frequent Xwayland/GPU resets during interactive Tauri usage.
+      GDK_BACKEND: x11
+      XDG_SESSION_TYPE: x11
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+      WEBKIT_DISABLE_COMPOSITING_MODE: "1"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw

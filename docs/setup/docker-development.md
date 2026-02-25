@@ -75,6 +75,10 @@ docker exec -it godzilla-dev bash
 ## Run Tauri GUI from container (Linux X11)
 This mode requires a local Linux desktop with an active X server. It will not work in headless-only environments.
 
+The GUI compose overlay also enables a container-safe WebKit/GL path
+(`GDK_BACKEND=x11`, software rendering, compositing disabled) to prevent common
+Xwayland display resets while running Tauri.
+
 Allow local Docker X11 clients from the host:
 
 ```bash
@@ -91,6 +95,14 @@ Run Tauri app inside the container:
 
 ```bash
 $COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && npm run tauri dev'
+```
+
+If you run Tauri outside the GUI overlay and see a crash like
+`Gdk-Message: Error reading events from display: Connection reset by peer`,
+retry with:
+
+```bash
+GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri dev
 ```
 
 After you are done, revoke X11 access:

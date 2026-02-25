@@ -76,6 +76,18 @@ npm install
 npm run tauri dev
 ```
 
+If you are running in Docker with `docker-compose.dev.gui.yml`, these runtime
+stability flags are applied automatically (`GDK_BACKEND=x11`,
+`LIBGL_ALWAYS_SOFTWARE=1`, `WEBKIT_DISABLE_COMPOSITING_MODE=1`).
+
+If you still hit `Gdk-Message: Error reading events from display: Connection reset by peer`,
+run:
+
+```bash
+cd ui
+GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri dev
+```
+
 ## 3. Current limitations
 
 - Single-user only. Multi-user/shared budgets are out of scope.
