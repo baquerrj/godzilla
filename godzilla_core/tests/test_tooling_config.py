@@ -43,6 +43,33 @@ class ToolingConfigTests(unittest.TestCase):
             "Black must be part of dev dependencies so it can be run locally.",
         )
 
+    def test_ui_biome_tooling_is_configured(self) -> None:
+        """Ensure UI lint/format tooling is configured with Biome.
+
+        REQ: SEC-DATA-004
+        """
+        ui_package_path = Path(__file__).resolve().parents[2] / "ui" / "package.json"
+        package_json = json.loads(ui_package_path.read_text(encoding="utf-8"))
+        scripts = package_json["scripts"]
+        dev_dependencies = package_json["devDependencies"]
+
+        self.assertIn("@biomejs/biome", dev_dependencies)
+        self.assertEqual(scripts["lint"], "biome lint .")
+        self.assertEqual(scripts["format:check"], "biome format .")
+
+        biome_config_path = Path(__file__).resolve().parents[2] / "ui" / "biome.json"
+        self.assertTrue(biome_config_path.exists(), "ui/biome.json must exist.")
+
+    def test_nox_runs_ui_lint_checks(self) -> None:
+        """Ensure nox lint session executes UI Biome lint checks.
+
+        REQ: SEC-DATA-004
+        """
+        noxfile_path = Path(__file__).resolve().parents[2] / "noxfile.py"
+        nox_text = noxfile_path.read_text(encoding="utf-8")
+
+        self.assertIn('session.run("npm", "run", "lint", external=True)', nox_text)
+
     def test_devcontainer_targets_dev_compose_service(self) -> None:
         """Ensure VS Code devcontainer settings point to the Docker dev service.
 

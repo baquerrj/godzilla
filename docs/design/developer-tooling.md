@@ -11,7 +11,7 @@ Containerized development uses four assets:
 - `docker-compose.dev.yml` runs a long-lived `dev` service with named volumes for workspace, app data, and dependency caches.
 - `docker-compose.dev.ssh-agent.yml` optionally forwards host SSH agent sockets for Git operations without copying private keys.
 - `.devcontainer/devcontainer.json` lets VS Code open or attach directly to the `dev` service.
-- Existing `pyproject.toml` and `noxfile.py` remain the source of truth for Python dependencies and quality commands run inside the container.
+- Existing `pyproject.toml`, `noxfile.py`, and `ui/package.json` remain the source of truth for quality commands run inside the container.
 
 ```mermaid
 flowchart LR
@@ -21,7 +21,7 @@ flowchart LR
   IMAGE[godzilla-dev image]
   CONTAINER[dev container]
   VSCODE[VS Code Remote Containers]
-  NOX[nox + pytest + ruff]
+  NOX[nox + pytest + ruff + black + biome]
 
   DOCKERFILE --> IMAGE
   IMAGE --> COMPOSE
@@ -55,6 +55,27 @@ None.
 ## Testing strategy and coverage mapping
 - Unit tests validate Dockerfile toolchain declarations, Compose service configuration, Dev Container wiring, and presence of operational setup documentation.
 - Existing tooling tests continue validating lint/test/build dependency hygiene rules.
+
+## UI Biome rollout strategy (pragmatic baseline)
+Biome is enabled for the UI with `lint`, `lint:fix`, `format`, and `format:check` scripts, but the rule set is intentionally limited to keep adoption low-risk while we stabilize ongoing feature work.
+
+Current intentionally deferred Biome rules in `ui/biome.json`:
+- `a11y.noLabelWithoutControl`
+- `a11y.useButtonType`
+- `a11y.useKeyWithClickEvents`
+- `correctness.useExhaustiveDependencies`
+- `performance.noDelete`
+- `style.noUnusedTemplateLiteral`
+- `style.useNumberNamespace`
+- `style.useSelfClosingElements`
+- `suspicious.noArrayIndexKey`
+
+Planned enforcement order:
+1. Accessibility pass: enable the three `a11y.*` rules after UI forms and interactive elements are remediated.
+2. React correctness pass: enable `correctness.useExhaustiveDependencies` and `suspicious.noArrayIndexKey` after hook dependency and list key cleanup.
+3. Style/performance pass: enable `performance.noDelete` and the deferred `style.*` rules after broad formatting and small refactor sweeps.
+
+Each phase should be merged only when `nox -s lint` and `cd ui && npm run format:check` pass without per-file exemptions.
 
 ## Rollout/migration notes
 - Build once: `docker compose -f docker-compose.dev.yml build dev`.

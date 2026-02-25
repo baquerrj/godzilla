@@ -17,6 +17,8 @@ def lint(session: nox.Session) -> None:
     session.install("black>=24.0.0", "ruff>=0.6.0")
     session.run("ruff", "check", "godzilla_core")
     session.run("black", "--check", "godzilla_core", "noxfile.py")
+    with session.chdir("ui"):
+        session.run("npm", "run", "lint", external=True)
 
 
 @nox.session(python="3.12")
@@ -27,6 +29,8 @@ def format(session: nox.Session) -> None:
     """
     session.install("black>=24.0.0")
     session.run("black", "godzilla_core", "noxfile.py")
+    with session.chdir("ui"):
+        session.run("npm", "run", "format", external=True)
 
 
 @nox.session(python="3.12")

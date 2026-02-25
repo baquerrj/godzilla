@@ -91,6 +91,12 @@ Python check commands:
 - `nox -s tests` (or `python3 -m pytest`)
 - `nox -s build` (or `python3 -m build --wheel`)
 
+Node/UI check commands:
+- `nox -s lint` runs Python linting plus `cd ui && npm run lint` (Biome lint).
+- `cd ui && npm run format:check` runs Biome format validation without file changes.
+- `nox -s format` runs Python formatting plus `cd ui && npm run format` (Biome format write).
+- Biome is currently applied with a pragmatic baseline; deferred rules and rollout order are documented in `docs/design/developer-tooling.md`.
+
 ## 8) Agent workflow checklist
 1. Identify impacted requirement IDs in the PRD.
 2. Plan implementation and required design doc updates.

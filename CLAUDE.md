@@ -11,14 +11,21 @@ Godzilla is a single-user personal budgeting app. The Python package `godzilla-c
 ## Commands
 
 ```bash
-# Lint (ruff + black)
+# Lint (ruff + black + biome lint)
 nox -s lint
 # or directly:
 python3 -m ruff check godzilla_core
 python3 -m black --check godzilla_core noxfile.py db_inspect.py
+cd ui && npm run lint
+
+# UI format check (non-writing)
+cd ui && npm run format:check
 
 # Auto-format
 nox -s format
+# or directly:
+python3 -m black godzilla_core noxfile.py db_inspect.py
+cd ui && npm run format
 
 # Run all tests
 nox -s tests
@@ -100,9 +107,11 @@ Follow the traceability policy in `AGENTS.md`:
 
 ## Code Quality
 
-- Line length: 100 characters (ruff + black enforced).
+- Line length: 100 characters (ruff + black + biome enforced).
 - Google-style docstrings required on all public symbols.
 - Ruff rules: `E, F, W, B, PL, D, I` (docstring rules exempt in test files).
+- UI linting and formatting is enforced via Biome (`npm run lint`, `npm run format:check`).
+- UI Biome rules currently use a pragmatic baseline with specific deferred rules; see `docs/design/developer-tooling.md` for the enforcement plan.
 - Parameterized queries only — no string concatenation for SQL.
 - All logs must pass through `redact_sensitive`.
 - Design docs in `docs/design/` must be updated for non-trivial changes (Markdown + Mermaid).
@@ -111,7 +120,7 @@ Follow the traceability policy in `AGENTS.md`:
 
 ## When to Run Lint and Tests
 
-Run lint (`ruff` + `black --check`) and the full test suite after any change to **functional** source code. For **purely non-functional changes** (for example comments, TODO annotations, or docstrings without logic changes), skip unit tests and run lint only.
+Run lint (`ruff` + `black --check` + `biome lint`) and the full test suite after any change to **functional** source code. Use `npm run format:check` when you need a non-writing UI format validation pass, and `nox -s format`/`npm run format` when formatting should be applied. For **purely non-functional changes** (for example comments, TODO annotations, or docstrings without logic changes), skip unit tests and run lint only.
 
 ## Commits and Progress
 As progress is made, mark tasks complete in plan markdown files, and make a local commit following the Conventional Commits convention with the configured git user and e-mail.

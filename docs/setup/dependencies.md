@@ -108,6 +108,13 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
 - Install dev tooling:
   - `python3 -m pip install -e ".[dev]"`
   - `python3 -m pip install nox`
+- Install UI tooling:
+  - `cd ui && npm install`
+- UI lint/format:
+  - `cd ui && npm run lint`
+  - `cd ui && npm run format:check`
+- UI format write:
+  - `cd ui && npm run format`
 - Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
 - Tests: `nox -s tests` (or `python3 -m pytest`)
 - Build wheel: `nox -s build` (or `python3 -m build --wheel`)

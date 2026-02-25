@@ -1229,12 +1229,16 @@
   code_refs:
   - pyproject.toml
   - noxfile.py
+  - ui/package.json
+  - ui/biome.json
   - Dockerfile.dev
   - docker-compose.dev.yml
   - docker-compose.dev.ssh-agent.yml
   - .devcontainer/devcontainer.json
   - .dockerignore
   test_refs:
+  - godzilla_core/tests/test_tooling_config.py:test_ui_biome_tooling_is_configured
+  - godzilla_core/tests/test_tooling_config.py:test_nox_runs_ui_lint_checks
   - godzilla_core/tests/test_tooling_config.py:ToolingConfigTests
   doc_refs:
   - docs/design/architecture-overview.md
