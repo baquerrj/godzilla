@@ -180,12 +180,23 @@
 - requirement_id: FUNC-ACCT-008
   title: Unlink institution
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:unlink_plaid_item
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.remove_item
+  - godzilla_core/integrations/plaid_sync.py:sync_item_transactions_and_balances
+  - ui/src/api/client.ts:GodzillaApi.unlinkItem
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_unlink_item_keep_marks_unlinked_and_preserves_ledger
+  - godzilla_core/tests/test_api_layer.py:test_unlink_item_purge_deletes_item_data
+  - godzilla_core/tests/test_plaid_client.py:PlaidClientPostTests.test_remove_item_posts_to_item_remove
+  - godzilla_core/tests/test_plaid_sync.py:SyncItemFullFlowTests.test_sync_raises_for_unlinked_item
+  - ui/src/test/SyncStatePanel.test.tsx:calls unlink endpoint and refreshes on keep mode
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: FUNC-ACCT-009
   title: Identity owner display
   parent_requirement_id: FUNC-ACCT-003
@@ -941,10 +952,16 @@
   - migrations/0003_m5_settings_extensions.sql
   - godzilla_core/api/app.py:SecuritySettingsResponse
   - godzilla_core/api/app.py:update_settings
+  - godzilla_core/api/app.py:require_api_key
+  - godzilla_core/api/app.py:_touch_unlock_session
+  - ui/src/components/AuthGatePanel.tsx:AuthGatePanel
+  - ui/src/App.tsx:App
   - ui/src/components/SettingsPanel.tsx:SettingsPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
   - godzilla_core/tests/test_api_layer.py:test_put_settings_rejects_invalid_values
+  - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
+  - ui/src/test/AuthGatePanel.test.tsx:unlocks when valid pin is submitted
   - ui/src/test/SettingsPanel.test.tsx:shows local validation error for invalid number fields
   doc_refs:
   - docs/design/m5-export-backup-settings-audit.md
@@ -1091,40 +1108,70 @@
 - requirement_id: SEC-CRY-004
   title: Secret rotation and revocation
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:unlink_plaid_item
+  - godzilla_core/integrations/plaid_client.py:PlaidClient.remove_item
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_unlink_item_keep_marks_unlinked_and_preserves_ledger
+  - godzilla_core/tests/test_api_layer.py:test_unlink_item_purge_deletes_item_data
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-ACC-001
   title: App access gate
   parent_requirement_id: SYS-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:require_api_key
+  - godzilla_core/api/app.py:_register_auth_routes
+  - godzilla_core/security/auth.py:verify_pin
+  - ui/src/components/AuthGatePanel.tsx:AuthGatePanel
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_auth_status_requires_pin_setup_when_unconfigured
+  - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
+  - ui/src/test/AuthGatePanel.test.tsx:unlocks when valid pin is submitted
+  - ui/src/test/App.test.tsx:renders main panels when token is present
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-ACC-002
   title: Session timeout
   parent_requirement_id: SEC-ACC-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:require_api_key
+  - godzilla_core/api/app.py:_touch_unlock_session
+  - godzilla_core/api/app.py:_register_unlock_session
+  - ui/src/api/client.ts:parseError
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
+  - ui/src/test/App.test.tsx:renders main panels when token is present
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-ACC-003
   title: Unlock configuration
   parent_requirement_id: SEC-ACC-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:setup_pin
+  - godzilla_core/security/auth.py:generate_pin_salt
+  - godzilla_core/security/auth.py:hash_pin
+  - ui/src/components/AuthGatePanel.tsx:AuthGatePanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_auth_setup_pin_rotation_requires_current_pin
+  - ui/src/test/AuthGatePanel.test.tsx:shows setup flow and saves new pin
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-ACC-004
   title: Authorization boundaries
   parent_requirement_id: SYS-003
@@ -1148,19 +1195,26 @@
   title: TLS enforcement
   parent_requirement_id: SYS-003
   code_refs:
+  - godzilla_core/scripts/run_api_server.py:main
+  - godzilla_core/api/app.py:_tls_status
   - ui/scripts/gen-cert.sh
-  test_refs: []
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_partial_tls_configuration
+  - godzilla_core/tests/test_api_layer.py:test_run_api_server_uses_tls_files_from_environment
+  - godzilla_core/tests/test_api_layer.py:test_auth_status_reports_tls_fingerprint_when_tls_configured
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
   - docs/design/vite-vs-tauri.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
   code_refs:
   - godzilla_core/scripts/run_api_server.py:main
+  - godzilla_core/api/app.py:require_api_key
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_non_loopback_host
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_starts_with_loopback_host
@@ -1173,13 +1227,20 @@
 - requirement_id: SEC-NET-003
   title: Rate limiting and backoff
   parent_requirement_id: FUNC-ACCT-007
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_client.py:PlaidClient._post
+  - godzilla_core/integrations/plaid_client.py:PlaidClient._backoff_delay
+  - godzilla_core/integrations/plaid_client.py:PlaidClient._retry_after_delay
+  test_refs:
+  - godzilla_core/tests/test_plaid_client.py:PlaidClientPostTests.test_post_retries_429_and_honors_retry_after
+  - godzilla_core/tests/test_plaid_client.py:PlaidClientPostTests.test_post_retries_url_error_with_backoff
+  - godzilla_core/tests/test_plaid_client.py:PlaidClientPostTests.test_post_non_retriable_http_error_does_not_sleep
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/design/m6-security-review-pass.md
 - requirement_id: SEC-DATA-001
   title: No secrets in client
   parent_requirement_id: SYS-003
@@ -1236,9 +1297,11 @@
   - docker-compose.dev.ssh-agent.yml
   - .devcontainer/devcontainer.json
   - .dockerignore
+  - noxfile.py:security
   test_refs:
   - godzilla_core/tests/test_tooling_config.py:test_ui_biome_tooling_is_configured
   - godzilla_core/tests/test_tooling_config.py:test_nox_runs_ui_lint_checks
+  - godzilla_core/tests/test_tooling_config.py:test_nox_security_session_runs_vulnerability_scans
   - godzilla_core/tests/test_tooling_config.py:ToolingConfigTests
   doc_refs:
   - docs/design/architecture-overview.md
