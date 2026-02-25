@@ -151,6 +151,20 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("- ${SSH_AUTH_SOCK}:/ssh-agent", compose_text)
         self.assertIn("REQ: SEC-DATA-004", compose_text)
 
+    def test_gui_overlay_for_tauri_x11(self) -> None:
+        """Ensure optional compose overlay exposes X11 socket for GUI runtime.
+
+        REQ: SEC-DATA-004
+        """
+        compose_path = Path(__file__).resolve().parents[2] / "docker-compose.dev.gui.yml"
+        compose_text = compose_path.read_text(encoding="utf-8")
+
+        self.assertIn("services:", compose_text)
+        self.assertIn("  dev:", compose_text)
+        self.assertIn("DISPLAY:", compose_text)
+        self.assertIn("- /tmp/.X11-unix:/tmp/.X11-unix:rw", compose_text)
+        self.assertIn("REQ: SEC-DATA-004", compose_text)
+
     def test_docker_setup_doc_includes_install_and_update_workflow(self) -> None:
         """Ensure setup docs describe installation, updates, and VS Code attach.
 
@@ -165,4 +179,5 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("## Run and use locally", doc_text)
         self.assertIn("## How to update the image", doc_text)
         self.assertIn("## VS Code connection to the running image", doc_text)
+        self.assertIn("## Run Tauri GUI from container (Linux X11)", doc_text)
         self.assertIn("do not copy private keys into the container", doc_text)

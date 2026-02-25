@@ -1,0 +1,9 @@
+# REQ: SEC-DATA-004
+
+services:
+  dev:
+    environment:
+      # Forward host X11 display into the container for GUI apps such as Tauri.
+      DISPLAY: ${DISPLAY:-:0}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw

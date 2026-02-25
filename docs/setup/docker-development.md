@@ -38,6 +38,12 @@ Use the same compose file set for all lifecycle commands:
 export COMPOSE_DEV='docker compose -f docker-compose.dev.yml -f docker-compose.dev.ssh-agent.yml -f docker-compose.dev.claude.yml'
 ```
 
+For GUI/Tauri work on a Linux desktop session, include the GUI overlay:
+
+```bash
+export COMPOSE_DEV_GUI='docker compose -f docker-compose.dev.yml -f docker-compose.dev.ssh-agent.yml -f docker-compose.dev.claude.yml -f docker-compose.dev.gui.yml'
+```
+
 ## Installation and first build
 From the repository root:
 
@@ -64,6 +70,33 @@ $COMPOSE_DEV exec dev bash
 ```
 ```bash
 docker exec -it godzilla-dev bash
+```
+
+## Run Tauri GUI from container (Linux X11)
+This mode requires a local Linux desktop with an active X server. It will not work in headless-only environments.
+
+Allow local Docker X11 clients from the host:
+
+```bash
+xhost +local:docker
+```
+
+Start container with GUI overlay:
+
+```bash
+$COMPOSE_DEV_GUI up -d dev
+```
+
+Run Tauri app inside the container:
+
+```bash
+$COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && npm run tauri dev'
+```
+
+After you are done, revoke X11 access:
+
+```bash
+xhost -local:docker
 ```
 
 Run quality checks inside the container:

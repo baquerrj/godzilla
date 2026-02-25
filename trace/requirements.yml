@@ -1303,6 +1303,7 @@
   - Dockerfile.dev
   - docker-compose.dev.yml
   - docker-compose.dev.ssh-agent.yml
+  - docker-compose.dev.gui.yml
   - .devcontainer/devcontainer.json
   - .dockerignore
   - noxfile.py:security
@@ -1310,6 +1311,7 @@
   - godzilla_core/tests/test_tooling_config.py:test_ui_biome_tooling_is_configured
   - godzilla_core/tests/test_tooling_config.py:test_nox_runs_ui_lint_checks
   - godzilla_core/tests/test_tooling_config.py:test_nox_security_session_runs_vulnerability_scans
+  - godzilla_core/tests/test_tooling_config.py:test_gui_overlay_for_tauri_x11
   - godzilla_core/tests/test_tooling_config.py:ToolingConfigTests
   doc_refs:
   - docs/design/architecture-overview.md
