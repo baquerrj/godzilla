@@ -214,46 +214,72 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] **M5 verification checklist (step-by-step to run)**
   - [ ] 1. Activate env and run quality gates:
     `. venv/bin/activate && nox -s lint && nox -s tests && nox -s build`
-  - [ ] 2. Run frontend tests/build:
+  - [x] 2. Run frontend tests/build:
     `cd ui && npm test && npm run build`
-  - [ ] 3. Start API against a fresh DB/secrets set:
-    `export GODZILLA_DB_PATH=/tmp/m5-test.db`
-    `export GODZILLA_DB_KEY=m5-test-key`
-    `export GODZILLA_SECRETS_PATH=/tmp/m5-secrets.db`
-    `export GODZILLA_SECRETS_KEY=m5-secrets-key`
-    `export GODZILLA_API_TOKEN=m5-test-token`
-    `. venv/bin/activate && migrations && godzilla-api`
-  - [ ] 4. Seed data with one sandbox item + sync:
-    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{}' "http://127.0.0.1:8787/plaid/link"`
+  - [x] 3. Start API against a fresh DB/secrets set:
+    ```bash
+    export GODZILLA_DB_PATH=/tmp/m5-test.db
+    export GODZILLA_DB_KEY=m5-test-key
+    export GODZILLA_SECRETS_PATH=/tmp/m5-secrets.db
+    export GODZILLA_SECRETS_KEY=m5-secrets-key
+    export GODZILLA_API_TOKEN=m5-test-token
+    . venv/bin/activate && migrations && godzilla-api
+    ```
+  - [x] 4. Seed data with one sandbox item + sync:
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{}' "http://127.0.0.1:8787/plaid/link"
+    ```
     Then sync returned `item_id`:
-    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"item_id":"<item_id>"}' "http://127.0.0.1:8787/plaid/sync"`
-  - [ ] 5. Verify `/settings` defaults:
-    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/settings"`
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"item_id":"<item_id>"}' "http://127.0.0.1:8787/plaid/sync"
+    ```
+  - [x] 5. Verify `/settings` defaults:
+    ```bash
+    curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/settings"
+    ```
     Expect HTTP 200 with timezone/currency/retention/export/security/sync keys.
-  - [ ] 6. Verify settings update + retention application:
-    `curl -s -X PUT -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"currency":"USD","retention":{"retain_raw_payloads":false,"retain_logs_days":30},"export_defaults":{"include_raw_payloads":false},"security":{"auto_lock_minutes":15},"sync":{"schedule_enabled":false,"frequency_minutes":360}}' "http://127.0.0.1:8787/settings"`
-  - [ ] 7. Verify `/balances` includes `account_name`:
-    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/balances?limit=5"`
-  - [ ] 8. Verify transaction export privacy default:
-    `curl -s -D /tmp/m5-tx.hdr -o /tmp/m5-transactions.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions"`
+  - [ ] 6. Verify settings update (without purging raw payloads yet):
+    ```bash
+    curl -s -X PUT -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"currency":"USD","retention":{"retain_raw_payloads":true,"retain_logs_days":30},"export_defaults":{"include_raw_payloads":false},"security":{"auto_lock_minutes":15},"sync":{"schedule_enabled":false,"frequency_minutes":360}}' "http://127.0.0.1:8787/settings"
+    ```
+  - [x] 7. Verify `/balances` includes `account_name`:
+    ```bash
+    curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/balances?limit=5"
+    ```
+  - [x] 8. Verify transaction export privacy default:
+    ```bash
+    curl -s -D /tmp/m5-tx.hdr -o /tmp/m5-transactions.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions"
+    ```
     Expect no `raw_provider_payloads` column.
   - [ ] 9. Verify transaction export with raw payloads included:
-    `curl -s -o /tmp/m5-transactions-raw.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions?include_raw_payloads=true"`
-    Expect `raw_provider_payloads` column present.
+    ```bash
+    curl -s -o /tmp/m5-transactions-raw.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/transactions?include_raw_payloads=true"
+    ```
+    Expect `raw_provider_payloads` column present and populated for synced transactions.
   - [ ] 10. Verify categories/budgets export CSV + JSON:
-    `curl -s -o /tmp/m5-categories-budgets.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=csv"`
-    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=json"`
+    ```bash
+    curl -s -o /tmp/m5-categories-budgets.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=csv"
+    curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/export/categories-budgets?format=json"
+    ```
   - [ ] 11. Verify backup creation:
-    `curl -s -o /tmp/m5-backup.gzbk -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"passphrase":"m5-passphrase","include_secrets":true}' "http://127.0.0.1:8787/backup"`
+    ```bash
+    curl -s -o /tmp/m5-backup.gzbk -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"passphrase":"m5-passphrase","include_secrets":true}' "http://127.0.0.1:8787/backup"
+    ```
   - [ ] 12. Verify integrity failure on tampered backup:
     copy `/tmp/m5-backup.gzbk`, modify one byte, restore should fail with explicit integrity error.
   - [ ] 13. Verify successful restore:
-    `curl -s -X POST -H "X-API-Key: m5-test-token" -F "passphrase=m5-passphrase" -F "backup_file=@/tmp/m5-backup.gzbk" "http://127.0.0.1:8787/restore"`
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -F "passphrase=m5-passphrase" -F "backup_file=@/tmp/m5-backup.gzbk" "http://127.0.0.1:8787/restore"
+    ```
   - [ ] 14. Verify wipe flow:
-    `curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"`
+    ```bash
+    curl -s -X POST -H "X-API-Key: m5-test-token" -H "Content-Type: application/json" -d '{"confirm":"WIPE_LOCAL_DATA"}' "http://127.0.0.1:8787/wipe"
+    ```
   - [ ] 15. Verify audit log JSON + CSV:
-    `curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=json&limit=50"`
-    `curl -s -o /tmp/m5-audit.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=csv"`
+    ```bash
+    curl -s -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=json&limit=50"
+    curl -s -o /tmp/m5-audit.csv -H "X-API-Key: m5-test-token" "http://127.0.0.1:8787/audit-log?format=csv"
+    ```
   - [ ] 16. Verify UI (`cd ui && npm run dev`):
     export downloads, settings save/reload, backup/restore/wipe confirmations, balances show account names.
   - [ ] 17. Verify traceability:
