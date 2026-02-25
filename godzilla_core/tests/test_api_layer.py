@@ -761,7 +761,7 @@ async def test_unlink_item_keep_marks_unlinked_and_preserves_ledger(
 ) -> None:
     """Verify unlink keep mode revokes token and marks item unlinked.
 
-    REQ: FUNC-ACCT-008
+    REQ: FUNC-ACCT-008, FUNC-AUD-001
     """
     conn = _open_env_db()
     try:
@@ -810,11 +810,24 @@ async def test_unlink_item_keep_marks_unlinked_and_preserves_ledger(
     )
     assert store.get_secret("plaid_access_token:item-provider-1") is None
 
+    verify_conn = _open_env_db()
+    try:
+        started_count = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE event_type = 'unlink_started'",
+        ).fetchone()[0]
+        success_count = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE event_type = 'unlink_success'",
+        ).fetchone()[0]
+    finally:
+        verify_conn.close()
+    assert started_count >= 1
+    assert success_count >= 1
+
 
 async def test_unlink_item_purge_deletes_item_data(backup_client: httpx.AsyncClient) -> None:
     """Verify unlink purge mode removes item-linked local data via cascade.
 
-    REQ: FUNC-ACCT-008
+    REQ: FUNC-ACCT-008, FUNC-AUD-001
     """
     with (
         patch("godzilla_core.api.app.PlaidConfig.from_env") as config_mock,
@@ -845,6 +858,38 @@ async def test_unlink_item_purge_deletes_item_data(backup_client: httpx.AsyncCli
     accounts_resp = await backup_client.get("/accounts", headers={"X-API-Key": "test-api-token"})
     assert accounts_resp.status_code == 200
     assert accounts_resp.json() == []
+
+    verify_conn = _open_env_db()
+    try:
+        success_count = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE event_type = 'unlink_success'",
+        ).fetchone()[0]
+    finally:
+        verify_conn.close()
+    assert success_count >= 1
+
+
+async def test_unlink_item_missing_records_failure_audit(
+    backup_client: httpx.AsyncClient,
+) -> None:
+    """Verify unlink failure path records an audit event.
+
+    REQ: FUNC-ACCT-008, FUNC-AUD-001
+    """
+    resp = await backup_client.delete(
+        "/plaid/items/does-not-exist?mode=keep",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert resp.status_code == 404
+
+    verify_conn = _open_env_db()
+    try:
+        failed_count = verify_conn.execute(
+            "SELECT COUNT(*) FROM audit_log WHERE event_type = 'unlink_failed'",
+        ).fetchone()[0]
+    finally:
+        verify_conn.close()
+    assert failed_count >= 1
 
 
 def test_run_api_server_rejects_non_loopback_host() -> None:

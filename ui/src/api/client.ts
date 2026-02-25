@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type {
   Account,
   ApiResult,
@@ -87,6 +88,32 @@ export class ApiError extends Error {
   }
 }
 
+type RuntimeHttpResponse = {
+  status: number;
+  headers: Headers;
+  body: Uint8Array;
+};
+
+type TauriApiProxyRequest = {
+  method: string;
+  path: string;
+  headers: Array<{ name: string; value: string }>;
+  bodyBase64?: string;
+};
+
+type TauriApiProxyResponse = {
+  status: number;
+  headers: Array<{ name: string; value: string }>;
+  bodyBase64: string;
+};
+
+function hasTauriRuntime(): boolean {
+  return (
+    typeof window !== "undefined"
+    && "__TAURI_INTERNALS__" in (window as unknown as Record<string, unknown>)
+  );
+}
+
 function buildHeaders(apiToken: string, options: RequestInit): Headers {
   const headers = new Headers(options.headers);
   headers.set("X-API-Key", apiToken);
@@ -101,21 +128,156 @@ function buildHeaders(apiToken: string, options: RequestInit): Headers {
   return headers;
 }
 
-async function parseError(response: Response): Promise<never> {
-  let message = `HTTP ${response.status}`;
+function parseErrorPayload(statusCode: number, rawBody: string): never {
+  let message = `HTTP ${statusCode}`;
   try {
-    const body = (await response.json()) as { detail?: string };
-    if (body.detail) message = body.detail;
+    const body = JSON.parse(rawBody) as { detail?: string };
+    if (body.detail) {
+      message = body.detail;
+    }
   } catch {
     // Ignore JSON parse failure.
   }
-  if (response.status === 423) {
+  if (statusCode === 423) {
     unlockToken = null;
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("godzilla-lock"));
     }
   }
-  throw new ApiError(response.status, message);
+  throw new ApiError(statusCode, message);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  if (!value) return new Uint8Array();
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function isFormDataBody(body: BodyInit | null | undefined): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
+async function encodeRequestBody(
+  options: RequestInit,
+  headers: Headers,
+): Promise<string | undefined> {
+  const body = options.body;
+  if (body === undefined || body === null) {
+    return undefined;
+  }
+
+  if (typeof body === "string") {
+    return bytesToBase64(new TextEncoder().encode(body));
+  }
+
+  if (body instanceof URLSearchParams) {
+    return bytesToBase64(new TextEncoder().encode(body.toString()));
+  }
+
+  if (body instanceof Blob) {
+    const bytes = new Uint8Array(await body.arrayBuffer());
+    return bytesToBase64(bytes);
+  }
+
+  if (body instanceof ArrayBuffer) {
+    return bytesToBase64(new Uint8Array(body));
+  }
+
+  if (body instanceof Uint8Array) {
+    return bytesToBase64(body);
+  }
+
+  if (isFormDataBody(body)) {
+    // Serialize FormData with browser-generated multipart boundary.
+    const syntheticRequest = new Request("https://127.0.0.1", {
+      method: options.method ?? "POST",
+      body,
+    });
+    const contentType = syntheticRequest.headers.get("Content-Type");
+    if (contentType && !headers.has("Content-Type")) {
+      headers.set("Content-Type", contentType);
+    }
+    const bytes = new Uint8Array(await syntheticRequest.arrayBuffer());
+    return bytesToBase64(bytes);
+  }
+
+  return undefined;
+}
+
+function shouldUseTauriTransport(): boolean {
+  // REQ: SEC-NET-001 — Tauri runtime enforces pinned local TLS through backend proxy command.
+  return hasTauriRuntime();
+}
+
+async function fetchResponse(
+  path: string,
+  options: RequestInit,
+  headers: Headers,
+): Promise<RuntimeHttpResponse> {
+  const url = `${API_BASE}${path}`;
+  const response = await fetch(url, { ...options, headers });
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: new Uint8Array(await response.arrayBuffer()),
+  };
+}
+
+async function tauriResponse(
+  path: string,
+  options: RequestInit,
+  headers: Headers,
+): Promise<RuntimeHttpResponse> {
+  const request: TauriApiProxyRequest = {
+    method: (options.method ?? "GET").toUpperCase(),
+    path,
+    headers: Array.from(headers.entries()).map(([name, value]) => ({ name, value })),
+  };
+  const bodyBase64 = await encodeRequestBody(options, headers);
+  if (bodyBase64) {
+    request.bodyBase64 = bodyBase64;
+  }
+
+  let proxyResponse: TauriApiProxyResponse;
+  try {
+    proxyResponse = await invoke<TauriApiProxyResponse>("api_request", { request });
+  } catch (error) {
+    throw new ApiError(0, String(error));
+  }
+
+  const responseHeaders = new Headers();
+  for (const header of proxyResponse.headers) {
+    responseHeaders.set(header.name, header.value);
+  }
+  return {
+    status: proxyResponse.status,
+    headers: responseHeaders,
+    body: base64ToBytes(proxyResponse.bodyBase64),
+  };
+}
+
+async function executeRequest(
+  path: string,
+  apiToken: string,
+  options: RequestInit = {},
+): Promise<RuntimeHttpResponse> {
+  const headers = buildHeaders(apiToken, options);
+  if (shouldUseTauriTransport()) {
+    return tauriResponse(path, options, headers);
+  }
+  return fetchResponse(path, options, headers);
 }
 
 async function request<T>(
@@ -123,19 +285,16 @@ async function request<T>(
   apiToken: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const url = `${API_BASE}${path}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: buildHeaders(apiToken, options),
-  });
+  const response = await executeRequest(path, apiToken, options);
+  const responseText = new TextDecoder().decode(response.body);
 
-  if (!response.ok) {
-    await parseError(response);
+  if (response.status < 200 || response.status >= 300) {
+    parseErrorPayload(response.status, responseText);
   }
 
   if (response.status === 204) return undefined as unknown as T;
 
-  return response.json() as Promise<T>;
+  return JSON.parse(responseText) as T;
 }
 
 function parseFilename(contentDisposition: string | null): string | null {
@@ -159,21 +318,18 @@ async function requestBlob(
   apiToken: string,
   options: RequestInit = {},
 ): Promise<BlobDownload> {
-  const url = `${API_BASE}${path}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: buildHeaders(apiToken, options),
-  });
-
-  if (!response.ok) {
-    await parseError(response);
+  const response = await executeRequest(path, apiToken, options);
+  const responseText = new TextDecoder().decode(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    parseErrorPayload(response.status, responseText);
   }
 
-  const blob = await response.blob();
+  const contentType = response.headers.get("Content-Type") ?? "application/octet-stream";
+  const blob = new Blob([response.body], { type: contentType });
   return {
     blob,
     filename: parseFilename(response.headers.get("Content-Disposition")),
-    contentType: response.headers.get("Content-Type") ?? "application/octet-stream",
+    contentType,
   };
 }
 
