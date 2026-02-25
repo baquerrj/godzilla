@@ -46,6 +46,7 @@ sequenceDiagram
 - `POST /auth/setup-pin`
 - `POST /auth/unlock`
 - `DELETE /plaid/items/{item_id}?mode=keep|purge`
+- `api_request` Tauri command for pinned HTTPS transport to the local sidecar
 - Existing protected endpoints now enforce lock state unless `GODZILLA_DEV_BYPASS_PIN=1`.
 - `godzilla-api` runner accepts TLS cert/key via CLI/env and passes them to uvicorn.
 
@@ -58,7 +59,7 @@ sequenceDiagram
 
 ## Tradeoffs
 - Unlock sessions are process-memory only; API restart invalidates sessions.
-- Current UI runtime transport still uses browser/dev proxy and API client HTTPS base; Tauri pinned proxy command is tracked for remaining M6 work.
+- Browser-only development keeps the Vite `/api` proxy path while Tauri runtime uses pinned proxy transport.
 - Unlink remote revoke is best-effort to avoid hard-failing local unlink when provider revoke is unavailable.
 
 ## Rollout Notes

@@ -18,6 +18,7 @@ This strategy covers automated tests for:
     - `test_auth_status_reports_tls_fingerprint_when_tls_configured`
     - `test_unlink_item_keep_marks_unlinked_and_preserves_ledger`
     - `test_unlink_item_purge_deletes_item_data`
+    - `test_unlink_item_missing_records_failure_audit`
     - `test_run_api_server_rejects_partial_tls_configuration`
     - `test_run_api_server_uses_tls_files_from_environment`
 - Plaid client:
@@ -30,6 +31,7 @@ This strategy covers automated tests for:
   - `godzilla_core/tests/test_tooling_config.py`
     - `test_nox_security_session_runs_vulnerability_scans`
 - Frontend:
+  - `ui/src/test/ApiClientTransport.test.ts`
   - `ui/src/test/AuthGatePanel.test.tsx`
   - `ui/src/test/SyncStatePanel.test.tsx`
   - `ui/src/test/App.test.tsx`
@@ -41,7 +43,7 @@ python -m ruff check godzilla_core noxfile.py
 python -m black --check godzilla_core noxfile.py
 pytest godzilla_core/tests/test_api_layer.py godzilla_core/tests/test_plaid_client.py godzilla_core/tests/test_plaid_sync.py godzilla_core/tests/test_migrations.py godzilla_core/tests/test_tooling_config.py
 cd ui
-npm test -- src/test/App.test.tsx src/test/SyncStatePanel.test.tsx src/test/AuthGatePanel.test.tsx
+npm test -- src/test/ApiClientTransport.test.ts src/test/App.test.tsx src/test/SyncStatePanel.test.tsx src/test/AuthGatePanel.test.tsx
 ```
 
 ## Manual Checks
@@ -50,7 +52,4 @@ npm test -- src/test/App.test.tsx src/test/SyncStatePanel.test.tsx src/test/Auth
   - protected routes return `423` until unlock token is provided
 - Configure PIN, unlock, then set `auto_lock_minutes=1` and verify relock behavior.
 - Verify unlink keep/purge outcomes from UI Sync panel actions.
-
-## Known Gaps
-- Tauri-native pinned transport command path is tracked as remaining M6 work.
-- End-to-end TLS mismatch behavior in Tauri runtime remains a manual validation item.
+- In Tauri runtime, verify cert pin success and mismatch behavior by changing `GODZILLA_TLS_CERT_SHA256`.

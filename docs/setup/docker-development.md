@@ -72,6 +72,7 @@ Run quality checks inside the container:
 $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s lint'
 $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s tests'
 $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s build'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && . venv/bin/activate && nox -s security'
 ```
 
 Run the API server from inside the container (example):

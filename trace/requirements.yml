@@ -189,6 +189,7 @@
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_unlink_item_keep_marks_unlinked_and_preserves_ledger
   - godzilla_core/tests/test_api_layer.py:test_unlink_item_purge_deletes_item_data
+  - godzilla_core/tests/test_api_layer.py:test_unlink_item_missing_records_failure_audit
   - godzilla_core/tests/test_plaid_client.py:PlaidClientPostTests.test_remove_item_posts_to_item_remove
   - godzilla_core/tests/test_plaid_sync.py:SyncItemFullFlowTests.test_sync_raises_for_unlinked_item
   - ui/src/test/SyncStatePanel.test.tsx:calls unlink endpoint and refreshes on keep mode
@@ -1146,11 +1147,12 @@
   - godzilla_core/api/app.py:require_api_key
   - godzilla_core/api/app.py:_touch_unlock_session
   - godzilla_core/api/app.py:_register_unlock_session
-  - ui/src/api/client.ts:parseError
+  - ui/src/api/client.ts:parseErrorPayload
   - ui/src/App.tsx:App
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
   - ui/src/test/App.test.tsx:renders main panels when token is present
+  - ui/src/test/ApiClientTransport.test.ts:dispatches lock event on tauri proxy 423 responses
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -1198,10 +1200,14 @@
   - godzilla_core/scripts/run_api_server.py:main
   - godzilla_core/api/app.py:_tls_status
   - ui/scripts/gen-cert.sh
+  - ui/src-tauri/src/lib.rs:api_request
+  - ui/src/api/client.ts:tauriResponse
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_partial_tls_configuration
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_uses_tls_files_from_environment
   - godzilla_core/tests/test_api_layer.py:test_auth_status_reports_tls_fingerprint_when_tls_configured
+  - ui/src/test/ApiClientTransport.test.ts:uses tauri proxy transport when tauri runtime is available
+  - ui/src/test/ApiClientTransport.test.ts:surfaces pin mismatch from tauri proxy request failures
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
@@ -1215,9 +1221,11 @@
   code_refs:
   - godzilla_core/scripts/run_api_server.py:main
   - godzilla_core/api/app.py:require_api_key
+  - ui/src-tauri/src/lib.rs:api_request
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_non_loopback_host
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_starts_with_loopback_host
+  - ui/src/test/ApiClientTransport.test.ts:uses fetch transport when tauri runtime is unavailable
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md

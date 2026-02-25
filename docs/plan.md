@@ -321,31 +321,190 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M6 — Security review pass
 
 - [ ] **23. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
-  Per-install self-signed cert, uvicorn TLS config, Tauri WebView cert pinning.
+  - [ ] 23a. Extend API server runner to accept TLS cert/key from CLI and env (`GODZILLA_TLS_CERT`, `GODZILLA_TLS_KEY`) and run uvicorn in TLS mode when both are provided.
+  - [ ] 23b. Enforce loopback bind only (`127.0.0.1`, `localhost`, `::1`) and reject non-loopback hosts.
+  - [ ] 23c. Add `/auth/status` TLS diagnostics with `tls.enabled` + `tls.cert_fingerprint_sha256` (fingerprint only, no private material).
+  - [ ] 23d. Implement Tauri runtime pinned transport path (command/proxy flow) that validates API cert fingerprint against `GODZILLA_TLS_CERT_SHA256`.
+  - [ ] 23e. Preserve browser dev path using Vite `/api` HTTP proxy for local dev velocity.
+  - [ ] 23f. Update Tauri CSP/connect-src and frontend transport wiring for runtime HTTPS + pinning behavior.
+  - [ ] 23g. Add backend/frontend/Tauri tests for TLS success path and pin mismatch failure path.
 
 - [ ] **24. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
-  `POST /auth/setup-pin`, `POST /auth/unlock`, inactivity lock + clear UI state.
+  - [ ] 24a. Add auth models/endpoints: `GET /auth/status`, `POST /auth/setup-pin`, `POST /auth/unlock`.
+  - [ ] 24b. Persist PIN verification material only in secure secrets storage.
+  - [ ] 24c. Enforce unlock-session header (`X-App-Unlock-Token`) for sensitive API routes.
+  - [ ] 24d. Enforce inactivity lock using persisted `settings.security.auto_lock_minutes`; return HTTP `423` when locked.
+  - [ ] 24e. Add first-run PIN setup + unlock UI gate before rendering financial panels.
+  - [ ] 24f. Add dev-only bypass switch (`GODZILLA_DEV_BYPASS_PIN=1`) for local development/testing.
+  - [ ] 24g. Clear sensitive UI state on lock or timeout event.
 
 - [ ] **25. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
-  Exponential backoff with jitter in `PlaidClient._post` for 429/5xx.
+  - [ ] 25a. Implement retry in `PlaidClient._post` for transient failures (`429`, transient `5xx`, network errors).
+  - [ ] 25b. Use bounded exponential backoff + jitter and honor `Retry-After` when present.
+  - [ ] 25c. Keep non-retriable `4xx` fail-fast behavior.
+  - [ ] 25d. Add deterministic tests with mocked sleep/jitter and status-code scenarios.
 
 - [ ] **26. Unlink institution** (`FUNC-ACCT-008`)
-  `DELETE /plaid/items/{item_id}` — call Plaid `/item/remove`, delete token,
-  handle data per retention policy.
+  - [ ] 26a. Add Plaid client method for `/item/remove`.
+  - [ ] 26b. Add `DELETE /plaid/items/{item_id}?mode=keep|purge` with auth + validation.
+  - [ ] 26c. `mode=keep`: remove/revoke token, clear raw payload cache for item, preserve ledger history.
+  - [ ] 26d. `mode=purge`: remove/revoke token, delete item-linked local data through cascade policy.
+  - [ ] 26e. Add unlinked item state and block sync for unlinked items.
+  - [ ] 26f. Add UI unlink controls in sync panel with explicit mode and destructive confirmation for purge.
+  - [ ] 26g. Add audit events and tests for unlink start/success/failure in both modes.
 
 - [ ] **27. Dependency vulnerability scanning** (`SEC-DATA-004`)
-  Add `pip-audit` to `nox -s lint` or a new `nox -s security` session.
+  - [ ] 27a. Add dedicated `nox -s security` session.
+  - [ ] 27b. Run `pip-audit` and `npm audit` (high severity threshold).
+  - [ ] 27c. Add tooling tests to ensure security session wiring remains intact.
+  - [ ] 27d. Update setup docs with security scan workflow and failure/triage expectations.
 
 - [ ] **28. Final security review pass**
-  Audit log redaction completeness, no secrets in client artifacts,
-  TLS cert pinning end-to-end, dependency audit resolved.
-
----
-
-## Cross-cutting (ongoing throughout)
+  - [ ] 28a. Verify redaction coverage for new TLS/auth/unlink/backoff paths.
+  - [ ] 28b. Verify no token/PIN leakage in logs or client artifacts.
+  - [ ] 28c. Verify Tauri pinning end-to-end (success and mismatch failure).
+  - [ ] 28d. Verify dependency scan output is clean or triaged with documented remediation decisions.
 
 - [ ] **29. Traceability maintenance**
-  Keep `trace/requirements.yml` `code_refs` and `test_refs` current after every task.
+  - [ ] 29a. Update `trace/requirements.yml` `code_refs`/`test_refs`/`doc_refs` for all M6 IDs.
+  - [ ] 29b. Ensure coverage for `FUNC-ACCT-008`, `SEC-ACC-001..003`, `SEC-NET-001..003`, `SEC-DATA-004`.
 
 - [ ] **30. Design doc updates**
-  Create/update `docs/design/` docs with Mermaid diagrams for M2–M6 features.
+  - [ ] 30a. Add `docs/design/m6-security-review-pass.md`.
+  - [ ] 30b. Add `docs/test-strategy/m6-security-review-pass.md`.
+  - [ ] 30c. Document dev-vs-prod TLS transport behavior and Tauri pinning tradeoffs.
+
+- [ ] **M6 checkpoint commits (required while implementing)**
+  - [ ] 1. `feat(m6): add tls sidecar enforcement and auth status tls diagnostics` (Task 23 core)
+  - [ ] 2. `feat(m6): add pin setup unlock gate and session timeout enforcement` (Task 24)
+  - [ ] 3. `feat(m6): add plaid retry backoff and unlink institution workflows` (Tasks 25–26 backend)
+  - [ ] 4. `feat(ui): add auth gate lock handling and unlink controls for m6` (Tasks 24e/24g/26f + transport wiring)
+  - [ ] 5. `chore(m6): add dependency security scan session and tooling coverage` (Task 27)
+  - [ ] 6. `docs(m6): update trace design and test strategy for security pass` (Tasks 28–30)
+  - [ ] 7. `docs(plan): mark m6 tasks and checklist status` (final bookkeeping)
+
+- [ ] **M6 verification checklist (step-by-step to run)**
+  - [ ] 1. Activate environment and run core quality gates:
+    ```bash
+    . venv/bin/activate
+    nox -s lint
+    nox -s tests
+    nox -s build
+    ```
+  - [ ] 2. Run frontend tests/build:
+    ```bash
+    cd ui
+    npm test
+    npm run build
+    cd ..
+    ```
+  - [ ] 3. Generate per-install TLS cert/key and fingerprint:
+    ```bash
+    bash ui/scripts/gen-cert.sh
+    export GODZILLA_TLS_CERT="${HOME}/.config/godzilla/tls/api-server.crt"
+    export GODZILLA_TLS_KEY="${HOME}/.config/godzilla/tls/api-server.key"
+    export GODZILLA_TLS_CERT_SHA256="$(openssl x509 -in "${GODZILLA_TLS_CERT}" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':')"
+    ```
+  - [ ] 4. Verify non-loopback bind is rejected:
+    ```bash
+    . venv/bin/activate
+    godzilla-api --host 0.0.0.0 --port 8787
+    ```
+    Expect startup failure with loopback-only host validation message.
+  - [ ] 5. Start API with fresh DB/secrets in TLS-required mode (Terminal A):
+    ```bash
+    export GODZILLA_DB_PATH=/tmp/m6-test.db
+    export GODZILLA_DB_KEY=m6-test-key
+    export GODZILLA_SECRETS_PATH=/tmp/m6-secrets.db
+    export GODZILLA_SECRETS_KEY=m6-secrets-key
+    export GODZILLA_API_TOKEN=m6-test-token
+    export GODZILLA_DEV_BYPASS_PIN=0
+    export GODZILLA_TLS_CERT="${HOME}/.config/godzilla/tls/api-server.crt"
+    export GODZILLA_TLS_KEY="${HOME}/.config/godzilla/tls/api-server.key"
+    rm -f /tmp/m6-test.db /tmp/m6-test.db-wal /tmp/m6-test.db-shm /tmp/m6-secrets.db /tmp/m6-secrets.db-wal /tmp/m6-secrets.db-shm
+    . venv/bin/activate
+    migrations
+    godzilla-api --host 127.0.0.1 --port 8787
+    ```
+    Keep this running; execute steps 6+ in Terminal B.
+  - [ ] 6. Set Terminal B env vars for API calls:
+    ```bash
+    export GODZILLA_API_TOKEN=m6-test-token
+    export GODZILLA_TLS_CERT="${HOME}/.config/godzilla/tls/api-server.crt"
+    export GODZILLA_TLS_CERT_SHA256="$(openssl x509 -in "${GODZILLA_TLS_CERT}" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':')"
+    ```
+  - [ ] 7. Verify plain HTTP fails and HTTPS works:
+    ```bash
+    curl -sS --max-time 5 -H "X-API-Key: ${GODZILLA_API_TOKEN}" "http://127.0.0.1:8787/auth/status" || true
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/auth/status"
+    ```
+  - [ ] 8. Verify PIN bootstrap gate:
+    ```bash
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/auth/status"
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/accounts"
+    ```
+    Expect setup-required/locked status and HTTP `423` for protected endpoint.
+  - [ ] 9. Configure PIN and unlock:
+    ```bash
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"new_pin":"123456"}' "https://127.0.0.1:8787/auth/setup-pin"
+    UNLOCK_TOKEN=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"pin":"123456"}' "https://127.0.0.1:8787/auth/unlock" | python3 -c "import json,sys; print(json.load(sys.stdin)['unlock_token'])")
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/accounts"
+    ```
+  - [ ] 10. Verify inactivity timeout lock:
+    ```bash
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X PUT -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{"security":{"auto_lock_minutes":1}}' "https://127.0.0.1:8787/settings"
+    sleep 70
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/accounts"
+    ```
+    Expect HTTP `423` after timeout.
+  - [ ] 11. Run targeted backoff tests:
+    ```bash
+    . venv/bin/activate
+    pytest godzilla_core/tests/test_plaid_client.py -k "backoff or retry or rate_limit"
+    ```
+  - [ ] 12. Link/sync first item and verify unlink `mode=keep`:
+    ```bash
+    UNLOCK_TOKEN=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"pin":"123456"}' "https://127.0.0.1:8787/auth/unlock" | python3 -c "import json,sys; print(json.load(sys.stdin)['unlock_token'])")
+    ITEM_1=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{}' "https://127.0.0.1:8787/plaid/link" | python3 -c "import json,sys; print(json.load(sys.stdin)['item_id'])")
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d "{\"item_id\":\"${ITEM_1}\"}" "https://127.0.0.1:8787/plaid/sync"
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X DELETE -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/plaid/items/${ITEM_1}?mode=keep"
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d "{\"item_id\":\"${ITEM_1}\"}" "https://127.0.0.1:8787/plaid/sync"
+    ```
+    Expect keep-unlink success and follow-up sync blocked for unlinked item.
+  - [ ] 13. Link/sync second item and verify unlink `mode=purge`:
+    ```bash
+    ITEM_2=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{}' "https://127.0.0.1:8787/plaid/link" | python3 -c "import json,sys; print(json.load(sys.stdin)['item_id'])")
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d "{\"item_id\":\"${ITEM_2}\"}" "https://127.0.0.1:8787/plaid/sync"
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -X DELETE -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/plaid/items/${ITEM_2}?mode=purge"
+    curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/sync-state"
+    ```
+    Expect purged item absent from sync-state and local linked records removed per policy.
+  - [ ] 14. Verify UI lock/unlock workflow in browser dev mode:
+    ```bash
+    cd ui
+    npm run dev
+    ```
+    Verify setup/unlock gate appears first, financial panels are hidden while locked, and lock event clears sensitive UI state.
+  - [ ] 15. Verify Tauri pinned transport behavior (success then mismatch):
+    ```bash
+    cd ui
+    export GODZILLA_TLS_CERT_SHA256="${GODZILLA_TLS_CERT_SHA256}"
+    npm run tauri dev
+    ```
+    Stop app, then run mismatch check:
+    ```bash
+    cd ui
+    export GODZILLA_TLS_CERT_SHA256=DEADBEEF
+    npm run tauri dev
+    ```
+    Expect API transport failure on mismatch.
+  - [ ] 16. Run dependency vulnerability scan:
+    ```bash
+    . venv/bin/activate
+    nox -s security
+    ```
+  - [ ] 17. Verify traceability coverage for all M6 IDs:
+    ```bash
+    rg -n "FUNC-ACCT-008|SEC-ACC-001|SEC-ACC-002|SEC-ACC-003|SEC-NET-001|SEC-NET-002|SEC-NET-003|SEC-DATA-004" trace/requirements.yml
+    ```
+  - [ ] 18. Mark M6 tasks complete and finalize checkpoint commits.
