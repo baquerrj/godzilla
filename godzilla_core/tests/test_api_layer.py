@@ -1700,8 +1700,7 @@ async def test_reinitialize_recreates_schema_after_wipe(backup_client: httpx.Asy
 
     with _open_env_db() as conn:
         tables = {
-            row[0]
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+            row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
         }
     assert "schema_version" in tables
     assert "plaid_item" in tables
