@@ -398,20 +398,20 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     npm run build
     cd ..
     ```
-  - [ ] 3. Generate per-install TLS cert/key and fingerprint:
+  - [x] 3. Generate per-install TLS cert/key and fingerprint:
     ```bash
     bash ui/scripts/gen-cert.sh
     export GODZILLA_TLS_CERT="${HOME}/.config/godzilla/tls/api-server.crt"
     export GODZILLA_TLS_KEY="${HOME}/.config/godzilla/tls/api-server.key"
     export GODZILLA_TLS_CERT_SHA256="$(openssl x509 -in "${GODZILLA_TLS_CERT}" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':')"
     ```
-  - [ ] 4. Verify non-loopback bind is rejected:
+  - [x] 4. Verify non-loopback bind is rejected:
     ```bash
     . venv/bin/activate
     godzilla-api --host 0.0.0.0 --port 8787
     ```
     Expect startup failure with loopback-only host validation message.
-  - [ ] 5. Start API with fresh DB/secrets in TLS-required mode (Terminal A):
+  - [x] 5. Start API with fresh DB/secrets in TLS-required mode (Terminal A):
     ```bash
     export GODZILLA_DB_PATH=/tmp/m6-test.db
     export GODZILLA_DB_KEY=m6-test-key
@@ -427,42 +427,42 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     godzilla-api --host 127.0.0.1 --port 8787
     ```
     Keep this running; execute steps 6+ in Terminal B.
-  - [ ] 6. Set Terminal B env vars for API calls:
+  - [x] 6. Set Terminal B env vars for API calls:
     ```bash
     export GODZILLA_API_TOKEN=m6-test-token
     export GODZILLA_TLS_CERT="${HOME}/.config/godzilla/tls/api-server.crt"
     export GODZILLA_TLS_CERT_SHA256="$(openssl x509 -in "${GODZILLA_TLS_CERT}" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':')"
     ```
-  - [ ] 7. Verify plain HTTP fails and HTTPS works:
+  - [x] 7. Verify plain HTTP fails and HTTPS works:
     ```bash
     curl -sS --max-time 5 -H "X-API-Key: ${GODZILLA_API_TOKEN}" "http://127.0.0.1:8787/auth/status" || true
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/auth/status"
     ```
-  - [ ] 8. Verify PIN bootstrap gate:
+  - [x] 8. Verify PIN bootstrap gate:
     ```bash
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/auth/status"
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" "https://127.0.0.1:8787/accounts"
     ```
     Expect setup-required/locked status and HTTP `423` for protected endpoint.
-  - [ ] 9. Configure PIN and unlock:
+  - [x] 9. Configure PIN and unlock:
     ```bash
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"new_pin":"123456"}' "https://127.0.0.1:8787/auth/setup-pin"
     UNLOCK_TOKEN=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"pin":"123456"}' "https://127.0.0.1:8787/auth/unlock" | python3 -c "import json,sys; print(json.load(sys.stdin)['unlock_token'])")
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/accounts"
     ```
-  - [ ] 10. Verify inactivity timeout lock:
+  - [x] 10. Verify inactivity timeout lock:
     ```bash
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -X PUT -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{"security":{"auto_lock_minutes":1}}' "https://127.0.0.1:8787/settings"
     sleep 70
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/accounts"
     ```
     Expect HTTP `423` after timeout.
-  - [ ] 11. Run targeted backoff tests:
+  - [x] 11. Run targeted backoff tests:
     ```bash
     . venv/bin/activate
     pytest godzilla_core/tests/test_plaid_client.py -k "backoff or retry or rate_limit"
     ```
-  - [ ] 12. Link/sync first item and verify unlink `mode=keep`:
+  - [x] 12. Link/sync first item and verify unlink `mode=keep`:
     ```bash
     UNLOCK_TOKEN=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "Content-Type: application/json" -d '{"pin":"123456"}' "https://127.0.0.1:8787/auth/unlock" | python3 -c "import json,sys; print(json.load(sys.stdin)['unlock_token'])")
     ITEM_1=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{}' "https://127.0.0.1:8787/plaid/link" | python3 -c "import json,sys; print(json.load(sys.stdin)['item_id'])")
@@ -471,7 +471,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d "{\"item_id\":\"${ITEM_1}\"}" "https://127.0.0.1:8787/plaid/sync"
     ```
     Expect keep-unlink success and follow-up sync blocked for unlinked item.
-  - [ ] 13. Link/sync second item and verify unlink `mode=purge`:
+  - [x] 13. Link/sync second item and verify unlink `mode=purge`:
     ```bash
     ITEM_2=$(curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d '{}' "https://127.0.0.1:8787/plaid/link" | python3 -c "import json,sys; print(json.load(sys.stdin)['item_id'])")
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -X POST -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" -H "Content-Type: application/json" -d "{\"item_id\":\"${ITEM_2}\"}" "https://127.0.0.1:8787/plaid/sync"
@@ -479,13 +479,26 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     curl --cacert "${GODZILLA_TLS_CERT}" -sS -H "X-API-Key: ${GODZILLA_API_TOKEN}" -H "X-App-Unlock-Token: ${UNLOCK_TOKEN}" "https://127.0.0.1:8787/sync-state"
     ```
     Expect purged item absent from sync-state and local linked records removed per policy.
-  - [ ] 14. Verify UI lock/unlock workflow in browser dev mode:
+  - [x] 14. Verify UI lock/unlock workflow in browser dev mode:
+    Run API without TLS
+    ```bash
+    unset GODZILLA_TLS_CERT
+    unset GODZILLA_TLS_KEY
+    export GODZILLA_DB_PATH=/tmp/m6-test.db
+    export GODZILLA_DB_KEY=m6-test-key
+    export GODZILLA_SECRETS_PATH=/tmp/m6-secrets.db
+    export GODZILLA_SECRETS_KEY=m6-secrets-key
+    export GODZILLA_API_TOKEN=m6-test-token
+    export GODZILLA_DEV_BYPASS_PIN=0
+    . venv/bin/activate
+    godzilla-api --host 127.0.0.1 --port 8787
+    ```
     ```bash
     cd ui
     npm run dev
     ```
     Verify setup/unlock gate appears first, financial panels are hidden while locked, and lock event clears sensitive UI state.
-  - [ ] 15. Verify Tauri pinned transport behavior (success then mismatch):
+  - [x] 15. Verify Tauri pinned transport behavior (success then mismatch):
     ```bash
     cd ui
     export GODZILLA_TLS_CERT_SHA256="${GODZILLA_TLS_CERT_SHA256}"
@@ -507,4 +520,3 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     ```bash
     rg -n "FUNC-ACCT-008|SEC-ACC-001|SEC-ACC-002|SEC-ACC-003|SEC-NET-001|SEC-NET-002|SEC-NET-003|SEC-DATA-004" trace/requirements.yml
     ```
-  - [ ] 18. Mark M6 tasks complete and finalize checkpoint commits.
