@@ -616,7 +616,7 @@
   - ui/src/components/ReportsPanel.tsx:ReportsPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_reports_monthly_overview_returns_expected_metrics
-  - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
+  - ui/src/test/ReportsPanel.test.tsx:requests category trends after categories are selected
   doc_refs:
   - docs/design/reports-dashboard.md
   - docs/test-strategy/m4-reports.md
@@ -1133,7 +1133,7 @@
   - godzilla_core/tests/test_api_layer.py:test_auth_status_requires_pin_setup_when_unconfigured
   - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
   - ui/src/test/AuthGatePanel.test.tsx:unlocks when valid pin is submitted
-  - ui/src/test/App.test.tsx:renders main panels when token is present
+  - ui/src/test/App.test.tsx:renders overview tab by default when token is present
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -1151,7 +1151,7 @@
   - ui/src/App.tsx:App
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_auth_setup_unlock_and_timeout_enforcement
-  - ui/src/test/App.test.tsx:renders main panels when token is present
+  - ui/src/test/App.test.tsx:renders overview tab by default when token is present
   - ui/src/test/ApiClientTransport.test.ts:dispatches lock event on tauri proxy 423 responses
   doc_refs:
   - docs/design/architecture-overview.md

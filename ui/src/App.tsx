@@ -52,6 +52,7 @@ export function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [filterValues, setFilterValues] = useState<FilterValues>(EMPTY_FILTERS);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
+  const [reportTrendCategoryIds, setReportTrendCategoryIds] = useState<string[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<AppTab>("overview");
 
@@ -77,6 +78,7 @@ export function App() {
     setAuthReady(false);
     setActiveTab("overview");
     setSelectedTxnId(null);
+    setReportTrendCategoryIds([]);
     setFilterValues(EMPTY_FILTERS);
   }, [token]);
 
@@ -86,6 +88,7 @@ export function App() {
       setAuthReady(false);
       setActiveTab("overview");
       setSelectedTxnId(null);
+      setReportTrendCategoryIds([]);
       setFilterValues(EMPTY_FILTERS);
     };
     window.addEventListener("godzilla-lock", onLocked);
@@ -292,6 +295,8 @@ export function App() {
               refreshKey={refreshKey}
               categories={categories}
               onDrillDown={handleReportDrillDown}
+              trendCategoryIds={reportTrendCategoryIds}
+              onTrendCategoryIdsChange={setReportTrendCategoryIds}
             />
           </>
         )}

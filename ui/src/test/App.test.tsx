@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../App";
 
@@ -114,7 +114,9 @@ vi.mock("../api/client", async () => {
 });
 
 import { invoke } from "@tauri-apps/api/core";
+import { GodzillaApi } from "../api/client";
 const mockInvoke = vi.mocked(invoke);
+const mockGetCategories = vi.mocked(GodzillaApi.getCategories);
 const tauriWindow = window as Window & { __TAURI_INTERNALS__?: unknown };
 
 describe("App", () => {
@@ -205,6 +207,43 @@ describe("App", () => {
     await userEvent.click(screen.getByTestId("tab-reports"));
     await waitFor(() => {
       expect(screen.getByTestId("budget-panel")).toBeInTheDocument();
+    });
+  });
+
+  it("preserves selected report trend categories across tab switches  REQ: FUNC-REP-004", async () => {
+    mockInvoke.mockResolvedValue("test-token-abc");
+    mockGetCategories.mockResolvedValue([
+      { category_id: "food", name: "Food", parent_id: null, active: true },
+      { category_id: "food_fast_food", name: "Fast Food", parent_id: "food", active: true },
+      { category_id: "fees", name: "Fees", parent_id: null, active: true },
+      { category_id: "fees_atm", name: "ATM Fees", parent_id: "fees", active: true },
+    ]);
+
+    render(<App />);
+    await waitFor(() => screen.getByTestId("tab-reports"));
+    await userEvent.click(screen.getByTestId("tab-reports"));
+    await waitFor(() => screen.getByTestId("report-trend-categories"));
+
+    const trendSelect = screen.getByTestId("report-trend-categories") as HTMLSelectElement;
+    for (const option of Array.from(trendSelect.options)) {
+      option.selected = option.value === "food_fast_food";
+    }
+    fireEvent.change(trendSelect);
+
+    await waitFor(() => {
+      const selectedValues = Array.from(
+        (screen.getByTestId("report-trend-categories") as HTMLSelectElement).selectedOptions,
+      ).map((option) => option.value);
+      expect(selectedValues).toEqual(["food_fast_food"]);
+    });
+
+    await userEvent.click(screen.getByTestId("tab-transactions"));
+    await userEvent.click(screen.getByTestId("tab-reports"));
+    await waitFor(() => {
+      const selectedValues = Array.from(
+        (screen.getByTestId("report-trend-categories") as HTMLSelectElement).selectedOptions,
+      ).map((option) => option.value);
+      expect(selectedValues).toEqual(["food_fast_food"]);
     });
   });
 });

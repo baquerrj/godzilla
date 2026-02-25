@@ -5,7 +5,7 @@
  * REQ: FUNC-REP-007, FUNC-REP-008
  */
 
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
 import { leafActiveCategories } from "./categoryUtils";
 import type {
@@ -28,6 +28,8 @@ interface Props {
   refreshKey: number;
   categories: Category[];
   onDrillDown: (input: ReportDrillDown) => void;
+  trendCategoryIds?: string[];
+  onTrendCategoryIdsChange?: (ids: string[]) => void;
 }
 
 function defaultMonth(): string {
@@ -74,16 +76,34 @@ function monthSpan(startDate: string, endDate: string): number {
   return Math.max(1, Math.min(24, span));
 }
 
-export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Props) {
+export function ReportsPanel({
+  token,
+  refreshKey,
+  categories,
+  onDrillDown,
+  trendCategoryIds,
+  onTrendCategoryIdsChange,
+}: Props) {
   const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
   const [rangeStart, setRangeStart] = useState<string>(monthBounds(defaultMonth()).start);
   const [rangeEnd, setRangeEnd] = useState<string>(monthBounds(defaultMonth()).end);
-  const [trendCategoryIds, setTrendCategoryIds] = useState<string[]>([]);
+  const [trendCategoryIdsInternal, setTrendCategoryIdsInternal] = useState<string[]>([]);
 
   const [overviewResult, executeOverview] = useApiCall<MonthlyOverview>();
   const [cashFlowResult, executeCashFlow] = useApiCall<CashFlowReport>();
   const [trendResult, executeTrends] = useApiCall<CategoryTrendsReport>();
   const [netWorthResult, executeNetWorth] = useApiCall<NetWorthReport>();
+
+  const trendSelections = trendCategoryIds ?? trendCategoryIdsInternal;
+  const setTrendSelections = useCallback(
+    (ids: string[]) => {
+      if (trendCategoryIds === undefined) {
+        setTrendCategoryIdsInternal(ids);
+      }
+      onTrendCategoryIdsChange?.(ids);
+    },
+    [trendCategoryIds, onTrendCategoryIdsChange],
+  );
 
   const leafCategories = useMemo(() => leafActiveCategories(categories), [categories]);
   const monthOptions = useMemo(() => buildReportMonthOptions(), []);
@@ -96,34 +116,35 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
   }, [selectedMonth]);
 
   useEffect(() => {
-    if (leafCategories.length === 0) {
-      setTrendCategoryIds([]);
+    if (trendSelections.length === 0) {
       return;
     }
-    if (trendCategoryIds.length === 0) {
-      setTrendCategoryIds(leafCategories.slice(0, 2).map((cat) => cat.category_id));
+    const validCategoryIds = new Set(leafCategories.map((cat) => cat.category_id));
+    const next = trendSelections.filter((id) => validCategoryIds.has(id));
+    if (next.length !== trendSelections.length) {
+      setTrendSelections(next);
     }
-  }, [leafCategories, trendCategoryIds.length]);
+  }, [leafCategories, trendSelections, setTrendSelections]);
 
   useEffect(() => {
     executeOverview(() => GodzillaApi.getMonthlyOverview(token, { month: selectedMonth }));
     executeCashFlow(() => GodzillaApi.getCashFlow(token, { start: rangeStart, end: rangeEnd }));
     executeNetWorth(() => GodzillaApi.getNetWorth(token, { start: rangeStart, end: rangeEnd }));
-    if (trendCategoryIds.length > 0) {
+    if (trendSelections.length > 0) {
       executeTrends(() =>
         GodzillaApi.getCategoryTrends(token, {
-          categories: trendCategoryIds,
+          categories: trendSelections,
           months: trendMonths,
           end_month: rangeEnd.slice(0, 7),
         }),
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, refreshKey, selectedMonth, rangeStart, rangeEnd, trendCategoryIds, trendMonths]);
+  }, [token, refreshKey, selectedMonth, rangeStart, rangeEnd, trendSelections, trendMonths]);
 
   const handleTrendCategoryChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
-    setTrendCategoryIds(selected);
+    setTrendSelections(selected);
   };
 
   const handleIncomeDrillDown = () => {
@@ -344,7 +365,7 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
           Categories
           <select
             multiple
-            value={trendCategoryIds}
+            value={trendSelections}
             onChange={handleTrendCategoryChange}
             data-testid="report-trend-categories"
           >
@@ -355,11 +376,16 @@ export function ReportsPanel({ token, refreshKey, categories, onDrillDown }: Pro
             ))}
           </select>
         </label>
-        {trendResult.status === "loading" && <p className="muted">Loading…</p>}
-        {trendResult.status === "error" && (
+        {trendSelections.length === 0 && (
+          <p className="muted" data-testid="report-trend-empty">
+            Select categories to load trend data.
+          </p>
+        )}
+        {trendSelections.length > 0 && trendResult.status === "loading" && <p className="muted">Loading…</p>}
+        {trendSelections.length > 0 && trendResult.status === "error" && (
           <p className="error-text">Failed to load category trends: {trendResult.message}</p>
         )}
-        {trendResult.status === "success" && (
+        {trendSelections.length > 0 && trendResult.status === "success" && (
           <div className="trend-series-list" data-testid="report-category-trends">
             {trendResult.data.series.map((series) => (
               <div key={series.category_id} className="trend-series-row">

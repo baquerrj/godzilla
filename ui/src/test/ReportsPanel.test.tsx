@@ -124,7 +124,7 @@ describe("ReportsPanel", () => {
       expect(screen.getByText(/net worth equals assets minus liabilities/i)).toBeInTheDocument();
       expect(screen.getByTestId("report-top-categories")).toBeInTheDocument();
       expect(screen.getByTestId("report-cash-flow")).toBeInTheDocument();
-      expect(screen.getByTestId("report-category-trends")).toBeInTheDocument();
+      expect(screen.getByTestId("report-trend-empty")).toBeInTheDocument();
       expect(screen.getByTestId("report-net-worth")).toBeInTheDocument();
       expect(screen.getByText(/rule note/i)).toBeInTheDocument();
     });
@@ -142,8 +142,37 @@ describe("ReportsPanel", () => {
     await waitFor(() => {
       expect(mockGetMonthlyOverview).toHaveBeenCalled();
       expect(mockGetCashFlow).toHaveBeenCalled();
-      expect(mockGetCategoryTrends).toHaveBeenCalled();
       expect(mockGetNetWorth).toHaveBeenCalled();
+    });
+    expect(mockGetCategoryTrends).not.toHaveBeenCalled();
+  });
+
+  it("requests category trends after categories are selected  REQ: FUNC-REP-004", async () => {
+    render(
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("report-trend-categories")).toBeInTheDocument();
+    });
+
+    const categorySelect = screen.getByTestId("report-trend-categories") as HTMLSelectElement;
+    for (const option of Array.from(categorySelect.options)) {
+      option.selected = option.value === "food_coffee";
+    }
+    fireEvent.change(categorySelect);
+
+    await waitFor(() => {
+      expect(mockGetCategoryTrends).toHaveBeenLastCalledWith(TOKEN, {
+        categories: ["food_coffee"],
+        months: expect.any(Number),
+        end_month: expect.stringMatching(/^\d{4}-\d{2}$/),
+      });
+      expect(screen.getByTestId("report-category-trends")).toBeInTheDocument();
     });
   });
 
@@ -228,6 +257,14 @@ describe("ReportsPanel", () => {
       />,
     );
     await waitFor(() => screen.getByTestId("report-cashflow-income-2026-01"));
+
+    const categorySelect = screen.getByTestId("report-trend-categories") as HTMLSelectElement;
+    for (const option of Array.from(categorySelect.options)) {
+      option.selected = option.value === "food_coffee";
+    }
+    fireEvent.change(categorySelect);
+    await waitFor(() => screen.getByTestId("report-trend-food_coffee-2026-01"));
+
     fireEvent.click(screen.getByTestId("report-cashflow-income-2026-01"));
     fireEvent.click(screen.getByTestId("report-cashflow-expense-2026-01"));
     fireEvent.click(screen.getByTestId("report-trend-food_coffee-2026-01"));
