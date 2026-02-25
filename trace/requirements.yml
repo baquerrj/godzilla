@@ -748,6 +748,7 @@
   - godzilla_core/tests/test_api_layer.py:test_reports_monthly_overview_invalid_month_returns_422
   - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_respects_end_month
   - godzilla_core/tests/test_api_layer.py:test_reports_reject_invalid_date_ranges
+  - ui/src/test/App.test.tsx:does not refetch reports when returning to an already mounted reports tab
   - ui/src/test/ReportsPanel.test.tsx:requests all report endpoints on load
   - ui/src/test/ReportsPanel.test.tsx:updates range-driven report calls when month changes
   doc_refs:
