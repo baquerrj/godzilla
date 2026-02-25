@@ -10,6 +10,8 @@ import react from "@vitejs/plugin-react";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+// Bind all interfaces by default for container/remote dev; Tauri can still override.
+const devHost = host || "0.0.0.0";
 // REQ: SEC-ACC-004, SEC-DATA-001
 const apiToken = process.env.GODZILLA_API_TOKEN ?? "";
 
@@ -35,7 +37,7 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    host: devHost,
     hmr: host
       ? {
           protocol: "ws",
