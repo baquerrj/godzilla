@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { App } from "../App";
 
 // Mock Tauri invoke so tests run outside the Tauri runtime.
@@ -143,19 +144,46 @@ describe("App", () => {
     });
   });
 
-  it("renders main panels when token is present  REQ: SEC-ACC-004", async () => {
+  it("renders overview tab by default when token is present  REQ: SEC-ACC-004", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
     await waitFor(() => {
+      expect(screen.getByTestId("app-tabs")).toBeInTheDocument();
       expect(screen.getByTestId("sync-state-panel")).toBeInTheDocument();
       expect(screen.getByTestId("accounts-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
+      expect(screen.queryByTestId("transactions-panel")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("reports-panel")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("settings-panel")).not.toBeInTheDocument();
+    });
+  });
+
+  it("switches tabs and mounts only active section panels  REQ: FUNC-TXN-001, FUNC-REP-001, FUNC-SET-001", async () => {
+    mockInvoke.mockResolvedValue("test-token-abc");
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByTestId("tab-transactions")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByTestId("tab-transactions"));
+    await waitFor(() => {
       expect(screen.getByTestId("transaction-filters")).toBeInTheDocument();
       expect(screen.getByTestId("transactions-panel")).toBeInTheDocument();
+      expect(screen.queryByTestId("sync-state-panel")).not.toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("tab-reports"));
+    await waitFor(() => {
+      expect(screen.getByTestId("budget-panel")).toBeInTheDocument();
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+      expect(screen.queryByTestId("transactions-panel")).not.toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("tab-data"));
+    await waitFor(() => {
       expect(screen.getByTestId("settings-panel")).toBeInTheDocument();
       expect(screen.getByTestId("export-panel")).toBeInTheDocument();
       expect(screen.getByTestId("data-management-panel")).toBeInTheDocument();
-      expect(screen.getByTestId("balances-panel")).toBeInTheDocument();
+      expect(screen.queryByTestId("reports-panel")).not.toBeInTheDocument();
     });
   });
 
@@ -173,6 +201,8 @@ describe("App", () => {
   it("renders budget-panel when token is present  REQ: FUNC-BUD-001", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
+    await waitFor(() => screen.getByTestId("tab-reports"));
+    await userEvent.click(screen.getByTestId("tab-reports"));
     await waitFor(() => {
       expect(screen.getByTestId("budget-panel")).toBeInTheDocument();
     });

@@ -66,6 +66,21 @@ body {
   letter-spacing: 0.5px;
 }
 
+.app-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .app-main {
   flex: 1;
   padding: 20px 24px;
@@ -716,6 +731,15 @@ code {
 @media (max-width: 700px) {
   .app-main {
     padding: 16px 12px;
+  }
+
+  .app-nav {
+    width: 100%;
+  }
+
+  .app-nav .btn {
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
   }
 
   .filter-bar {

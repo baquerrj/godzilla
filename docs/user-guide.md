@@ -77,8 +77,10 @@ npm run tauri dev
 ```
 
 If you are running in Docker with `docker-compose.dev.gui.yml`, these runtime
-stability flags are applied automatically (`GDK_BACKEND=x11`,
-`LIBGL_ALWAYS_SOFTWARE=1`, `WEBKIT_DISABLE_COMPOSITING_MODE=1`).
+settings default to an X11 path with hardware acceleration enabled.
+
+If you need maximum stability instead of performance (for example display reset
+crashes), run with compatibility flags:
 
 If you still hit `Gdk-Message: Error reading events from display: Connection reset by peer`,
 run:
@@ -90,6 +92,8 @@ GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm ru
 
 ## 3. Current limitations
 
+- App content is split across tabs (Overview, Transactions, Reports, Data) to
+  reduce render/load pressure; only the active tab is mounted at a time.
 - Single-user only. Multi-user/shared budgets are out of scope.
 - Local-only sidecar. API host is restricted to loopback addresses.
 - Plaid link endpoint currently supports `PLAID_ENV=sandbox` only.

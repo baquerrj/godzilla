@@ -41,6 +41,7 @@ import type { Account, Category, GetTransactionsParams } from "./api/types";
 import "./App.css";
 
 const DEV_PROXY_TOKEN = "__vite_dev_proxy_token__";
+type AppTab = "overview" | "transactions" | "reports" | "data";
 
 export function App() {
   // null = still loading from Tauri; "" = token not configured
@@ -52,6 +53,7 @@ export function App() {
   const [filterValues, setFilterValues] = useState<FilterValues>(EMPTY_FILTERS);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [activeTab, setActiveTab] = useState<AppTab>("overview");
 
   // REQ: SEC-ACC-004, SEC-DATA-001 — obtain token from Tauri at runtime, and
   // fall back to a dev-only proxy token when running in a plain browser.
@@ -73,6 +75,7 @@ export function App() {
   useEffect(() => {
     GodzillaApi.setUnlockToken(null);
     setAuthReady(false);
+    setActiveTab("overview");
     setSelectedTxnId(null);
     setFilterValues(EMPTY_FILTERS);
   }, [token]);
@@ -81,6 +84,7 @@ export function App() {
     const onLocked = () => {
       GodzillaApi.setUnlockToken(null);
       setAuthReady(false);
+      setActiveTab("overview");
       setSelectedTxnId(null);
       setFilterValues(EMPTY_FILTERS);
     };
@@ -110,6 +114,13 @@ export function App() {
     setRefreshKey((k) => k + 1);
   };
 
+  const switchTab = (tab: AppTab) => {
+    setActiveTab(tab);
+    if (tab !== "transactions") {
+      setSelectedTxnId(null);
+    }
+  };
+
   // REQ: FUNC-BUD-003 — drill-down from overspent budget row into transactions
   const handleBudgetDrillDown = (categoryId: string, month: string) => {
     const [year, monthNum] = month.split("-").map(Number);
@@ -120,6 +131,7 @@ export function App() {
       date_from: `${month}-01`,
       date_to: `${month}-${String(lastDay).padStart(2, "0")}`,
     });
+    switchTab("transactions");
   };
 
   // REQ: FUNC-REP-002 — drill-down from report metrics to transaction filters.
@@ -132,6 +144,7 @@ export function App() {
       ...(input.flow === "income" ? { amount_max: "-0.01" } : {}),
       ...(input.flow === "expense" ? { amount_min: "0.01" } : {}),
     });
+    switchTab("transactions");
   };
 
   // Build API filter params from controlled filter form values
@@ -174,7 +187,9 @@ export function App() {
     return (
       <div className="app">
         <header className="app-header">
-          <h1>Godzilla</h1>
+          <div className="app-header-row">
+            <h1>Godzilla</h1>
+          </div>
         </header>
         <main className="app-main">
           <AuthGatePanel
@@ -193,63 +208,111 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Godzilla</h1>
+        <div className="app-header-row">
+          <h1>Godzilla</h1>
+          <nav className="app-nav" aria-label="Primary navigation" data-testid="app-tabs">
+            <button
+              className={`btn btn-sm ${activeTab === "overview" ? "btn-primary" : ""}`}
+              onClick={() => switchTab("overview")}
+              data-testid="tab-overview"
+            >
+              Overview
+            </button>
+            <button
+              className={`btn btn-sm ${activeTab === "transactions" ? "btn-primary" : ""}`}
+              onClick={() => switchTab("transactions")}
+              data-testid="tab-transactions"
+            >
+              Transactions
+            </button>
+            <button
+              className={`btn btn-sm ${activeTab === "reports" ? "btn-primary" : ""}`}
+              onClick={() => switchTab("reports")}
+              data-testid="tab-reports"
+            >
+              Reports
+            </button>
+            <button
+              className={`btn btn-sm ${activeTab === "data" ? "btn-primary" : ""}`}
+              onClick={() => switchTab("data")}
+              data-testid="tab-data"
+            >
+              Data
+            </button>
+          </nav>
+        </div>
       </header>
       <main className="app-main">
-        <SyncStatePanel
-          token={token}
-          refreshKey={refreshKey}
-          onRefresh={handleRefresh}
-        />
-        <ConflictQueue token={token} refreshKey={refreshKey} />
-        <AccountsTable token={token} refreshKey={refreshKey} />
-        <BudgetPanel
-          token={token}
-          refreshKey={refreshKey}
-          categories={categories}
-          onDrillDown={handleBudgetDrillDown}
-        />
-        <ReportsPanel
-          token={token}
-          refreshKey={refreshKey}
-          categories={categories}
-          onDrillDown={handleReportDrillDown}
-        />
-        <SettingsPanel
-          token={token}
-          refreshKey={refreshKey}
-          onSaved={handleRefresh}
-        />
-        <ExportPanel
-          token={token}
-          refreshKey={refreshKey}
-          filters={activeFilters}
-        />
-        <DataManagementPanel
-          token={token}
-          onDataChanged={handleRefresh}
-        />
-        <TransactionFilters
-          values={filterValues}
-          accounts={accounts}
-          categories={categories}
-          onChange={setFilterValues}
-          onReset={() => setFilterValues(EMPTY_FILTERS)}
-        />
-        <TransactionsTable
-          token={token}
-          refreshKey={refreshKey}
-          filters={activeFilters}
-          onSelectTransaction={setSelectedTxnId}
-        />
-        <TransactionDetailPanel
-          token={token}
-          transactionId={selectedTxnId}
-          categories={categories}
-          onClose={() => setSelectedTxnId(null)}
-          onUpdated={handleRefresh}
-        />
-        <BalancesTable token={token} refreshKey={refreshKey} />
+        {activeTab === "overview" && (
+          <>
+            <SyncStatePanel
+              token={token}
+              refreshKey={refreshKey}
+              onRefresh={handleRefresh}
+            />
+            <ConflictQueue token={token} refreshKey={refreshKey} />
+            <AccountsTable token={token} refreshKey={refreshKey} />
+            <BalancesTable token={token} refreshKey={refreshKey} />
+          </>
+        )}
+        {activeTab === "transactions" && (
+          <>
+            <TransactionFilters
+              values={filterValues}
+              accounts={accounts}
+              categories={categories}
+              onChange={setFilterValues}
+              onReset={() => setFilterValues(EMPTY_FILTERS)}
+            />
+            <TransactionsTable
+              token={token}
+              refreshKey={refreshKey}
+              filters={activeFilters}
+              onSelectTransaction={setSelectedTxnId}
+            />
+            <TransactionDetailPanel
+              token={token}
+              transactionId={selectedTxnId}
+              categories={categories}
+              onClose={() => setSelectedTxnId(null)}
+              onUpdated={handleRefresh}
+            />
+          </>
+        )}
+        {activeTab === "reports" && (
+          <>
+            <BudgetPanel
+              token={token}
+              refreshKey={refreshKey}
+              categories={categories}
+              onDrillDown={handleBudgetDrillDown}
+            />
+            <ReportsPanel
+              token={token}
+              refreshKey={refreshKey}
+              categories={categories}
+              onDrillDown={handleReportDrillDown}
+            />
+          </>
+        )}
+        {activeTab === "data" && (
+          <>
+            <SettingsPanel
+              token={token}
+              refreshKey={refreshKey}
+              onSaved={handleRefresh}
+            />
+            <ExportPanel
+              token={token}
+              refreshKey={refreshKey}
+              filters={activeFilters}
+            />
+            <DataManagementPanel
+              token={token}
+              onDataChanged={handleRefresh}
+            />
+          </>
+        )}
       </main>
     </div>
   );
