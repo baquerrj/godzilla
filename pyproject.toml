@@ -9,6 +9,7 @@ description = "Core services for the Godzilla personal budgeting app."
 readme = "docs/product-requirements-document.md"
 requires-python = ">=3.12"
 dependencies = [
+  "cryptography>=43.0.0",
   "fastapi[standard]>=0.128.0",
   "sqlcipher3-binary>=0.6.0",
 ]

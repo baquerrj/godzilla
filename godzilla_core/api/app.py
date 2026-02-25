@@ -10,6 +10,7 @@ REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
 REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
 REQ: SEC-ACC-004, SEC-DATA-003
 """
 
@@ -25,14 +26,15 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from hmac import compare_digest
 from pathlib import Path
-from typing import Any, Iterator, Literal
+from typing import Annotated, Any, Iterator, Literal
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Response, UploadFile
 from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, field_validator
 from sqlcipher3 import dbapi2 as sqlcipher
 
+from godzilla_core.db.migrations import run_migrations
 from godzilla_core.integrations.plaid_client import (
     PlaidApiError,
     PlaidClient,
@@ -41,6 +43,13 @@ from godzilla_core.integrations.plaid_client import (
     link_sandbox_item,
 )
 from godzilla_core.integrations.plaid_sync import SyncError, sync_item_transactions_and_balances
+from godzilla_core.security.backup import (
+    BackupError,
+    BackupFormatError,
+    BackupIntegrityError,
+    create_backup_blob,
+    decrypt_backup_blob,
+)
 from godzilla_core.security.redaction import redact_sensitive
 from godzilla_core.security.secrets import SecretStoreError, store_from_env
 from godzilla_core.util.time import local_timestamp_metadata
@@ -448,6 +457,47 @@ class NetWorthReportResponse(BaseModel):
     start_date: str
     end_date: str
     points: list[NetWorthPointResponse]
+
+
+class BackupRequest(BaseModel):
+    """Request body for encrypted backup creation.
+
+    REQ: FUNC-BKP-001
+    """
+
+    passphrase: str = Field(min_length=1, max_length=512)
+    include_secrets: bool = False
+
+
+class RestoreResponse(BaseModel):
+    """Restore operation result.
+
+    REQ: FUNC-BKP-003
+    """
+
+    restored_database: bool
+    restored_secrets: bool
+    schema_version: int
+
+
+class WipeRequest(BaseModel):
+    """Request body for wipe confirmation.
+
+    REQ: FUNC-BKP-004
+    """
+
+    confirm: str = Field(min_length=1, max_length=64)
+
+
+class WipeResponse(BaseModel):
+    """Wipe operation result details.
+
+    REQ: FUNC-BKP-004
+    """
+
+    deleted_files: list[str]
+    missing_files: list[str]
+    failed_files: list[str]
 
 
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
@@ -1037,6 +1087,62 @@ def _export_default_include_raw_payloads(conn: sqlcipher.Connection) -> bool:
     if row is None:
         return False
     return bool(row[0])
+
+
+def _sqlite_related_paths(database_path: Path) -> list[Path]:
+    """Return SQLite database path and sidecar paths.
+
+    REQ: FUNC-BKP-004
+    """
+    return [database_path, Path(f"{database_path}-wal"), Path(f"{database_path}-shm")]
+
+
+def _read_file_bytes(path: Path) -> bytes:
+    """Read all bytes from a file path.
+
+    REQ: FUNC-BKP-001, FUNC-BKP-003
+    """
+    return path.read_bytes()
+
+
+def _write_file_bytes_atomic(path: Path, content: bytes) -> None:
+    """Atomically replace file content using a temporary path.
+
+    REQ: FUNC-BKP-003
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.tmp-{uuid4().hex}")
+    temp_path.write_bytes(content)
+    os.replace(temp_path, path)
+
+
+def _best_effort_wipe(path: Path) -> bool:
+    """Best-effort overwrite and unlink for local data wipe.
+
+    REQ: FUNC-BKP-004, SEC-DATA-006
+    """
+    if not path.exists():
+        return False
+    try:
+        if path.is_file():
+            file_size = path.stat().st_size
+            with path.open("r+b") as file_handle:
+                chunk = b"\x00" * 65536
+                remaining = file_size
+                while remaining > 0:
+                    write_size = min(remaining, len(chunk))
+                    file_handle.write(chunk[:write_size])
+                    remaining -= write_size
+                file_handle.flush()
+                os.fsync(file_handle.fileno())
+    except OSError:
+        # Overwrite failures are non-fatal; continue with unlink.
+        pass
+    try:
+        path.unlink()
+    except OSError:
+        return False
+    return True
 
 
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
@@ -1911,7 +2017,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
 
     REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
     REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004,
-    REQ: FUNC-BUD-001
+    REQ: FUNC-BUD-001, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -2325,6 +2431,182 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
             conn.commit()
         _log_event(logging.INFO, "budget_deleted", {"budget_id": budget_id})
 
+    @app.post(
+        "/backup",
+        dependencies=[Depends(require_api_key)],
+        response_model=None,
+    )
+    async def create_backup(request: BackupRequest) -> Response:
+        """Create encrypted backup of local database and optional secrets store.
+
+        REQ: FUNC-BKP-001, FUNC-BKP-002
+        """
+        db_path_raw, _ = _read_database_settings()
+        db_path = _expand_path(db_path_raw)
+        if not db_path.exists():
+            raise HTTPException(status_code=404, detail="Database file not found")
+
+        secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
+        secrets_path = _expand_path(secrets_path_raw) if secrets_path_raw else None
+        db_bytes = _read_file_bytes(db_path)
+        include_secrets = bool(request.include_secrets and secrets_path and secrets_path.exists())
+        secrets_bytes = _read_file_bytes(secrets_path) if include_secrets and secrets_path else None
+        secrets_name = secrets_path.name if include_secrets and secrets_path else None
+
+        try:
+            blob = create_backup_blob(
+                db_bytes=db_bytes,
+                db_filename=db_path.name,
+                passphrase=request.passphrase,
+                secrets_bytes=secrets_bytes,
+                secrets_filename=secrets_name,
+            )
+        except BackupError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        _log_event(
+            logging.INFO,
+            "backup_created",
+            {"include_secrets": include_secrets, "size_bytes": len(blob)},
+        )
+        return Response(
+            content=blob,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": 'attachment; filename="godzilla-backup.gzbk"'},
+        )
+
+    @app.post(
+        "/restore",
+        dependencies=[Depends(require_api_key)],
+        response_model=RestoreResponse,
+    )
+    async def restore_backup(  # noqa: PLR0912
+        passphrase: Annotated[str, Form(min_length=1, max_length=512)],
+        backup_file: Annotated[UploadFile, File(...)],
+    ) -> RestoreResponse:
+        """Restore local state from an encrypted backup file.
+
+        REQ: FUNC-BKP-002, FUNC-BKP-003
+        """
+        _log_event(logging.INFO, "restore_started", {"filename": backup_file.filename})
+        payload_bytes = await backup_file.read()
+        try:
+            backup = decrypt_backup_blob(blob=payload_bytes, passphrase=passphrase)
+        except BackupIntegrityError as exc:
+            _log_event(logging.ERROR, "restore_failed", {"reason": "integrity"})
+            raise HTTPException(status_code=400, detail="Backup integrity check failed") from exc
+        except BackupFormatError as exc:
+            _log_event(logging.ERROR, "restore_failed", {"reason": "format"})
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except BackupError as exc:
+            _log_event(logging.ERROR, "restore_failed", {"reason": "decrypt"})
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        db_path_raw, db_key = _read_database_settings()
+        db_path = _expand_path(db_path_raw)
+        old_db_bytes = _read_file_bytes(db_path) if db_path.exists() else None
+
+        secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
+        secrets_path = _expand_path(secrets_path_raw) if secrets_path_raw else None
+        old_secrets_bytes = (
+            _read_file_bytes(secrets_path)
+            if secrets_path and secrets_path.exists()
+            else None
+        )
+
+        try:
+            for sidecar_path in _sqlite_related_paths(db_path)[1:]:
+                if sidecar_path.exists():
+                    sidecar_path.unlink()
+            _write_file_bytes_atomic(db_path, backup.db_bytes)
+
+            restored_secrets = False
+            if backup.secrets_bytes is not None:
+                if secrets_path is None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Secrets store is not configured for this restore",
+                    )
+                for sidecar_path in _sqlite_related_paths(secrets_path)[1:]:
+                    if sidecar_path.exists():
+                        sidecar_path.unlink()
+                _write_file_bytes_atomic(secrets_path, backup.secrets_bytes)
+                restored_secrets = True
+
+            schema_version = run_migrations(db_path=str(db_path), db_key=db_key)
+        except HTTPException:
+            if old_db_bytes is not None:
+                _write_file_bytes_atomic(db_path, old_db_bytes)
+            if secrets_path and old_secrets_bytes is not None:
+                _write_file_bytes_atomic(secrets_path, old_secrets_bytes)
+            raise
+        except Exception as exc:
+            if old_db_bytes is not None:
+                _write_file_bytes_atomic(db_path, old_db_bytes)
+            if secrets_path and old_secrets_bytes is not None:
+                _write_file_bytes_atomic(secrets_path, old_secrets_bytes)
+            _log_event(logging.ERROR, "restore_failed", {"reason": str(exc)})
+            raise HTTPException(status_code=400, detail="Restore failed") from exc
+
+        _log_event(
+            logging.INFO,
+            "restore_success",
+            {"restored_secrets": restored_secrets, "schema_version": schema_version},
+        )
+        return RestoreResponse(
+            restored_database=True,
+            restored_secrets=restored_secrets,
+            schema_version=schema_version,
+        )
+
+    @app.post(
+        "/wipe",
+        dependencies=[Depends(require_api_key)],
+        response_model=WipeResponse,
+    )
+    async def wipe_local_data(request: WipeRequest) -> WipeResponse:
+        """Wipe local DB and secrets files with best-effort secure deletion.
+
+        REQ: FUNC-BKP-004
+        """
+        if request.confirm != "WIPE_LOCAL_DATA":
+            raise HTTPException(status_code=422, detail="Invalid wipe confirmation token")
+
+        _log_event(logging.WARNING, "wipe_started", {})
+        db_path_raw, _ = _read_database_settings()
+        db_paths = _sqlite_related_paths(_expand_path(db_path_raw))
+
+        secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
+        secret_paths = (
+            _sqlite_related_paths(_expand_path(secrets_path_raw)) if secrets_path_raw else []
+        )
+        deleted_files: list[str] = []
+        missing_files: list[str] = []
+        failed_files: list[str] = []
+        for path in [*db_paths, *secret_paths]:
+            if not path.exists():
+                missing_files.append(str(path))
+                continue
+            if _best_effort_wipe(path):
+                deleted_files.append(str(path))
+            else:
+                failed_files.append(str(path))
+
+        _log_event(
+            logging.WARNING,
+            "wipe_finished",
+            {
+                "deleted_count": len(deleted_files),
+                "missing_count": len(missing_files),
+                "failed_count": len(failed_files),
+            },
+        )
+        return WipeResponse(
+            deleted_files=deleted_files,
+            missing_files=missing_files,
+            failed_files=failed_files,
+        )
+
 
 async def get_transaction_detail_internal(
     conn_factory: Any,
@@ -2413,6 +2695,8 @@ def create_app() -> FastAPI:
     REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
     REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
     REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
     REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")

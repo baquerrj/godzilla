@@ -8,13 +8,17 @@ REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
 REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
 REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
+REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
+REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
 REQ: FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
 """
 
 from __future__ import annotations
 
+import json
 import os
 import sys
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from csv import DictReader
 from io import StringIO
 from tempfile import TemporaryDirectory
@@ -30,6 +34,7 @@ from godzilla_core.integrations.plaid_client import PlaidApiError, PlaidConfig
 from godzilla_core.integrations.plaid_sync import SyncResult
 from godzilla_core.scripts.run_api_server import main as run_api_server_main
 from godzilla_core.security.redaction import redact_sensitive
+from godzilla_core.security.secrets import SecretStore
 
 pytestmark = pytest.mark.anyio
 
@@ -176,6 +181,15 @@ def _seed_database(db_path: str, db_key: str) -> None:
     conn.close()
 
 
+def _seed_secrets_database(secrets_path: str, secrets_key: str) -> None:
+    """Seed encrypted secrets DB with deterministic test values.
+
+    REQ: FUNC-BKP-001, FUNC-BKP-003
+    """
+    store = SecretStore(db_path=secrets_path, db_key=secrets_key)
+    store.set_secret("plaid_access_token:item-provider-1", "secret-token-1")
+
+
 @pytest.fixture
 async def api_client() -> httpx.AsyncClient:
     """Provide an authenticated ASGI client bound to a seeded encrypted DB.
@@ -195,6 +209,45 @@ async def api_client() -> httpx.AsyncClient:
 
         os.environ["GODZILLA_DB_PATH"] = db_path
         os.environ["GODZILLA_DB_KEY"] = db_key
+        os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
+
+    for key, value in env_backup.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
+@pytest.fixture
+async def backup_client() -> httpx.AsyncClient:
+    """Provide authenticated ASGI client configured with DB and secrets paths.
+
+    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, SEC-ACC-004
+    """
+    env_backup = {
+        "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
+        "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
+        "GODZILLA_SECRETS_PATH": os.environ.get("GODZILLA_SECRETS_PATH"),
+        "GODZILLA_SECRETS_KEY": os.environ.get("GODZILLA_SECRETS_KEY"),
+        "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+    }
+    with TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "backup.db")
+        db_key = "backup-db-key"
+        secrets_path = os.path.join(tmp_dir, "secrets.db")
+        secrets_key = "backup-secrets-key"
+        run_migrations(db_path=db_path, db_key=db_key)
+        _seed_database(db_path, db_key)
+        _seed_secrets_database(secrets_path, secrets_key)
+
+        os.environ["GODZILLA_DB_PATH"] = db_path
+        os.environ["GODZILLA_DB_KEY"] = db_key
+        os.environ["GODZILLA_SECRETS_PATH"] = secrets_path
+        os.environ["GODZILLA_SECRETS_KEY"] = secrets_key
         os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
 
         transport = httpx.ASGITransport(app=create_app())
@@ -1481,6 +1534,153 @@ async def test_export_endpoints_auth_and_validation(report_client: httpx.AsyncCl
         headers=_HEADERS,
     )
     assert bad_format.status_code == 422
+
+
+# ── Backup/restore/wipe tests (M5 Task 18) ───────────────────────────────────
+
+
+async def test_backup_returns_encrypted_blob(backup_client: httpx.AsyncClient) -> None:
+    """Verify /backup returns encrypted backup bytes and attachment metadata.
+
+    REQ: FUNC-BKP-001, FUNC-BKP-002
+    """
+    resp = await backup_client.post(
+        "/backup",
+        json={"passphrase": "backup-passphrase", "include_secrets": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/octet-stream"
+    assert "attachment;" in resp.headers["content-disposition"]
+    assert b"SQLite format 3" not in resp.content
+    envelope = json.loads(resp.content.decode("utf-8"))
+    assert envelope["format"] == "godzilla_backup"
+    assert envelope["version"] == 1
+    assert "ciphertext_b64" in envelope
+
+
+async def test_restore_rejects_tampered_backup(backup_client: httpx.AsyncClient) -> None:
+    """Verify tampered backup payload fails restore integrity checks.
+
+    REQ: FUNC-BKP-002
+    """
+    backup_resp = await backup_client.post(
+        "/backup",
+        json={"passphrase": "backup-passphrase", "include_secrets": True},
+        headers=_HEADERS,
+    )
+    assert backup_resp.status_code == 200
+    envelope = json.loads(backup_resp.content.decode("utf-8"))
+    ciphertext = bytearray(urlsafe_b64decode(envelope["ciphertext_b64"].encode("ascii")))
+    ciphertext[len(ciphertext) // 2] ^= 0x01
+    envelope["ciphertext_b64"] = urlsafe_b64encode(bytes(ciphertext)).decode("ascii")
+    tampered_blob = json.dumps(envelope).encode("utf-8")
+
+    restore_resp = await backup_client.post(
+        "/restore",
+        data={"passphrase": "backup-passphrase"},
+        files={"backup_file": ("tampered.gzbk", tampered_blob, "application/octet-stream")},
+        headers=_HEADERS,
+    )
+    assert restore_resp.status_code == 400
+    assert restore_resp.json()["detail"] == "Backup integrity check failed"
+
+
+async def test_restore_recovers_database_and_secrets(backup_client: httpx.AsyncClient) -> None:
+    """Verify restoring a valid backup recovers DB rows and secrets.
+
+    REQ: FUNC-BKP-003
+    """
+    backup_resp = await backup_client.post(
+        "/backup",
+        json={"passphrase": "backup-passphrase", "include_secrets": True},
+        headers=_HEADERS,
+    )
+    assert backup_resp.status_code == 200
+    blob = backup_resp.content
+
+    db_path = os.environ["GODZILLA_DB_PATH"]
+    db_key = os.environ["GODZILLA_DB_KEY"]
+    conn = sqlcipher.connect(db_path)
+    conn.execute(f"PRAGMA key = '{db_key}';")
+    conn.execute("DELETE FROM transaction_record WHERE id = ?", ("txn-1",))
+    conn.commit()
+    conn.close()
+
+    store = SecretStore(
+        db_path=os.environ["GODZILLA_SECRETS_PATH"],
+        db_key=os.environ["GODZILLA_SECRETS_KEY"],
+    )
+    store.set_secret("plaid_access_token:item-provider-1", "changed-token")
+
+    restore_resp = await backup_client.post(
+        "/restore",
+        data={"passphrase": "backup-passphrase"},
+        files={"backup_file": ("backup.gzbk", blob, "application/octet-stream")},
+        headers=_HEADERS,
+    )
+    assert restore_resp.status_code == 200
+    body = restore_resp.json()
+    assert body["restored_database"] is True
+    assert body["restored_secrets"] is True
+    assert body["schema_version"] >= 2
+
+    txn_resp = await backup_client.get("/transactions/txn-1", headers=_HEADERS)
+    assert txn_resp.status_code == 200
+    assert store.get_secret("plaid_access_token:item-provider-1") == "secret-token-1"
+
+
+async def test_wipe_removes_database_and_secrets_files(backup_client: httpx.AsyncClient) -> None:
+    """Verify wipe removes DB/secrets files and sidecars.
+
+    REQ: FUNC-BKP-004
+    """
+    db_path = os.environ["GODZILLA_DB_PATH"]
+    secrets_path = os.environ["GODZILLA_SECRETS_PATH"]
+    for sidecar in (f"{db_path}-wal", f"{db_path}-shm", f"{secrets_path}-wal", f"{secrets_path}-shm"):
+        with open(sidecar, "wb") as file_handle:
+            file_handle.write(b"dummy")
+
+    wipe_resp = await backup_client.post(
+        "/wipe",
+        json={"confirm": "WIPE_LOCAL_DATA"},
+        headers=_HEADERS,
+    )
+    assert wipe_resp.status_code == 200
+    payload = wipe_resp.json()
+    assert payload["failed_files"] == []
+    assert os.path.exists(db_path) is False
+    assert os.path.exists(secrets_path) is False
+    assert os.path.exists(f"{db_path}-wal") is False
+    assert os.path.exists(f"{db_path}-shm") is False
+    assert os.path.exists(f"{secrets_path}-wal") is False
+    assert os.path.exists(f"{secrets_path}-shm") is False
+    assert len(payload["deleted_files"]) >= 2
+
+
+async def test_backup_restore_wipe_auth_and_validation(
+    backup_client: httpx.AsyncClient,
+) -> None:
+    """Verify backup/restore/wipe endpoints enforce auth and validation.
+
+    REQ: SEC-ACC-004, FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004
+    """
+    unauthorized = await backup_client.post("/backup", json={"passphrase": "p"})
+    assert unauthorized.status_code == 401
+
+    invalid_confirm = await backup_client.post(
+        "/wipe",
+        json={"confirm": "NOPE"},
+        headers=_HEADERS,
+    )
+    assert invalid_confirm.status_code == 422
+
+    restore_missing_fields = await backup_client.post(
+        "/restore",
+        files={"backup_file": ("backup.gzbk", b"{}", "application/octet-stream")},
+        headers=_HEADERS,
+    )
+    assert restore_missing_fields.status_code == 422
 
 
 # ── Budget tests (Task 13) ────────────────────────────────────────────────────
