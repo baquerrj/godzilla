@@ -1,7 +1,7 @@
 """Plaid sync ingestion for transactions and balances.
 
 REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006,
-REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006
+REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-ACCT-008
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ def _upsert_item(
 ) -> str:
     """Create or update a linked Plaid item record.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-ACCT-008
     """
     item_id = _get_item_id(conn, provider_item_id)
     meta = _timestamp_meta("created_at")
@@ -191,15 +191,17 @@ def _upsert_item(
         conn.execute(
             "INSERT INTO plaid_item ("
             "id, provider_item_id, institution_id, access_token_ref, status, "
+            "is_unlinked, "
             "last_sync_at_utc, last_sync_at_tz, last_sync_at_offset_minutes, "
             "created_at_utc, created_at_tz, created_at_offset_minutes"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 item_id,
                 provider_item_id,
                 institution_id,
                 access_token_ref,
                 status,
+                0,
                 None,
                 None,
                 None,
@@ -212,11 +214,23 @@ def _upsert_item(
 
     conn.execute(
         "UPDATE plaid_item SET "
-        "institution_id = ?, access_token_ref = ?, status = ? "
+        "institution_id = ?, access_token_ref = ?, status = ?, is_unlinked = 0 "
         "WHERE id = ?",
         (institution_id, access_token_ref, status, item_id),
     )
     return item_id
+
+
+def _item_is_unlinked(conn: sqlcipher.Connection, provider_item_id: str) -> bool:
+    """Return whether a Plaid item is locally marked as unlinked.
+
+    REQ: FUNC-ACCT-008
+    """
+    row = conn.execute(
+        "SELECT is_unlinked FROM plaid_item WHERE provider_item_id = ?",
+        (provider_item_id,),
+    ).fetchone()
+    return bool(row[0]) if row else False
 
 
 def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
@@ -818,7 +832,8 @@ def sync_item_transactions_and_balances(  # noqa: PLR0912, PLR0915
 ) -> SyncResult:
     """Sync transactions and balances for a Plaid item.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006,
+    REQ: FUNC-ACCT-008
     """
     config = PlaidConfig.from_env()
     client = PlaidClient(config)
@@ -836,6 +851,9 @@ def sync_item_transactions_and_balances(  # noqa: PLR0912, PLR0915
 
     conn = _connect(db_path, db_key)
     try:
+        if _item_is_unlinked(conn, provider_item_id):
+            raise SyncError("Item is unlinked and cannot be synced")
+
         retention_enabled = _retention_enabled(conn)
 
         if not plaid_institution_id:

@@ -2,7 +2,7 @@
 """API layer tests.
 
 REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
-REQ: FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
+REQ: FUNC-ACCT-007, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
 REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-006, FUNC-SYNC-007,
 REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
@@ -12,7 +12,8 @@ REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
 REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
 REQ: FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, FUNC-AUD-004,
-REQ: SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
+REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003,
+REQ: SEC-NET-001, SEC-NET-002
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 from csv import DictReader
 from datetime import datetime, timedelta, timezone
 from io import StringIO
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
@@ -31,6 +33,7 @@ import httpx
 import pytest
 from sqlcipher3 import dbapi2 as sqlcipher
 
+import godzilla_core.api.app as app_module
 from godzilla_core.api.app import create_app
 from godzilla_core.db.migrations import run_migrations
 from godzilla_core.integrations.plaid_client import PlaidApiError, PlaidConfig
@@ -214,6 +217,7 @@ async def api_client() -> httpx.AsyncClient:
         "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
         "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
         "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+        "GODZILLA_DEV_BYPASS_PIN": os.environ.get("GODZILLA_DEV_BYPASS_PIN"),
     }
     with TemporaryDirectory() as tmp_dir:
         db_path = os.path.join(tmp_dir, "app.db")
@@ -224,6 +228,7 @@ async def api_client() -> httpx.AsyncClient:
         os.environ["GODZILLA_DB_PATH"] = db_path
         os.environ["GODZILLA_DB_KEY"] = db_key
         os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+        os.environ["GODZILLA_DEV_BYPASS_PIN"] = "1"
 
         transport = httpx.ASGITransport(app=create_app())
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -248,6 +253,7 @@ async def backup_client() -> httpx.AsyncClient:
         "GODZILLA_SECRETS_PATH": os.environ.get("GODZILLA_SECRETS_PATH"),
         "GODZILLA_SECRETS_KEY": os.environ.get("GODZILLA_SECRETS_KEY"),
         "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+        "GODZILLA_DEV_BYPASS_PIN": os.environ.get("GODZILLA_DEV_BYPASS_PIN"),
     }
     with TemporaryDirectory() as tmp_dir:
         db_path = os.path.join(tmp_dir, "backup.db")
@@ -263,11 +269,58 @@ async def backup_client() -> httpx.AsyncClient:
         os.environ["GODZILLA_SECRETS_PATH"] = secrets_path
         os.environ["GODZILLA_SECRETS_KEY"] = secrets_key
         os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+        os.environ["GODZILLA_DEV_BYPASS_PIN"] = "1"
 
         transport = httpx.ASGITransport(app=create_app())
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             yield client
 
+    for key, value in env_backup.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+
+@pytest.fixture
+async def locked_api_client() -> httpx.AsyncClient:
+    """Provide ASGI client with PIN gate enabled (no dev bypass).
+
+    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004
+    """
+    env_backup = {
+        "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
+        "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
+        "GODZILLA_SECRETS_PATH": os.environ.get("GODZILLA_SECRETS_PATH"),
+        "GODZILLA_SECRETS_KEY": os.environ.get("GODZILLA_SECRETS_KEY"),
+        "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+        "GODZILLA_DEV_BYPASS_PIN": os.environ.get("GODZILLA_DEV_BYPASS_PIN"),
+    }
+    with TemporaryDirectory() as tmp_dir:
+        db_path = os.path.join(tmp_dir, "locked.db")
+        db_key = "locked-db-key"
+        secrets_path = os.path.join(tmp_dir, "locked-secrets.db")
+        secrets_key = "locked-secrets-key"
+        run_migrations(db_path=db_path, db_key=db_key)
+        _seed_database(db_path, db_key)
+        _seed_secrets_database(secrets_path, secrets_key)
+
+        os.environ["GODZILLA_DB_PATH"] = db_path
+        os.environ["GODZILLA_DB_KEY"] = db_key
+        os.environ["GODZILLA_SECRETS_PATH"] = secrets_path
+        os.environ["GODZILLA_SECRETS_KEY"] = secrets_key
+        os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+        os.environ["GODZILLA_DEV_BYPASS_PIN"] = "0"
+
+        with app_module._UNLOCK_SESSIONS_LOCK:
+            app_module._UNLOCK_SESSIONS.clear()
+
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            yield client
+
+    with app_module._UNLOCK_SESSIONS_LOCK:
+        app_module._UNLOCK_SESSIONS.clear()
     for key, value in env_backup.items():
         if value is None:
             os.environ.pop(key, None)
@@ -304,6 +357,171 @@ async def test_auth_required_for_endpoints(api_client: httpx.AsyncClient) -> Non
     """
     response = await api_client.get("/accounts")
     assert response.status_code == 401
+
+
+async def test_auth_status_requires_pin_setup_when_unconfigured(
+    locked_api_client: httpx.AsyncClient,
+) -> None:
+    """Verify status endpoint reports setup-required and gate blocks data routes.
+
+    REQ: SEC-ACC-001, SEC-ACC-004
+    """
+    status_resp = await locked_api_client.get(
+        "/auth/status",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert status_resp.status_code == 200
+    status_body = status_resp.json()
+    assert status_body["pin_configured"] is False
+    assert status_body["setup_required"] is True
+    assert status_body["locked"] is True
+
+    locked_resp = await locked_api_client.get(
+        "/accounts",
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert locked_resp.status_code == 423
+
+
+async def test_auth_setup_unlock_and_timeout_enforcement(
+    locked_api_client: httpx.AsyncClient,
+) -> None:
+    """Verify setup-pin + unlock grants access, then expires after timeout.
+
+    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, FUNC-SET-003
+    """
+    setup_resp = await locked_api_client.post(
+        "/auth/setup-pin",
+        json={"new_pin": "123456"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert setup_resp.status_code == 200
+    assert setup_resp.json()["pin_configured"] is True
+
+    bad_unlock = await locked_api_client.post(
+        "/auth/unlock",
+        json={"pin": "999999"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert bad_unlock.status_code == 401
+
+    unlock_resp = await locked_api_client.post(
+        "/auth/unlock",
+        json={"pin": "123456"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert unlock_resp.status_code == 200
+    unlock_token = unlock_resp.json()["unlock_token"]
+
+    unlocked_accounts = await locked_api_client.get(
+        "/accounts",
+        headers={"X-API-Key": "test-api-token", "X-App-Unlock-Token": unlock_token},
+    )
+    assert unlocked_accounts.status_code == 200
+
+    update_resp = await locked_api_client.put(
+        "/settings",
+        json={"security": {"auto_lock_minutes": 1}},
+        headers={"X-API-Key": "test-api-token", "X-App-Unlock-Token": unlock_token},
+    )
+    assert update_resp.status_code == 200
+
+    with app_module._UNLOCK_SESSIONS_LOCK:
+        app_module._UNLOCK_SESSIONS[unlock_token] = datetime.now(timezone.utc) - timedelta(
+            minutes=2
+        )
+
+    relock_resp = await locked_api_client.get(
+        "/accounts",
+        headers={"X-API-Key": "test-api-token", "X-App-Unlock-Token": unlock_token},
+    )
+    assert relock_resp.status_code == 423
+
+
+async def test_auth_setup_pin_rotation_requires_current_pin(
+    locked_api_client: httpx.AsyncClient,
+) -> None:
+    """Verify rotating PIN requires current PIN and old PIN no longer unlocks.
+
+    REQ: SEC-ACC-003
+    """
+    first_setup = await locked_api_client.post(
+        "/auth/setup-pin",
+        json={"new_pin": "123456"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert first_setup.status_code == 200
+
+    missing_current = await locked_api_client.post(
+        "/auth/setup-pin",
+        json={"new_pin": "654321"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert missing_current.status_code == 422
+
+    wrong_current = await locked_api_client.post(
+        "/auth/setup-pin",
+        json={"new_pin": "654321", "current_pin": "111111"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert wrong_current.status_code == 401
+
+    rotate_resp = await locked_api_client.post(
+        "/auth/setup-pin",
+        json={"new_pin": "654321", "current_pin": "123456"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert rotate_resp.status_code == 200
+
+    old_unlock = await locked_api_client.post(
+        "/auth/unlock",
+        json={"pin": "123456"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert old_unlock.status_code == 401
+
+    new_unlock = await locked_api_client.post(
+        "/auth/unlock",
+        json={"pin": "654321"},
+        headers={"X-API-Key": "test-api-token"},
+    )
+    assert new_unlock.status_code == 200
+
+
+async def test_auth_status_reports_tls_fingerprint_when_tls_configured(
+    locked_api_client: httpx.AsyncClient,
+    tmp_path: Path,
+) -> None:
+    """Verify auth status exposes TLS enablement and cert fingerprint.
+
+    REQ: SEC-NET-001
+    """
+    cert_path = tmp_path / "test.crt"
+    key_path = tmp_path / "test.key"
+    cert_path.write_text("-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----\n")
+    key_path.write_text("-----BEGIN PRIVATE KEY-----\nTEST\n-----END PRIVATE KEY-----\n")
+
+    with (
+        patch.dict(
+            os.environ,
+            {"GODZILLA_TLS_CERT": str(cert_path), "GODZILLA_TLS_KEY": str(key_path)},
+            clear=False,
+        ),
+        patch(
+            "godzilla_core.api.app.ssl.PEM_cert_to_DER_cert",
+            return_value=b"tls-der-cert",
+        ),
+    ):
+        resp = await locked_api_client.get(
+            "/auth/status",
+            headers={"X-API-Key": "test-api-token"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["tls"]["enabled"] is True
+    assert isinstance(body["tls"]["cert_fingerprint_sha256"], str)
+    assert len(body["tls"]["cert_fingerprint_sha256"]) == 64
 
 
 async def test_input_validation_rejects_invalid_payloads(api_client: httpx.AsyncClient) -> None:
@@ -538,6 +756,97 @@ async def test_plaid_sync_endpoint_returns_sync_result(api_client: httpx.AsyncCl
     )
 
 
+async def test_unlink_item_keep_marks_unlinked_and_preserves_ledger(
+    backup_client: httpx.AsyncClient,
+) -> None:
+    """Verify unlink keep mode revokes token and marks item unlinked.
+
+    REQ: FUNC-ACCT-008
+    """
+    conn = _open_env_db()
+    try:
+        conn.execute(
+            "INSERT INTO provider_raw ("
+            "id, transaction_id, raw_payload, created_at_utc, created_at_tz, created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("raw-unlink-1", "txn-1", '{"raw":"payload"}', "2026-01-01T00:00:00", "UTC", 0),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    with (
+        patch("godzilla_core.api.app.PlaidConfig.from_env") as config_mock,
+        patch("godzilla_core.api.app.PlaidClient") as client_cls_mock,
+    ):
+        config_mock.return_value = PlaidConfig(
+            client_id="cid",
+            secret="sec",
+            env="sandbox",
+            base_url="https://sandbox.plaid.com",
+            sandbox_institution_id="ins_109508",
+        )
+        client_cls_mock.return_value.remove_item.return_value = {"request_id": "req-1"}
+        resp = await backup_client.delete(
+            "/plaid/items/item-provider-1?mode=keep",
+            headers={"X-API-Key": "test-api-token"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["mode"] == "keep"
+    assert body["item_id"] == "item-provider-1"
+    assert body["token_removed"] is True
+    assert body["local_data_purged"] is False
+    assert body["raw_payload_rows_deleted"] == 1
+
+    state_resp = await backup_client.get("/sync-state", headers={"X-API-Key": "test-api-token"})
+    assert state_resp.status_code == 200
+    assert state_resp.json()[0]["status"] == "unlinked"
+
+    store = SecretStore(
+        db_path=os.environ["GODZILLA_SECRETS_PATH"],
+        db_key=os.environ["GODZILLA_SECRETS_KEY"],
+    )
+    assert store.get_secret("plaid_access_token:item-provider-1") is None
+
+
+async def test_unlink_item_purge_deletes_item_data(backup_client: httpx.AsyncClient) -> None:
+    """Verify unlink purge mode removes item-linked local data via cascade.
+
+    REQ: FUNC-ACCT-008
+    """
+    with (
+        patch("godzilla_core.api.app.PlaidConfig.from_env") as config_mock,
+        patch("godzilla_core.api.app.PlaidClient") as client_cls_mock,
+    ):
+        config_mock.return_value = PlaidConfig(
+            client_id="cid",
+            secret="sec",
+            env="sandbox",
+            base_url="https://sandbox.plaid.com",
+            sandbox_institution_id="ins_109508",
+        )
+        client_cls_mock.return_value.remove_item.return_value = {"request_id": "req-1"}
+        resp = await backup_client.delete(
+            "/plaid/items/item-provider-1?mode=purge",
+            headers={"X-API-Key": "test-api-token"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["mode"] == "purge"
+    assert body["local_data_purged"] is True
+
+    state_resp = await backup_client.get("/sync-state", headers={"X-API-Key": "test-api-token"})
+    assert state_resp.status_code == 200
+    assert state_resp.json() == []
+
+    accounts_resp = await backup_client.get("/accounts", headers={"X-API-Key": "test-api-token"})
+    assert accounts_resp.status_code == 200
+    assert accounts_resp.json() == []
+
+
 def test_run_api_server_rejects_non_loopback_host() -> None:
     """Verify server CLI rejects non-loopback bind host values.
 
@@ -569,6 +878,50 @@ def test_run_api_server_starts_with_loopback_host() -> None:
         factory=True,
         host="127.0.0.1",
         port=8899,
+        ssl_certfile=None,
+        ssl_keyfile=None,
+    )
+
+
+def test_run_api_server_rejects_partial_tls_configuration() -> None:
+    """Verify server CLI requires both TLS cert and key when TLS is configured.
+
+    REQ: SEC-NET-001
+    """
+    with patch.object(sys, "argv", ["godzilla-api", "--tls-cert", "/tmp/cert.pem"]):
+        with pytest.raises(SystemExit, match="Both TLS cert and key must be set together"):
+            run_api_server_main()
+
+
+def test_run_api_server_uses_tls_files_from_environment(tmp_path: Path) -> None:
+    """Verify server CLI forwards TLS cert and key to uvicorn when configured.
+
+    REQ: SEC-NET-001, SEC-NET-002
+    """
+    cert = tmp_path / "cert.pem"
+    key = tmp_path / "key.pem"
+    cert.write_text("-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----\n")
+    key.write_text("-----BEGIN PRIVATE KEY-----\nTEST\n-----END PRIVATE KEY-----\n")
+
+    with (
+        patch.dict(
+            os.environ,
+            {"GODZILLA_TLS_CERT": str(cert), "GODZILLA_TLS_KEY": str(key)},
+            clear=False,
+        ),
+        patch.object(sys, "argv", ["godzilla-api", "--host", "127.0.0.1"]),
+        patch("godzilla_core.scripts.run_api_server.uvicorn.run") as run_mock,
+    ):
+        exit_code = run_api_server_main()
+
+    assert exit_code == 0
+    run_mock.assert_called_once_with(
+        "godzilla_core.api.app:create_app",
+        factory=True,
+        host="127.0.0.1",
+        port=8787,
+        ssl_certfile=str(cert),
+        ssl_keyfile=str(key),
     )
 
 
@@ -1209,6 +1562,7 @@ async def report_client() -> httpx.AsyncClient:
         "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
         "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
         "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+        "GODZILLA_DEV_BYPASS_PIN": os.environ.get("GODZILLA_DEV_BYPASS_PIN"),
     }
     with TemporaryDirectory() as tmp_dir:
         db_path = os.path.join(tmp_dir, "report.db")
@@ -1220,6 +1574,7 @@ async def report_client() -> httpx.AsyncClient:
         os.environ["GODZILLA_DB_PATH"] = db_path
         os.environ["GODZILLA_DB_KEY"] = db_key
         os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+        os.environ["GODZILLA_DEV_BYPASS_PIN"] = "1"
 
         transport = httpx.ASGITransport(app=create_app())
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -2367,6 +2722,7 @@ async def budget_client() -> httpx.AsyncClient:
         "GODZILLA_DB_PATH": os.environ.get("GODZILLA_DB_PATH"),
         "GODZILLA_DB_KEY": os.environ.get("GODZILLA_DB_KEY"),
         "GODZILLA_API_TOKEN": os.environ.get("GODZILLA_API_TOKEN"),
+        "GODZILLA_DEV_BYPASS_PIN": os.environ.get("GODZILLA_DEV_BYPASS_PIN"),
     }
     with TemporaryDirectory() as tmp_dir:
         db_path = os.path.join(tmp_dir, "budget.db")
@@ -2378,6 +2734,7 @@ async def budget_client() -> httpx.AsyncClient:
         os.environ["GODZILLA_DB_PATH"] = db_path
         os.environ["GODZILLA_DB_KEY"] = db_key
         os.environ["GODZILLA_API_TOKEN"] = "test-api-token"
+        os.environ["GODZILLA_DEV_BYPASS_PIN"] = "1"
 
         transport = httpx.ASGITransport(app=create_app())
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:

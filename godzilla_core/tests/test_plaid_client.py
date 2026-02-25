@@ -1,6 +1,6 @@
 """Plaid client tests.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-008, SEC-CRY-002, SEC-NET-003
 """
 
 import io
@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 import unittest
+from email.message import Message
 from unittest.mock import MagicMock, patch
 from urllib import error as urllib_error
 
@@ -186,6 +187,71 @@ class PlaidClientPostTests(unittest.TestCase):
             with self.assertRaises(PlaidApiError):
                 client._post("/some/path", {})
 
+    def test_post_retries_429_and_honors_retry_after(self) -> None:
+        """_post retries transient 429 and uses Retry-After delay.
+
+        REQ: SEC-NET-003
+        """
+        client = PlaidClient(self._make_config())
+        headers = Message()
+        headers["Retry-After"] = "2"
+        first_error = urllib_error.HTTPError(
+            url="https://sandbox.plaid.com/some/path",
+            code=429,
+            msg="Too Many Requests",
+            hdrs=headers,  # type: ignore[arg-type]
+            fp=io.BytesIO(b'{"error":"rate_limited"}'),
+        )
+        mock_resp = self._mock_response({"result": "ok"})
+
+        with (
+            patch(_URLOPEN, side_effect=[first_error, mock_resp]),
+            patch("godzilla_core.integrations.plaid_client.time.sleep") as sleep_mock,
+        ):
+            result = client._post("/some/path", {})
+
+        self.assertEqual(result, {"result": "ok"})
+        sleep_mock.assert_called_once_with(2.0)
+
+    def test_post_retries_url_error_with_backoff(self) -> None:
+        """_post retries transient network errors with backoff.
+
+        REQ: SEC-NET-003
+        """
+        client = PlaidClient(self._make_config())
+        mock_resp = self._mock_response({"result": "ok"})
+
+        with (
+            patch(_URLOPEN, side_effect=[urllib_error.URLError("timeout"), mock_resp]),
+            patch.object(client, "_backoff_delay", return_value=0.25),
+            patch("godzilla_core.integrations.plaid_client.time.sleep") as sleep_mock,
+        ):
+            result = client._post("/some/path", {})
+
+        self.assertEqual(result, {"result": "ok"})
+        sleep_mock.assert_called_once_with(0.25)
+
+    def test_post_non_retriable_http_error_does_not_sleep(self) -> None:
+        """_post fails fast on non-retriable 4xx errors.
+
+        REQ: SEC-NET-003
+        """
+        client = PlaidClient(self._make_config())
+        first_error = urllib_error.HTTPError(
+            url="https://sandbox.plaid.com/some/path",
+            code=400,
+            msg="Bad Request",
+            hdrs=Message(),  # type: ignore[arg-type]
+            fp=io.BytesIO(b'{"error":"bad"}'),
+        )
+        with (
+            patch(_URLOPEN, side_effect=first_error),
+            patch("godzilla_core.integrations.plaid_client.time.sleep") as sleep_mock,
+        ):
+            with self.assertRaises(PlaidApiError):
+                client._post("/some/path", {})
+        sleep_mock.assert_not_called()
+
     def test_create_sandbox_public_token(self) -> None:
         """create_sandbox_public_token returns the public_token from the response.
 
@@ -286,6 +352,17 @@ class PlaidClientPostTests(unittest.TestCase):
         with patch(_URLOPEN, return_value=mock_resp):
             result = client.accounts_balance_get("at-xyz")
         self.assertEqual(result["accounts"][0]["account_id"], "acct-1")
+
+    def test_remove_item_posts_to_item_remove(self) -> None:
+        """remove_item sends request to /item/remove endpoint.
+
+        REQ: FUNC-ACCT-008
+        """
+        client = PlaidClient(self._make_config())
+        mock_resp = self._mock_response({"request_id": "req-1"})
+        with patch(_URLOPEN, return_value=mock_resp):
+            result = client.remove_item("at-xyz")
+        self.assertEqual(result["request_id"], "req-1")
 
 
 class PlaidSandboxFlowTests(unittest.TestCase):

@@ -1,7 +1,7 @@
 """FastAPI application layer for UI integration.
 
 REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
-REQ: FUNC-ACCT-005, FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001,
+REQ: FUNC-ACCT-005, FUNC-ACCT-007, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001,
 REQ: FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005,
 REQ: FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
 REQ: FUNC-CAT-001, FUNC-CAT-002,
@@ -14,26 +14,41 @@ REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
 REQ: FUNC-BKP-006,
 REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
 REQ: FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004,
-REQ: SEC-ACC-004, SEC-DATA-003
+REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-DATA-003,
+REQ: SEC-NET-001
 """
 
 from __future__ import annotations
 
 import calendar
 import csv
+import hashlib
 import io
 import json
 import logging
 import os
+import ssl
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from hmac import compare_digest
 from pathlib import Path
+from threading import Lock
 from typing import Annotated, Any, Iterator, Literal
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, field_validator
 from sqlcipher3 import dbapi2 as sqlcipher
@@ -47,6 +62,7 @@ from godzilla_core.integrations.plaid_client import (
     link_sandbox_item,
 )
 from godzilla_core.integrations.plaid_sync import SyncError, sync_item_transactions_and_balances
+from godzilla_core.security.auth import generate_pin_salt, hash_pin, verify_pin
 from godzilla_core.security.backup import (
     BackupError,
     BackupFormatError,
@@ -65,6 +81,13 @@ _SORT_FIELDS = {
     "amount": "transaction_record.amount",
 }
 _DISALLOWED_PLAID_LINK_PRODUCTS = {"balance"}
+_PIN_HASH_SECRET_KEY = "app_pin_hash"
+_PIN_SALT_SECRET_KEY = "app_pin_salt"
+_PIN_UPDATED_AT_SECRET_KEY = "app_pin_updated_at_utc"
+_UNLOCK_HEADER_NAME = "X-App-Unlock-Token"
+_UNLOCK_EXEMPT_PATHS = {"/auth/status", "/auth/setup-pin", "/auth/unlock"}
+_UNLOCK_SESSIONS: dict[str, datetime] = {}
+_UNLOCK_SESSIONS_LOCK = Lock()
 
 
 class PlaidLinkRequest(BaseModel):
@@ -132,6 +155,20 @@ class PlaidSyncResponse(BaseModel):
     removed: int
     balance_accounts: int
     cursor: str
+
+
+class UnlinkItemResponse(BaseModel):
+    """Response payload for item unlink operation.
+
+    REQ: FUNC-ACCT-008
+    """
+
+    item_id: str
+    mode: Literal["keep", "purge"]
+    token_removed: bool
+    remote_revoked: bool
+    raw_payload_rows_deleted: int
+    local_data_purged: bool
 
 
 class AccountResponse(BaseModel):
@@ -618,6 +655,69 @@ class UpdateSettingsRequest(BaseModel):
     sync: SyncSettingsPatch | None = None
 
 
+class AuthStatusTlsResponse(BaseModel):
+    """TLS status details returned by auth status endpoint.
+
+    REQ: SEC-NET-001
+    """
+
+    enabled: bool
+    cert_fingerprint_sha256: str | None
+
+
+class AuthStatusResponse(BaseModel):
+    """Authentication/lock status for UI bootstrap and gating.
+
+    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001
+    """
+
+    pin_configured: bool
+    setup_required: bool
+    locked: bool
+    auto_lock_minutes: int
+    unlock_expires_at_utc: str | None
+    dev_bypass_enabled: bool
+    tls: AuthStatusTlsResponse
+
+
+class SetupPinRequest(BaseModel):
+    """Create or rotate the application PIN.
+
+    REQ: SEC-ACC-001, SEC-ACC-003
+    """
+
+    new_pin: str = Field(pattern=r"^\d{4,12}$")
+    current_pin: str | None = Field(default=None, pattern=r"^\d{4,12}$")
+
+
+class SetupPinResponse(BaseModel):
+    """PIN setup result payload.
+
+    REQ: SEC-ACC-003
+    """
+
+    pin_configured: bool
+
+
+class UnlockRequest(BaseModel):
+    """Unlock request payload containing PIN.
+
+    REQ: SEC-ACC-001
+    """
+
+    pin: str = Field(pattern=r"^\d{4,12}$")
+
+
+class UnlockResponse(BaseModel):
+    """Unlock response payload containing session token.
+
+    REQ: SEC-ACC-001, SEC-ACC-002
+    """
+
+    unlock_token: str
+    expires_at_utc: str
+
+
 class AuditLogEntryResponse(BaseModel):
     """Audit log entry payload.
 
@@ -803,15 +903,17 @@ def _upsert_linked_item_metadata(
         conn.execute(
             "INSERT INTO plaid_item ("
             "id, provider_item_id, institution_id, access_token_ref, status, "
+            "is_unlinked, "
             "last_sync_at_utc, last_sync_at_tz, last_sync_at_offset_minutes, "
             "created_at_utc, created_at_tz, created_at_offset_minutes"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 item_id,
                 provider_item_id,
                 institution_id,
                 access_token_ref,
                 "linked",
+                0,
                 None,
                 None,
                 None,
@@ -823,25 +925,282 @@ def _upsert_linked_item_metadata(
         return
 
     conn.execute(
-        "UPDATE plaid_item SET institution_id = ?, access_token_ref = ?, status = ? WHERE id = ?",
+        "UPDATE plaid_item SET institution_id = ?, access_token_ref = ?, "
+        "status = ?, is_unlinked = 0 WHERE id = ?",
         (institution_id, access_token_ref, "linked", item_row[0]),
     )
 
 
-async def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
-    """Validate API caller credentials.
+def _pin_bypass_enabled() -> bool:
+    """Return whether dev PIN bypass mode is enabled.
 
-    REQ: SEC-ACC-004
+    REQ: SEC-ACC-001
+    """
+    value = os.environ.get("GODZILLA_DEV_BYPASS_PIN", "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _load_pin_material() -> tuple[str, str] | None:
+    """Load persisted PIN hash/salt from secure storage.
+
+    REQ: SEC-ACC-003
+    """
+    store = store_from_env()
+    pin_hash = store.get_secret(_PIN_HASH_SECRET_KEY)
+    pin_salt = store.get_secret(_PIN_SALT_SECRET_KEY)
+    if not pin_hash or not pin_salt:
+        return None
+    return pin_hash, pin_salt
+
+
+def _save_pin_material(pin_hash: str, pin_salt: str) -> None:
+    """Persist PIN hash/salt into secure storage.
+
+    REQ: SEC-ACC-003
+    """
+    store = store_from_env()
+    store.set_secret(_PIN_HASH_SECRET_KEY, pin_hash)
+    store.set_secret(_PIN_SALT_SECRET_KEY, pin_salt)
+    timestamp_utc, _, _ = local_timestamp_metadata()
+    store.set_secret(_PIN_UPDATED_AT_SECRET_KEY, timestamp_utc)
+
+
+def _current_auto_lock_minutes() -> int:
+    """Load active auto-lock timeout from settings.
+
+    REQ: SEC-ACC-002, FUNC-SET-003
+    """
+    try:
+        with _db_connection() as conn:
+            return _load_settings(conn).security.auto_lock_minutes
+    except Exception:
+        return _default_settings_payload().security.auto_lock_minutes
+
+
+def _register_unlock_session() -> tuple[str, datetime]:
+    """Create and store a new unlock session token.
+
+    REQ: SEC-ACC-001, SEC-ACC-002
+    """
+    now = datetime.now(timezone.utc)
+    token = str(uuid4())
+    with _UNLOCK_SESSIONS_LOCK:
+        _UNLOCK_SESSIONS[token] = now
+    expires_at = now + timedelta(minutes=_current_auto_lock_minutes())
+    return token, expires_at
+
+
+def _touch_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
+    """Validate and refresh unlock session activity.
+
+    Returns expiry timestamp when valid, otherwise None.
+
+    REQ: SEC-ACC-001, SEC-ACC-002
+    """
+    now = datetime.now(timezone.utc)
+    with _UNLOCK_SESSIONS_LOCK:
+        last_activity = _UNLOCK_SESSIONS.get(token)
+        if last_activity is None:
+            return None
+        if now > (last_activity + timedelta(minutes=timeout_minutes)):
+            del _UNLOCK_SESSIONS[token]
+            return None
+        _UNLOCK_SESSIONS[token] = now
+    return now + timedelta(minutes=timeout_minutes)
+
+
+def _peek_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
+    """Validate unlock session without mutating activity timestamp.
+
+    REQ: SEC-ACC-001, SEC-ACC-002
+    """
+    now = datetime.now(timezone.utc)
+    with _UNLOCK_SESSIONS_LOCK:
+        last_activity = _UNLOCK_SESSIONS.get(token)
+        if last_activity is None:
+            return None
+        if now > (last_activity + timedelta(minutes=timeout_minutes)):
+            del _UNLOCK_SESSIONS[token]
+            return None
+    return last_activity + timedelta(minutes=timeout_minutes)
+
+
+def _tls_status() -> AuthStatusTlsResponse:
+    """Return current TLS enablement and certificate fingerprint.
+
+    REQ: SEC-NET-001
+    """
+    cert_env = os.environ.get("GODZILLA_TLS_CERT")
+    key_env = os.environ.get("GODZILLA_TLS_KEY")
+    if not cert_env or not key_env:
+        return AuthStatusTlsResponse(enabled=False, cert_fingerprint_sha256=None)
+
+    cert_path = _expand_path(cert_env)
+    key_path = _expand_path(key_env)
+    if not cert_path.exists() or not key_path.exists():
+        return AuthStatusTlsResponse(enabled=False, cert_fingerprint_sha256=None)
+
+    fingerprint: str | None = None
+    try:
+        pem_text = cert_path.read_text(encoding="utf-8")
+        der_bytes = ssl.PEM_cert_to_DER_cert(pem_text)
+        fingerprint = hashlib.sha256(der_bytes).hexdigest().upper()
+    except Exception:
+        fingerprint = None
+    return AuthStatusTlsResponse(enabled=True, cert_fingerprint_sha256=fingerprint)
+
+
+async def require_api_key(
+    request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    x_app_unlock_token: str | None = Header(default=None, alias=_UNLOCK_HEADER_NAME),
+) -> None:
+    """Validate API token and enforce unlock gate for sensitive routes.
+
+    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004
     """
     expected = os.environ.get("GODZILLA_API_TOKEN")
     if not expected:
         raise HTTPException(status_code=500, detail="API auth is not configured")
-
     if not x_api_key or not compare_digest(x_api_key, expected):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    if _pin_bypass_enabled() or request.url.path in _UNLOCK_EXEMPT_PATHS:
+        return
 
-def _register_plaid_routes(app: FastAPI) -> None:
+    try:
+        pin_material = _load_pin_material()
+    except SecretStoreError as exc:
+        raise HTTPException(status_code=500, detail="PIN secure storage is not configured") from exc
+    if pin_material is None:
+        raise HTTPException(status_code=423, detail="PIN setup required")
+
+    timeout_minutes = _current_auto_lock_minutes()
+    if not x_app_unlock_token:
+        raise HTTPException(status_code=423, detail="App is locked")
+    if _touch_unlock_session(x_app_unlock_token, timeout_minutes) is None:
+        raise HTTPException(status_code=423, detail="App is locked")
+
+
+def _register_auth_routes(app: FastAPI) -> None:
+    """Register authentication and lock-state endpoints.
+
+    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001, SEC-ACC-004
+    """
+
+    @app.get(
+        "/auth/status",
+        response_model=AuthStatusResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def get_auth_status(
+        x_app_unlock_token: str | None = Header(default=None, alias=_UNLOCK_HEADER_NAME),
+    ) -> AuthStatusResponse:
+        """Return lock/setup/TLS status used by app bootstrap.
+
+        REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001
+        """
+        bypass_enabled = _pin_bypass_enabled()
+        auto_lock_minutes = _current_auto_lock_minutes()
+
+        pin_configured = False
+        try:
+            pin_configured = _load_pin_material() is not None
+        except SecretStoreError:
+            pin_configured = False
+
+        unlock_expires: str | None = None
+        if (
+            not bypass_enabled
+            and pin_configured
+            and x_app_unlock_token
+            and (expiry := _peek_unlock_session(x_app_unlock_token, auto_lock_minutes)) is not None
+        ):
+            unlock_expires = expiry.strftime("%Y-%m-%dT%H:%M:%S")
+            locked = False
+        else:
+            locked = not bypass_enabled
+
+        return AuthStatusResponse(
+            pin_configured=pin_configured,
+            setup_required=(not pin_configured and not bypass_enabled),
+            locked=locked,
+            auto_lock_minutes=auto_lock_minutes,
+            unlock_expires_at_utc=unlock_expires,
+            dev_bypass_enabled=bypass_enabled,
+            tls=_tls_status(),
+        )
+
+    @app.post(
+        "/auth/setup-pin",
+        response_model=SetupPinResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def setup_pin(request: SetupPinRequest) -> SetupPinResponse:
+        """Create or rotate app PIN in secure storage.
+
+        REQ: SEC-ACC-001, SEC-ACC-003
+        """
+        try:
+            existing = _load_pin_material()
+        except SecretStoreError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="PIN secure storage is not configured",
+            ) from exc
+
+        if existing is not None:
+            if not request.current_pin:
+                raise HTTPException(status_code=422, detail="current_pin is required to change PIN")
+            if not verify_pin(request.current_pin, existing[0], existing[1]):
+                raise HTTPException(status_code=401, detail="Invalid current PIN")
+
+        new_salt = generate_pin_salt()
+        new_hash = hash_pin(request.new_pin, new_salt)
+        _save_pin_material(new_hash, new_salt)
+        with _UNLOCK_SESSIONS_LOCK:
+            _UNLOCK_SESSIONS.clear()
+        _log_event(logging.INFO, "pin_configured", {"pin_rotated": existing is not None})
+        return SetupPinResponse(pin_configured=True)
+
+    @app.post(
+        "/auth/unlock",
+        response_model=UnlockResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def unlock_app(request: UnlockRequest) -> UnlockResponse:
+        """Unlock app session with PIN verification.
+
+        REQ: SEC-ACC-001, SEC-ACC-002
+        """
+        if _pin_bypass_enabled():
+            token, expires_at = _register_unlock_session()
+            return UnlockResponse(
+                unlock_token=token,
+                expires_at_utc=expires_at.strftime("%Y-%m-%dT%H:%M:%S"),
+            )
+
+        try:
+            pin_material = _load_pin_material()
+        except SecretStoreError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="PIN secure storage is not configured",
+            ) from exc
+        if pin_material is None:
+            raise HTTPException(status_code=423, detail="PIN setup required")
+        if not verify_pin(request.pin, pin_material[0], pin_material[1]):
+            raise HTTPException(status_code=401, detail="Invalid PIN")
+
+        token, expires_at = _register_unlock_session()
+        _log_event(logging.INFO, "unlock_success", {})
+        return UnlockResponse(
+            unlock_token=token,
+            expires_at_utc=expires_at.strftime("%Y-%m-%dT%H:%M:%S"),
+        )
+
+
+def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register Plaid endpoints on the FastAPI application.
 
     REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
@@ -972,6 +1331,98 @@ def _register_plaid_routes(app: FastAPI) -> None:
                 {"item_id": request.item_id, "error": str(exc)},
             )
             raise HTTPException(status_code=400, detail="Plaid sync failed") from exc
+
+    @app.delete(
+        "/plaid/items/{item_id}",
+        response_model=UnlinkItemResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def unlink_plaid_item(
+        item_id: str = FastAPIPath(min_length=1),
+        mode: Literal["keep", "purge"] = Query(default="keep"),
+    ) -> UnlinkItemResponse:
+        """Unlink an institution item and revoke/delete credentials.
+
+        REQ: FUNC-ACCT-008, SEC-CRY-004
+        """
+        _log_event(logging.INFO, "unlink_started", {"item_id": item_id, "mode": mode})
+        try:
+            with _db_connection() as conn:
+                item_row = conn.execute(
+                    "SELECT id, access_token_ref FROM plaid_item WHERE provider_item_id = ?",
+                    (item_id,),
+                ).fetchone()
+                if item_row is None:
+                    raise HTTPException(status_code=404, detail="Plaid item not found")
+                local_item_id = str(item_row[0])
+                access_token_ref = str(item_row[1])
+
+                try:
+                    secret_store = store_from_env()
+                except SecretStoreError as exc:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Secrets store is not configured",
+                    ) from exc
+
+                access_token = secret_store.get_secret(access_token_ref)
+                remote_revoked = False
+                if access_token:
+                    try:
+                        client = PlaidClient(PlaidConfig.from_env())
+                        client.remove_item(access_token)
+                        remote_revoked = True
+                    except (PlaidConfigError, PlaidApiError):
+                        remote_revoked = False
+
+                token_removed = access_token is not None
+                secret_store.delete_secret(access_token_ref)
+
+                raw_payload_rows_deleted = conn.execute(
+                    "DELETE FROM provider_raw WHERE transaction_id IN ("
+                    "SELECT transaction_record.id "
+                    "FROM transaction_record "
+                    "JOIN account ON account.id = transaction_record.account_id "
+                    "WHERE account.item_id = ?"
+                    ")",
+                    (local_item_id,),
+                ).rowcount
+
+                if mode == "purge":
+                    conn.execute("DELETE FROM plaid_item WHERE id = ?", (local_item_id,))
+                    local_data_purged = True
+                else:
+                    conn.execute(
+                        "UPDATE plaid_item SET status = 'requires_reauth', is_unlinked = 1 "
+                        "WHERE id = ?",
+                        (local_item_id,),
+                    )
+                    local_data_purged = False
+
+                conn.commit()
+            _log_event(
+                logging.INFO,
+                "unlink_success",
+                {
+                    "item_id": item_id,
+                    "mode": mode,
+                    "token_removed": token_removed,
+                    "remote_revoked": remote_revoked,
+                    "raw_payload_rows_deleted": raw_payload_rows_deleted,
+                    "local_data_purged": local_data_purged,
+                },
+            )
+            return UnlinkItemResponse(
+                item_id=item_id,
+                mode=mode,
+                token_removed=token_removed,
+                remote_revoked=remote_revoked,
+                raw_payload_rows_deleted=raw_payload_rows_deleted,
+                local_data_purged=local_data_purged,
+            )
+        except HTTPException:
+            _log_event(logging.ERROR, "unlink_failed", {"item_id": item_id, "mode": mode})
+            raise
 
 
 def _validate_category_assignment(conn: sqlcipher.Connection, category_id: str) -> None:
@@ -2178,6 +2629,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             rows = conn.execute(
                 "SELECT "
                 "plaid_item.provider_item_id, institution.plaid_institution_id, plaid_item.status, "
+                "plaid_item.is_unlinked, "
                 "sync_state.last_sync_at_utc, sync_state.last_sync_at_tz, "
                 "sync_state.last_sync_at_offset_minutes, sync_state.last_sync_status, "
                 "sync_state.plaid_cursor "
@@ -2191,12 +2643,12 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             SyncStateResponse(
                 item_id=row[0],
                 institution_id=row[1],
-                status=row[2],
-                last_sync_at_utc=row[3],
-                last_sync_at_tz=row[4],
-                last_sync_at_offset_minutes=row[5],
-                last_sync_status=row[6],
-                cursor=row[7],
+                status="unlinked" if bool(row[3]) else row[2],
+                last_sync_at_utc=row[4],
+                last_sync_at_tz=row[5],
+                last_sync_at_offset_minutes=row[6],
+                last_sync_status=row[7],
+                cursor=row[8],
             )
             for row in rows
         ]
@@ -3317,9 +3769,11 @@ def create_app() -> FastAPI:
     REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
     REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
     REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-004
+    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-001,
+    REQ: SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-NET-001
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
+    _register_auth_routes(app)
     _register_plaid_routes(app)
     _register_read_routes(app)
     _register_write_routes(app)

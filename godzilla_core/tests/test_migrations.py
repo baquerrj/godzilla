@@ -41,7 +41,7 @@ class MigrationRunnerTests(unittest.TestCase):
         REQ: SEC-CRY-001, SYS-004
         """
         version = run_migrations(db_path=self.db_path, db_key=self.db_key)
-        self.assertEqual(version, 3)
+        self.assertEqual(version, 4)
 
         conn = sqlcipher.connect(self.db_path)
         conn.execute("PRAGMA key = 'test-key';")
@@ -68,6 +68,10 @@ class MigrationRunnerTests(unittest.TestCase):
         self.assertIn("auto_lock_minutes", columns)
         self.assertIn("sync_schedule_enabled", columns)
         self.assertIn("sync_frequency_minutes", columns)
+        plaid_item_columns = {
+            r[1] for r in conn.execute("PRAGMA table_info(plaid_item)").fetchall()
+        }
+        self.assertIn("is_unlinked", plaid_item_columns)
         conn.close()
 
     def test_migration_is_idempotent(self) -> None:

@@ -1,7 +1,7 @@
 """Plaid sync ingestion tests.
 
 REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003,
-REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006
+REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-ACCT-008
 """
 
 import json
@@ -710,6 +710,53 @@ class SyncItemFullFlowTests(unittest.TestCase):
         with self.assertRaises(SyncError):
             sync_item_transactions_and_balances(
                 provider_item_id="no-such-item",
+                plaid_institution_id="ins_109508",
+            )
+
+    def test_sync_raises_for_unlinked_item(self) -> None:
+        """sync_item_transactions_and_balances rejects items marked unlinked.
+
+        REQ: FUNC-ACCT-008
+        """
+        conn = sqlcipher.connect(self.db_path)
+        conn.execute(f"PRAGMA key = '{self.db_key}';")
+        conn.execute(
+            "INSERT INTO institution ("
+            "id, name, plaid_institution_id, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?)",
+            ("inst-u1", "inst-u1", "ins_109508", "2026-01-01T00:00:00", "UTC", 0),
+        )
+        conn.execute(
+            "INSERT INTO plaid_item ("
+            "id, provider_item_id, institution_id, access_token_ref, status, is_unlinked, "
+            "last_sync_at_utc, last_sync_at_tz, last_sync_at_offset_minutes, "
+            "created_at_utc, created_at_tz, created_at_offset_minutes"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "item-unlinked",
+                "provider-item-unlinked",
+                "inst-u1",
+                "plaid_access_token:provider-item-unlinked",
+                "requires_reauth",
+                1,
+                None,
+                None,
+                None,
+                "2026-01-01T00:00:00",
+                "UTC",
+                0,
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        store = SecretStore(db_path=self.secrets_path, db_key=self.db_key)
+        store.set_secret("plaid_access_token:provider-item-unlinked", "at-unlinked")
+
+        with self.assertRaisesRegex(SyncError, "unlinked"):
+            sync_item_transactions_and_balances(
+                provider_item_id="provider-item-unlinked",
                 plaid_institution_id="ins_109508",
             )
 

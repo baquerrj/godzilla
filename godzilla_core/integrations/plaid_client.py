@@ -1,13 +1,18 @@
 """Plaid sandbox client and token exchange helpers.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002, SEC-DATA-001
+REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-008, SEC-CRY-002, SEC-DATA-001,
+REQ: SEC-NET-003
 """
 
 from __future__ import annotations
 
 import json
 import os
+import random
+import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Dict, Iterable, Optional
 from urllib import error, request
 
@@ -21,6 +26,11 @@ _ENV_URLS = {
 
 _DEFAULT_PRODUCTS = ["transactions", "identity"]
 _DEFAULT_SANDBOX_INSTITUTION_ID = "ins_109508"
+_MAX_RETRY_ATTEMPTS = 5
+_BACKOFF_BASE_SECONDS = 0.5
+_BACKOFF_MAX_SECONDS = 8.0
+_BACKOFF_JITTER_SECONDS = 0.3
+_RETRIABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
 
 class PlaidConfigError(RuntimeError):
@@ -90,21 +100,56 @@ class PlaidConfig:
 class PlaidClient:
     """HTTP client wrapper for the Plaid API.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
+    REQ: SEC-NET-003
     """
 
     def __init__(self, config: PlaidConfig, timeout_seconds: int = 15) -> None:
         """Create a Plaid client with static config and request timeout.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
+        REQ: SEC-NET-003
         """
         self._config = config
         self._timeout_seconds = timeout_seconds
 
+    def _backoff_delay(self, attempt_index: int) -> float:
+        """Compute capped exponential backoff delay with jitter.
+
+        REQ: SEC-NET-003
+        """
+        base_delay = min(_BACKOFF_BASE_SECONDS * (2**attempt_index), _BACKOFF_MAX_SECONDS)
+        jitter = random.uniform(0.0, _BACKOFF_JITTER_SECONDS)  # noqa: S311
+        return min(base_delay + jitter, _BACKOFF_MAX_SECONDS)
+
+    def _retry_after_delay(self, retry_after: str | None) -> float | None:
+        """Parse Retry-After header value into delay seconds.
+
+        Supports integer seconds and RFC 2822 datetime values.
+
+        REQ: SEC-NET-003
+        """
+        if not retry_after:
+            return None
+        value = retry_after.strip()
+        if not value:
+            return None
+        if value.isdigit():
+            return max(0.0, float(value))
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return None
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        return max(0.0, (retry_at - now).total_seconds())
+
     def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Send an authenticated POST request to a Plaid endpoint.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
+        REQ: SEC-NET-003
 
         Args:
             path: Plaid API endpoint path.
@@ -126,15 +171,29 @@ class PlaidClient:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        try:
-            with request.urlopen(req, timeout=self._timeout_seconds) as resp:
-                response_data = resp.read().decode("utf-8")
-                return json.loads(response_data)
-        except error.HTTPError as exc:
-            details = exc.read().decode("utf-8")
-            raise PlaidApiError(details or "Plaid API error", exc.code) from exc
-        except error.URLError as exc:
-            raise PlaidApiError(str(exc)) from exc
+        for attempt in range(_MAX_RETRY_ATTEMPTS):
+            try:
+                with request.urlopen(req, timeout=self._timeout_seconds) as resp:
+                    response_data = resp.read().decode("utf-8")
+                    return json.loads(response_data)
+            except error.HTTPError as exc:
+                details = exc.read().decode("utf-8")
+                if exc.code in _RETRIABLE_HTTP_CODES and attempt < (_MAX_RETRY_ATTEMPTS - 1):
+                    retry_after = None
+                    if exc.headers is not None:
+                        retry_after = exc.headers.get("Retry-After")
+                    delay = self._retry_after_delay(retry_after)
+                    if delay is None:
+                        delay = self._backoff_delay(attempt)
+                    time.sleep(delay)
+                    continue
+                raise PlaidApiError(details or "Plaid API error", exc.code) from exc
+            except error.URLError as exc:
+                if attempt < (_MAX_RETRY_ATTEMPTS - 1):
+                    time.sleep(self._backoff_delay(attempt))
+                    continue
+                raise PlaidApiError(str(exc)) from exc
+        raise PlaidApiError("Plaid API retry attempts exhausted")
 
     def create_sandbox_public_token(
         self,
@@ -190,6 +249,14 @@ class PlaidClient:
         """
         payload = {"access_token": access_token}
         return self._post("/accounts/balance/get", payload)
+
+    def remove_item(self, access_token: str) -> Dict[str, Any]:
+        """Revoke an item's access token via Plaid item/remove.
+
+        REQ: FUNC-ACCT-008
+        """
+        payload = {"access_token": access_token}
+        return self._post("/item/remove", payload)
 
 
 def store_access_token(secret_store: SecretStore, item_id: str, access_token: str) -> str:
