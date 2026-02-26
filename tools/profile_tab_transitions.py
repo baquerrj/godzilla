@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
-"""Profile UI first-load latency by timing tab-specific API call groups.
+"""Profile API latency for sequential tab-navigation transitions.
 
-This script measures the backend request sets that each tab issues on first load.
-It writes both raw samples and summarized metrics to JSON/CSV files.
+This script simulates the API call sets that fire when a user navigates
+between tabs in sequence: overview → transactions → reports → data → overview.
+Each transition is timed as a group (the max latency of the concurrent
+calls fired for that tab) to capture the wall-clock cost of switching tabs.
+
+Output files follow the required naming convention:
+    <batch>-<yyyymmddThhmmssZ>-<artifact>
+
+Required artifacts per run:
+    *-tab-transitions.raw.json
+    *-tab-transitions.summary.json
+    *-tab-transitions.summary.csv
+    *-tab-transitions.endpoints.csv
 """
 
 from __future__ import annotations
@@ -22,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
@@ -31,7 +42,6 @@ class EndpointCall:
     name: str
     path: str
     method: str = "GET"
-    body: dict[str, Any] | None = None
 
 
 def month_bounds(now: datetime) -> tuple[str, str, str]:
@@ -58,12 +68,12 @@ def percentile(values: list[float], p: float) -> float:
     upper = math.ceil(rank)
     if lower == upper:
         return sorted_values[int(rank)]
-    low_val = sorted_values[lower]
-    high_val = sorted_values[upper]
-    return low_val + (high_val - low_val) * (rank - lower)
+    return sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * (rank - lower)
 
 
-def build_context(base_url: str, insecure: bool) -> ssl.SSLContext | None:
+def build_ssl_context(base_url: str, insecure: bool) -> ssl.SSLContext | None:
+    from urllib.parse import urlsplit
+
     if urlsplit(base_url).scheme != "https":
         return None
     if insecure:
@@ -79,31 +89,18 @@ def make_request(
     unlock_token: str | None,
     call: EndpointCall,
 ) -> dict[str, Any]:
-    headers = {
-        "X-API-Key": api_token,
-    }
+    headers: dict[str, str] = {"X-API-Key": api_token}
     if unlock_token:
         headers["X-App-Unlock-Token"] = unlock_token
 
-    body_bytes: bytes | None = None
-    if call.body is not None:
-        body_bytes = json.dumps(call.body).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-
-    request = Request(
-        url=f"{base_url}{call.path}",
-        method=call.method,
-        headers=headers,
-        data=body_bytes,
-    )
-
+    req = Request(url=f"{base_url}{call.path}", method=call.method, headers=headers)
     start = time.perf_counter()
     status_code: int | None = None
     ok = False
     error: str | None = None
     payload_size = 0
     try:
-        with urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
+        with urlopen(req, timeout=timeout_seconds, context=ssl_context) as response:
             payload = response.read()
             status_code = response.status
             payload_size = len(payload)
@@ -117,7 +114,7 @@ def make_request(
             payload_size = 0
     except URLError as exc:
         error = f"url_error:{exc.reason}"
-    except Exception as exc:  # pragma: no cover - defensive fallback
+    except Exception as exc:
         error = f"request_error:{exc}"
     duration_ms = (time.perf_counter() - start) * 1000.0
     return {
@@ -139,25 +136,16 @@ def fetch_auth_status(
     api_token: str,
     unlock_token: str | None,
 ) -> dict[str, Any]:
-    result = make_request(
-        base_url=base_url,
-        timeout_seconds=timeout_seconds,
-        ssl_context=ssl_context,
-        api_token=api_token,
-        unlock_token=unlock_token,
-        call=EndpointCall(name="auth_status", path="/auth/status"),
-    )
-    if not result["ok"]:
-        raise RuntimeError(
-            f"/auth/status failed: status={result['status_code']} error={result['error']}"
-        )
-
-    headers = {"X-API-Key": api_token}
+    headers: dict[str, str] = {"X-API-Key": api_token}
     if unlock_token:
         headers["X-App-Unlock-Token"] = unlock_token
-    request = Request(url=f"{base_url}/auth/status", method="GET", headers=headers)
-    with urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
-        return json.loads(response.read().decode("utf-8"))
+    req = Request(url=f"{base_url}/auth/status", method="GET", headers=headers)
+    try:
+        with urlopen(req, timeout=timeout_seconds, context=ssl_context) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        message = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"/auth/status failed: status={exc.code} body={message}") from exc
 
 
 def unlock_with_pin(
@@ -167,19 +155,11 @@ def unlock_with_pin(
     api_token: str,
     pin: str,
 ) -> str:
-    headers = {
-        "X-API-Key": api_token,
-        "Content-Type": "application/json",
-    }
+    headers = {"X-API-Key": api_token, "Content-Type": "application/json"}
     body = json.dumps({"pin": pin}).encode("utf-8")
-    request = Request(
-        url=f"{base_url}/auth/unlock",
-        method="POST",
-        headers=headers,
-        data=body,
-    )
+    req = Request(url=f"{base_url}/auth/unlock", method="POST", headers=headers, data=body)
     try:
-        with urlopen(request, timeout=timeout_seconds, context=ssl_context) as response:
+        with urlopen(req, timeout=timeout_seconds, context=ssl_context) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         message = exc.read().decode("utf-8", errors="replace")
@@ -190,59 +170,67 @@ def unlock_with_pin(
     return token
 
 
-def build_scenarios(now: datetime) -> dict[str, list[EndpointCall]]:
-    """Build the per-tab API call sets that reflect the post-S1 call graph.
+def build_transitions(now: datetime) -> list[tuple[str, list[EndpointCall]]]:
+    """Return the ordered sequence of (transition_name, calls) for one navigation loop.
 
-    Post-S1 changes:
-    - overview_first_load: /accounts is fetched once (accountsTable.getAccounts removed).
-    - data_first_load: /settings is fetched once (exportPanel.getSettings removed).
+    Simulates: overview (already loaded) → transactions → reports → data → back to overview.
+    Each entry represents the API calls that fire when the tab is visited for the first time
+    (lazy-mount pattern). The overview calls are included to model a full refresh cycle too.
     """
     month, month_start, month_end = month_bounds(now)
-    overview_calls = [
-        # S1-1: accounts fetched once in App; AccountsTable receives it as a prop.
-        EndpointCall(name="app.getAccounts", path="/accounts"),
-        EndpointCall(name="app.getCategories", path="/categories"),
-        EndpointCall(name="syncState.getSyncState", path="/sync-state"),
-        EndpointCall(name="conflictQueue.getConflicts", path="/conflicts?status=open"),
-        EndpointCall(name="balancesTable.getBalances", path="/balances?limit=100"),
-    ]
-    transactions_calls = [
-        EndpointCall(
-            name="transactionsTable.getTransactions",
-            path=f"/transactions?{urlencode({'limit': 50, 'offset': 0, 'sort_by': 'date', 'sort_order': 'desc'})}",
-        )
-    ]
-    reports_calls = [
-        EndpointCall(name="budgetPanel.getBudgets", path=f"/budgets?{urlencode({'month': month})}"),
-        EndpointCall(
-            name="reportsPanel.getMonthlyOverview",
-            path=f"/reports/monthly-overview?{urlencode({'month': month})}",
+    return [
+        (
+            "overview_load",
+            [
+                EndpointCall(name="app.getAccounts", path="/accounts"),
+                EndpointCall(name="app.getCategories", path="/categories"),
+                EndpointCall(name="syncState.getSyncState", path="/sync-state"),
+                EndpointCall(name="conflictQueue.getConflicts", path="/conflicts?status=open"),
+                EndpointCall(name="balancesTable.getBalances", path="/balances?limit=100"),
+            ],
         ),
-        EndpointCall(
-            name="reportsPanel.getCashFlow",
-            path=f"/reports/cash-flow?{urlencode({'start': month_start, 'end': month_end})}",
+        (
+            "transactions_tab",
+            [
+                EndpointCall(
+                    name="transactionsTable.getTransactions",
+                    path=f"/transactions?{urlencode({'limit': 50, 'offset': 0, 'sort_by': 'date', 'sort_order': 'desc'})}",
+                ),
+            ],
         ),
-        EndpointCall(
-            name="reportsPanel.getNetWorth",
-            path=f"/reports/net-worth?{urlencode({'start': month_start, 'end': month_end})}",
+        (
+            "reports_tab",
+            [
+                EndpointCall(
+                    name="budgetPanel.getBudgets",
+                    path=f"/budgets?{urlencode({'month': month})}",
+                ),
+                EndpointCall(
+                    name="reportsPanel.getMonthlyOverview",
+                    path=f"/reports/monthly-overview?{urlencode({'month': month})}",
+                ),
+                EndpointCall(
+                    name="reportsPanel.getCashFlow",
+                    path=f"/reports/cash-flow?{urlencode({'start': month_start, 'end': month_end})}",
+                ),
+                EndpointCall(
+                    name="reportsPanel.getNetWorth",
+                    path=f"/reports/net-worth?{urlencode({'start': month_start, 'end': month_end})}",
+                ),
+            ],
+        ),
+        (
+            "data_tab",
+            [
+                EndpointCall(name="app.getSettings", path="/settings"),
+            ],
         ),
     ]
-    data_calls = [
-        # S1-2: settings fetched once in App; both SettingsPanel and ExportPanel receive it.
-        EndpointCall(name="app.getSettings", path="/settings"),
-    ]
-    return {
-        "overview_first_load": overview_calls,
-        "transactions_first_load": transactions_calls,
-        "reports_first_load": reports_calls,
-        "data_first_load": data_calls,
-    }
 
 
-def run_scenario(
+def run_transitions(
     *,
-    scenario_name: str,
-    calls: list[EndpointCall],
+    transitions: list[tuple[str, list[EndpointCall]]],
     runs: int,
     base_url: str,
     timeout_seconds: float,
@@ -250,71 +238,71 @@ def run_scenario(
     api_token: str,
     unlock_token: str | None,
 ) -> list[dict[str, Any]]:
+    """Run each transition sequentially per run, collecting per-endpoint samples."""
     all_samples: list[dict[str, Any]] = []
     for run_idx in range(runs):
         run_started_at = datetime.now(timezone.utc).isoformat()
-        with ThreadPoolExecutor(max_workers=max(1, len(calls))) as pool:
-            futures = [
-                pool.submit(
-                    make_request,
-                    base_url,
-                    timeout_seconds,
-                    ssl_context,
-                    api_token,
-                    unlock_token,
-                    call,
-                )
-                for call in calls
-            ]
-            results: list[dict[str, Any]] = []
-            for future in as_completed(futures):
-                results.append(future.result())
-        group_duration_ms = max((entry["duration_ms"] for entry in results), default=0.0)
-        for entry in results:
-            entry["scenario"] = scenario_name
-            entry["run_index"] = run_idx
-            entry["run_started_at_utc"] = run_started_at
-            entry["group_duration_ms"] = round(group_duration_ms, 3)
-            all_samples.append(entry)
+        for transition_name, calls in transitions:
+            with ThreadPoolExecutor(max_workers=max(1, len(calls))) as pool:
+                futures = [
+                    pool.submit(
+                        make_request,
+                        base_url,
+                        timeout_seconds,
+                        ssl_context,
+                        api_token,
+                        unlock_token,
+                        call,
+                    )
+                    for call in calls
+                ]
+                results: list[dict[str, Any]] = [f.result() for f in as_completed(futures)]
+            group_duration_ms = max((r["duration_ms"] for r in results), default=0.0)
+            for entry in results:
+                entry["transition"] = transition_name
+                entry["run_index"] = run_idx
+                entry["run_started_at_utc"] = run_started_at
+                entry["group_duration_ms"] = round(group_duration_ms, 3)
+                all_samples.append(entry)
     return all_samples
 
 
 def summarize(samples: list[dict[str, Any]]) -> dict[str, Any]:
-    by_scenario: dict[str, list[dict[str, Any]]] = {}
+    by_transition: dict[str, list[dict[str, Any]]] = {}
     by_endpoint: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for sample in samples:
-        by_scenario.setdefault(sample["scenario"], []).append(sample)
-        by_endpoint.setdefault((sample["scenario"], sample["endpoint_name"]), []).append(sample)
+    for s in samples:
+        by_transition.setdefault(s["transition"], []).append(s)
+        by_endpoint.setdefault((s["transition"], s["endpoint_name"]), []).append(s)
 
-    scenario_summary: dict[str, dict[str, Any]] = {}
-    for scenario, scenario_samples in by_scenario.items():
-        grouped_by_run: dict[int, list[dict[str, Any]]] = {}
-        for entry in scenario_samples:
-            grouped_by_run.setdefault(int(entry["run_index"]), []).append(entry)
-        run_latencies = [
+    transition_summary: dict[str, dict[str, Any]] = {}
+    for transition, t_samples in by_transition.items():
+        grouped: dict[int, list[dict[str, Any]]] = {}
+        for entry in t_samples:
+            grouped.setdefault(int(entry["run_index"]), []).append(entry)
+        latencies = [
             max(item["duration_ms"] for item in run_entries)
-            for _, run_entries in sorted(grouped_by_run.items(), key=lambda kv: kv[0])
+            for _, run_entries in sorted(grouped.items())
         ]
-        scenario_summary[scenario] = {
-            "runs": len(run_latencies),
+        transition_summary[transition] = {
+            "runs": len(latencies),
             "latency_ms": {
-                "min": round(min(run_latencies), 3),
-                "max": round(max(run_latencies), 3),
-                "mean": round(sum(run_latencies) / len(run_latencies), 3),
-                "p50": round(percentile(run_latencies, 0.50), 3),
-                "p95": round(percentile(run_latencies, 0.95), 3),
+                "min": round(min(latencies), 3),
+                "max": round(max(latencies), 3),
+                "mean": round(sum(latencies) / len(latencies), 3),
+                "p50": round(percentile(latencies, 0.50), 3),
+                "p95": round(percentile(latencies, 0.95), 3),
             },
         }
 
     endpoint_summary: dict[str, dict[str, Any]] = {}
-    for (scenario, endpoint_name), endpoint_samples in by_endpoint.items():
-        key = f"{scenario}:{endpoint_name}"
-        durations = [entry["duration_ms"] for entry in endpoint_samples]
-        failures = [entry for entry in endpoint_samples if not entry["ok"]]
+    for (transition, endpoint_name), ep_samples in by_endpoint.items():
+        key = f"{transition}:{endpoint_name}"
+        durations = [s["duration_ms"] for s in ep_samples]
+        failures = [s for s in ep_samples if not s["ok"]]
         endpoint_summary[key] = {
-            "scenario": scenario,
+            "transition": transition,
             "endpoint_name": endpoint_name,
-            "calls": len(endpoint_samples),
+            "calls": len(ep_samples),
             "failures": len(failures),
             "latency_ms": {
                 "min": round(min(durations), 3),
@@ -325,10 +313,7 @@ def summarize(samples: list[dict[str, Any]]) -> dict[str, Any]:
             },
         }
 
-    return {
-        "scenarios": scenario_summary,
-        "endpoints": endpoint_summary,
-    }
+    return {"transitions": transition_summary, "endpoints": endpoint_summary}
 
 
 def write_outputs(
@@ -349,49 +334,31 @@ def write_outputs(
 
     with summary_csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["scenario", "runs", "min_ms", "p50_ms", "mean_ms", "p95_ms", "max_ms"])
-        for scenario, values in summary_payload["scenarios"].items():
-            latency = values["latency_ms"]
+        writer.writerow(["transition", "runs", "min_ms", "p50_ms", "mean_ms", "p95_ms", "max_ms"])
+        for transition, values in summary_payload["transitions"].items():
+            lat = values["latency_ms"]
             writer.writerow(
-                [
-                    scenario,
-                    values["runs"],
-                    latency["min"],
-                    latency["p50"],
-                    latency["mean"],
-                    latency["p95"],
-                    latency["max"],
-                ]
+                [transition, values["runs"], lat["min"], lat["p50"], lat["mean"], lat["p95"], lat["max"]]
             )
 
     with endpoint_csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            [
-                "scenario",
-                "endpoint_name",
-                "calls",
-                "failures",
-                "min_ms",
-                "p50_ms",
-                "mean_ms",
-                "p95_ms",
-                "max_ms",
-            ]
+            ["transition", "endpoint_name", "calls", "failures", "min_ms", "p50_ms", "mean_ms", "p95_ms", "max_ms"]
         )
         for _, values in summary_payload["endpoints"].items():
-            latency = values["latency_ms"]
+            lat = values["latency_ms"]
             writer.writerow(
                 [
-                    values["scenario"],
+                    values["transition"],
                     values["endpoint_name"],
                     values["calls"],
                     values["failures"],
-                    latency["min"],
-                    latency["p50"],
-                    latency["mean"],
-                    latency["p95"],
-                    latency["max"],
+                    lat["min"],
+                    lat["p50"],
+                    lat["mean"],
+                    lat["p95"],
+                    lat["max"],
                 ]
             )
 
@@ -404,14 +371,16 @@ def write_outputs(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Profile first-load API latency by tab.")
+    parser = argparse.ArgumentParser(
+        description="Profile API latency for sequential tab-navigation transitions."
+    )
     parser.add_argument(
         "--batch",
         default=os.environ.get("GODZILLA_PROFILE_BATCH", "s1"),
         help=(
             "Batch label used in output file names, e.g. 'baseline', 's1', 's2' "
             "(default: %(default)s). Output files use the convention "
-            "<batch>-<yyyymmddThhmmssZ>-<artifact>."
+            "<batch>-<yyyymmddThhmmssZ>-tab-transitions.<artifact>."
         ),
     )
     parser.add_argument(
@@ -438,7 +407,7 @@ def parse_args() -> argparse.Namespace:
         "--runs",
         type=int,
         default=8,
-        help="Number of repeated runs per scenario (default: %(default)s).",
+        help="Number of repeated navigation loops per run set (default: %(default)s).",
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -476,7 +445,7 @@ def main() -> int:
         print("--runs must be >= 1", file=sys.stderr)
         return 2
 
-    ssl_context = build_context(args.base_url, args.insecure)
+    ssl_context = build_ssl_context(args.base_url, args.insecure)
     unlock_token = args.unlock_token
 
     try:
@@ -508,38 +477,34 @@ def main() -> int:
             pass
         else:
             print(
-                "App is locked. Provide --pin or --unlock-token, or set GODZILLA_AUTH_DEV_BYPASS=1 "
-                "for a dedicated profiling sidecar.",
+                "App is locked. Provide --pin or --unlock-token.",
                 file=sys.stderr,
             )
             return 1
 
     started_at = datetime.now(timezone.utc)
-    scenarios = build_scenarios(started_at)
-    samples: list[dict[str, Any]] = []
-    for scenario_name, calls in scenarios.items():
-        samples.extend(
-            run_scenario(
-                scenario_name=scenario_name,
-                calls=calls,
-                runs=args.runs,
-                base_url=args.base_url,
-                timeout_seconds=args.timeout_seconds,
-                ssl_context=ssl_context,
-                api_token=args.api_token,
-                unlock_token=unlock_token,
-            )
-        )
+    transitions = build_transitions(started_at)
+
+    samples = run_transitions(
+        transitions=transitions,
+        runs=args.runs,
+        base_url=args.base_url,
+        timeout_seconds=args.timeout_seconds,
+        ssl_context=ssl_context,
+        api_token=args.api_token,
+        unlock_token=unlock_token,
+    )
 
     summary = summarize(samples)
+    batch = re.sub(r"[^a-z0-9_-]", "", args.batch.lower()) or "batch"
+    base_name = f"{batch}-{started_at.strftime('%Y%m%dT%H%M%SZ')}-tab-transitions"
     raw_payload = {
         "generated_at_utc": started_at.isoformat(),
         "base_url": args.base_url,
-        "runs_per_scenario": args.runs,
-        "scenarios": list(scenarios.keys()),
-        "calls_by_scenario": {
-            scenario: [call.__dict__ for call in calls]
-            for scenario, calls in scenarios.items()
+        "runs_per_loop": args.runs,
+        "transitions": [name for name, _ in transitions],
+        "calls_by_transition": {
+            name: [call.__dict__ for call in calls] for name, calls in transitions
         },
         "auth_status": {
             "pin_configured": auth_status.get("pin_configured"),
@@ -552,8 +517,6 @@ def main() -> int:
         "samples": samples,
     }
 
-    batch = re.sub(r"[^a-z0-9_-]", "", args.batch.lower()) or "batch"
-    base_name = f"{batch}-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
     output_paths = write_outputs(Path(args.output_dir), base_name, raw_payload, summary)
     print(json.dumps({k: str(v) for k, v in output_paths.items()}, indent=2))
     return 0

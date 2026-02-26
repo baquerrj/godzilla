@@ -1,0 +1,12 @@
+scenario,endpoint_name,calls,failures,min_ms,p50_ms,mean_ms,p95_ms,max_ms
+overview_first_load,app.getAccounts,12,0,131.0,168.0,238.0,493.0,695.0
+overview_first_load,app.getCategories,12,0,268.0,303.0,372.0,549.0,648.0
+overview_first_load,syncState.getSyncState,12,0,323.0,572.0,561.0,770.0,822.0
+overview_first_load,conflictQueue.getConflicts,12,0,132.0,662.0,635.0,847.0,868.0
+overview_first_load,balancesTable.getBalances,12,0,730.0,835.0,847.0,970.0,991.0
+transactions_first_load,transactionsTable.getTransactions,12,0,145.0,202.0,212.0,319.0,385.0
+reports_first_load,budgetPanel.getBudgets,12,0,122.0,148.0,152.0,201.0,249.0
+reports_first_load,reportsPanel.getMonthlyOverview,12,0,241.0,297.0,355.0,568.0,578.0
+reports_first_load,reportsPanel.getCashFlow,12,0,265.0,468.0,459.0,590.0,606.0
+reports_first_load,reportsPanel.getNetWorth,12,0,297.0,495.0,498.0,578.0,606.0
+data_first_load,app.getSettings,12,0,120.0,162.0,163.0,207.0,215.0
