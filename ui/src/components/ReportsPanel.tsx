@@ -105,7 +105,12 @@ export function ReportsPanel({
     [trendCategoryIds, onTrendCategoryIdsChange],
   );
 
-  const leafCategories = useMemo(() => leafActiveCategories(categories), [categories]);
+  const leafCategories = useMemo(
+    () =>
+      [...leafActiveCategories(categories)].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
+    [categories],
+  );
   const monthOptions = useMemo(() => buildReportMonthOptions(), []);
   const trendMonths = useMemo(() => monthSpan(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
 

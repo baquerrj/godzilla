@@ -176,6 +176,29 @@ describe("ReportsPanel", () => {
     });
   });
 
+  it("renders trend categories in alphabetical order  REQ: FUNC-REP-004", async () => {
+    const unsortedCategories: Category[] = [
+      { category_id: "zeta", name: "zeta", parent_id: null, active: true },
+      { category_id: "alpha", name: "Alpha", parent_id: null, active: true },
+      { category_id: "beta", name: "beta", parent_id: null, active: true },
+    ];
+    render(
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={unsortedCategories}
+        onDrillDown={vi.fn()}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("report-trend-categories")).toBeInTheDocument();
+    });
+
+    const categorySelect = screen.getByTestId("report-trend-categories") as HTMLSelectElement;
+    const labels = Array.from(categorySelect.options).map((option) => option.textContent);
+    expect(labels).toEqual(["Alpha", "beta", "zeta"]);
+  });
+
   it("updates range-driven report calls when month changes  REQ: FUNC-REP-008", async () => {
     render(
       <ReportsPanel

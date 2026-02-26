@@ -669,6 +669,7 @@
   - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_supports_multi_category_selection
   - godzilla_core/tests/test_api_layer.py:test_reports_category_trends_unknown_category_returns_422
   - ui/src/test/ReportsPanel.test.tsx:renders report sections and data
+  - ui/src/test/ReportsPanel.test.tsx:renders trend categories in alphabetical order
   doc_refs:
   - docs/design/reports-dashboard.md
   - docs/test-strategy/m4-reports.md
