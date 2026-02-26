@@ -109,6 +109,7 @@ export function TransactionsTable({ token, refreshKey, filters, onSelectTransact
               >
                 Date {sortBy === "date" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
               </th>
+              <th>Account</th>
               <th>Merchant</th>
               <th>Display Name</th>
               <th>Category</th>
@@ -135,6 +136,7 @@ export function TransactionsTable({ token, refreshKey, filters, onSelectTransact
                 data-testid={`txn-row-${txn.transaction_id}`}
               >
                 <td>{txn.date}</td>
+                <td>{txn.account_name}</td>
                 <td>{txn.merchant_name ?? "—"}</td>
                 <td>{txn.display_name}</td>
                 <td>{txn.category_id ?? "—"}</td>

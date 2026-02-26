@@ -167,12 +167,10 @@ export function TransactionDetailPanel({
         {txn && (
           <div className="detail-body">
             <dl className="detail-fields">
-              <dt>Date</dt>
-              <dd>{txn.date}</dd>
-              <dt>Display Name</dt>
-              <dd>{txn.display_name}</dd>
-              <dt>Merchant</dt>
-              <dd>{txn.merchant_name ?? "—"}</dd>
+              <dt>Date</dt><dd>{txn.date}</dd>
+              <dt>Account</dt><dd>{txn.account_name}</dd>
+              <dt>Display Name</dt><dd>{txn.display_name}</dd>
+              <dt>Merchant</dt><dd>{txn.merchant_name ?? "—"}</dd>
               <dt>Amount</dt>
               <dd className={`amount ${txn.amount < 0 ? "amount-negative" : ""}`}>
                 {txn.amount.toFixed(2)} {txn.currency}

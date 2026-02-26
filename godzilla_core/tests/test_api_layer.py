@@ -582,6 +582,7 @@ async def test_get_transactions_supports_pagination_and_sorting(
 
     assert len(payload) == 1
     assert payload[0]["transaction_id"] == "txn-1"
+    assert payload[0]["account_name"] == "Checking"
     assert payload[0]["amount"] == 15.25
 
 
@@ -1032,6 +1033,7 @@ async def test_get_transactions_response_includes_category_and_notes(
     assert response.status_code == 200
     payload = response.json()
     assert len(payload) > 0
+    assert "account_name" in payload[0]
     assert "category_id" in payload[0]
     assert "notes" in payload[0]
 
@@ -1051,6 +1053,7 @@ async def test_get_transaction_detail_returns_full_record(api_client: httpx.Asyn
     assert response.status_code == 200
     payload = response.json()
     assert payload["transaction_id"] == "txn-1"
+    assert payload["account_name"] == "Checking"
     assert payload["display_name"] == "Coffee"
     assert "tags" in payload
     assert "splits" in payload

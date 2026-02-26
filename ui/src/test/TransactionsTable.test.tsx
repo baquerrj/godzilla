@@ -34,6 +34,7 @@ const makeTxn = (id: string, overrides: Partial<Transaction> = {}): Transaction 
   transaction_id: id,
   account_id: "acc1",
   provider_account_id: "prov1",
+  account_name: "Checking",
   date: "2025-01-15",
   amount: 42.0,
   currency: "USD",
@@ -60,11 +61,18 @@ describe("TransactionsTable", () => {
 
   it("renders transaction rows  REQ: FUNC-TXN-001", async () => {
     mockGetTransactions.mockResolvedValue([
-      makeTxn("txn-1", { merchant_name: "Starbucks", amount: 5.75 }),
+      makeTxn("txn-1", {
+        account_name: "Plaid Diamond 12.5% APR Interest Credit Card",
+        merchant_name: "Starbucks",
+        amount: 5.75,
+      }),
     ]);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
       expect(screen.getByTestId("transactions-table")).toBeInTheDocument();
+      expect(
+        screen.getByText("Plaid Diamond 12.5% APR Interest Credit Card"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Starbucks")).toBeInTheDocument();
       expect(screen.getByText("5.75")).toBeInTheDocument();
     });

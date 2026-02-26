@@ -199,6 +199,7 @@ class TransactionResponse(BaseModel):
     transaction_id: str
     account_id: str
     provider_account_id: str
+    account_name: str
     date: str
     amount: float
     currency: str
@@ -232,6 +233,7 @@ class TransactionDetailResponse(BaseModel):
     transaction_id: str
     account_id: str
     provider_account_id: str
+    account_name: str
     date: str
     amount: float
     currency: str
@@ -1462,24 +1464,25 @@ def _row_to_transaction_response(row: tuple[Any, ...]) -> TransactionResponse:
     REQ: FUNC-TXN-001, FUNC-TXN-002
 
     Args:
-        row: Columns: id, account_id, provider_account_id, date, amount, currency,
-             status, merchant_name, display_name, category_id, notes, is_transfer,
-             is_excluded.
+        row: Columns: id, account_id, provider_account_id, account_name, date,
+             amount, currency, status, merchant_name, display_name, category_id,
+             notes, is_transfer, is_excluded.
     """
     return TransactionResponse(
         transaction_id=row[0],
         account_id=row[1],
         provider_account_id=row[2],
-        date=row[3],
-        amount=float(row[4]),
-        currency=row[5],
-        status=row[6],
-        merchant_name=row[7],
-        display_name=row[8],
-        category_id=row[9],
-        notes=row[10],
-        is_transfer=bool(row[11]),
-        is_excluded=bool(row[12]),
+        account_name=row[3],
+        date=row[4],
+        amount=float(row[5]),
+        currency=row[6],
+        status=row[7],
+        merchant_name=row[8],
+        display_name=row[9],
+        category_id=row[10],
+        notes=row[11],
+        is_transfer=bool(row[12]),
+        is_excluded=bool(row[13]),
     )
 
 
@@ -1532,7 +1535,8 @@ def _build_transaction_filter_clause(  # noqa: PLR0913
 _TXN_SELECT = (
     "SELECT "
     "transaction_record.id, transaction_record.account_id, account.provider_account_id, "
-    "transaction_record.date, transaction_record.amount, transaction_record.currency, "
+    "account.name, transaction_record.date, "
+    "transaction_record.amount, transaction_record.currency, "
     "transaction_record.status, transaction_record.merchant_name, "
     "transaction_record.display_name, transaction_record.category_id, "
     "transaction_record.notes, transaction_record.is_transfer, "
@@ -2182,6 +2186,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
             transaction_id=base.transaction_id,
             account_id=base.account_id,
             provider_account_id=base.provider_account_id,
+            account_name=base.account_name,
             date=base.date,
             amount=base.amount,
             currency=base.currency,
@@ -3741,6 +3746,7 @@ async def get_transaction_detail_internal(
         transaction_id=base.transaction_id,
         account_id=base.account_id,
         provider_account_id=base.provider_account_id,
+        account_name=base.account_name,
         date=base.date,
         amount=base.amount,
         currency=base.currency,

@@ -49,6 +49,7 @@ const makeTxnDetail = (overrides: Partial<TransactionDetail> = {}): TransactionD
   transaction_id: "txn-1",
   account_id: "acc-1",
   provider_account_id: "prov-1",
+  account_name: "Checking",
   date: "2025-01-15",
   amount: 42.0,
   currency: "USD",
@@ -94,6 +95,7 @@ describe("TransactionDetailPanel", () => {
     );
     await waitFor(() => {
       expect(screen.getByText("Transaction Detail")).toBeInTheDocument();
+      expect(screen.getByText("Checking")).toBeInTheDocument();
       expect(screen.getByText("42.00 USD")).toBeInTheDocument();
       expect(screen.getByDisplayValue("morning coffee")).toBeInTheDocument();
     });
