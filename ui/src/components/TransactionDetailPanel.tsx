@@ -177,6 +177,7 @@ export function TransactionDetailPanel({
           <div className="detail-body">
             <dl className="detail-fields">
               <dt>Date</dt><dd>{txn.date}</dd>
+              <dt>Account</dt><dd>{txn.account_name}</dd>
               <dt>Display Name</dt><dd>{txn.display_name}</dd>
               <dt>Merchant</dt><dd>{txn.merchant_name ?? "—"}</dd>
               <dt>Amount</dt>

@@ -39,6 +39,7 @@ export interface Transaction {
   transaction_id: string;
   account_id: string;
   provider_account_id: string;
+  account_name: string;
   date: string;
   amount: number;
   currency: string;
