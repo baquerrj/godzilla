@@ -27,7 +27,7 @@ services:
     #   GODZILLA_API_TOKEN, PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV
     env_file:
       - path: "${GODENV_FILE:-.godenv}"
-        required: false
+        required: true
     environment:
       PYTHONUNBUFFERED: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
