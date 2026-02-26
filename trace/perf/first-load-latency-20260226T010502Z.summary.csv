@@ -1,0 +1,5 @@
+scenario,runs,min_ms,p50_ms,mean_ms,p95_ms,max_ms
+overview_first_load,12,805.45,868.65,890.869,989.139,1014.213
+transactions_first_load,12,145.028,202.399,212.293,318.746,383.679
+reports_first_load,12,462.026,524.452,524.273,590.362,606.028
+data_first_load,12,231.025,285.62,282.997,316.127,318.054
