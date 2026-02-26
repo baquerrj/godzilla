@@ -28,9 +28,6 @@ export GODZILLA_API_TOKEN="replace-with-local-api-token"
 # Local TLS cert + key for the API sidecar
 export GODZILLA_TLS_CERT="$HOME/.config/godzilla/tls/api-server.crt"
 export GODZILLA_TLS_KEY="$HOME/.config/godzilla/tls/api-server.key"
-
-# TLS pin expected by Tauri runtime
-export GODZILLA_TLS_CERT_SHA256="$(openssl x509 -in "$GODZILLA_TLS_CERT" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':')"
 ```
 
 If you do not have a local cert/key yet:
@@ -56,6 +53,10 @@ export GODZILLA_DEV_BYPASS_PIN="0"
 
 # Optional if sidecar base URL differs from default https://127.0.0.1:8787
 export GODZILLA_API_BASE="https://127.0.0.1:8787"
+
+# Optional strict TLS pin check override for Tauri runtime.
+# If unset, Tauri computes SHA-256 from GODZILLA_TLS_CERT at runtime.
+export GODZILLA_TLS_CERT_SHA256="AABBCC... (64 hex chars)"
 ```
 
 ## 2. Launch sequence

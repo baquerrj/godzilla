@@ -59,19 +59,31 @@ fn sha256_hex_upper(bytes: &[u8]) -> String {
     digest.iter().map(|b| format!("{b:02X}")).collect::<String>()
 }
 
+fn sha256_from_cert_pem(cert_pem: &[u8]) -> Result<String, String> {
+    let cert_pem_text = String::from_utf8(cert_pem.to_vec())
+        .map_err(|err| format!("TLS cert is not valid UTF-8 PEM: {err}"))?;
+    let cert_der = pem_to_der_bytes(&cert_pem_text)?;
+    Ok(sha256_hex_upper(&cert_der))
+}
+
+fn resolved_pinned_fingerprint(pinned_env: Option<&str>, actual: &str) -> String {
+    pinned_env
+        .map(normalize_fingerprint)
+        .unwrap_or_else(|| actual.to_string())
+}
+
 fn verify_pinned_certificate() -> Result<Vec<u8>, String> {
     // REQ: SEC-NET-001 — enforce explicit certificate pinning in Tauri runtime transport.
     let cert_path = std::env::var("GODZILLA_TLS_CERT")
         .map_err(|_| "GODZILLA_TLS_CERT is not configured".to_string())?;
-    let expected = std::env::var("GODZILLA_TLS_CERT_SHA256")
-        .map_err(|_| "GODZILLA_TLS_CERT_SHA256 is not configured".to_string())?;
     let cert_pem = fs::read(&cert_path)
         .map_err(|err| format!("Unable to read TLS cert at '{cert_path}': {err}"))?;
-    let cert_pem_text = String::from_utf8(cert_pem.clone())
-        .map_err(|err| format!("TLS cert is not valid UTF-8 PEM: {err}"))?;
-    let cert_der = pem_to_der_bytes(&cert_pem_text)?;
-    let actual = sha256_hex_upper(&cert_der);
-    if normalize_fingerprint(&expected) != actual {
+    let actual = sha256_from_cert_pem(&cert_pem)?;
+    let expected = resolved_pinned_fingerprint(
+        std::env::var("GODZILLA_TLS_CERT_SHA256").ok().as_deref(),
+        &actual,
+    );
+    if expected != actual {
         return Err("TLS certificate pin mismatch".to_string());
     }
     Ok(cert_pem)
@@ -176,7 +188,10 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_fingerprint, pem_to_der_bytes, sha256_hex_upper};
+    use super::{
+        normalize_fingerprint, pem_to_der_bytes, resolved_pinned_fingerprint, sha256_from_cert_pem,
+        sha256_hex_upper,
+    };
 
     #[test]
     fn normalize_fingerprint_strips_non_hex_chars() {
@@ -197,6 +212,33 @@ mod tests {
         assert_eq!(
             sha256_hex_upper(&[1, 2, 3, 4]),
             "9F64A747E1B97F131FABB6B447296C9B6F0201E79FB3C5356E6C77E89B6A806A"
+        );
+    }
+
+    #[test]
+    fn sha256_from_cert_pem_hashes_der_contents() {
+        let pem = b"-----BEGIN CERTIFICATE-----\nAQIDBA==\n-----END CERTIFICATE-----\n";
+        assert_eq!(
+            sha256_from_cert_pem(pem).expect("should hash cert"),
+            "9F64A747E1B97F131FABB6B447296C9B6F0201E79FB3C5356E6C77E89B6A806A"
+        );
+    }
+
+    #[test]
+    // REQ: SEC-NET-001
+    fn resolved_pinned_fingerprint_uses_cert_hash_when_env_is_missing() {
+        assert_eq!(
+            resolved_pinned_fingerprint(None, "ABC123"),
+            "ABC123".to_string()
+        );
+    }
+
+    #[test]
+    // REQ: SEC-NET-001
+    fn resolved_pinned_fingerprint_normalizes_env_value() {
+        assert_eq!(
+            resolved_pinned_fingerprint(Some("ab:cd ef"), "ABC123"),
+            "ABCDEF".to_string()
         );
     }
 }

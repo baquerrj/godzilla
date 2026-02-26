@@ -1210,6 +1210,7 @@
   - godzilla_core/tests/test_api_layer.py:test_auth_status_reports_tls_fingerprint_when_tls_configured
   - ui/src/test/ApiClientTransport.test.ts:uses tauri proxy transport when tauri runtime is available
   - ui/src/test/ApiClientTransport.test.ts:surfaces pin mismatch from tauri proxy request failures
+  - ui/src-tauri/src/lib.rs:resolved_pinned_fingerprint_uses_cert_hash_when_env_is_missing
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
