@@ -9,10 +9,7 @@ import { GodzillaApi, useApiCall } from "../api/client";
 import type { GetTransactionsParams, Transaction } from "../api/types";
 
 const PAGE_SIZE = 50;
-const NO_FILTERS: Omit<
-  GetTransactionsParams,
-  "limit" | "offset" | "sort_by" | "sort_order"
-> = {};
+const NO_FILTERS: Omit<GetTransactionsParams, "limit" | "offset" | "sort_by" | "sort_order"> = {};
 
 interface Props {
   token: string;
@@ -21,12 +18,7 @@ interface Props {
   onSelectTransaction?: (id: string) => void;
 }
 
-export function TransactionsTable({
-  token,
-  refreshKey,
-  filters,
-  onSelectTransaction,
-}: Props) {
+export function TransactionsTable({ token, refreshKey, filters, onSelectTransaction }: Props) {
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -38,17 +30,23 @@ export function TransactionsTable({
     setOffset(0);
   }, [appliedFilters]);
 
-  // REQ: FUNC-TXN-001, FUNC-TXN-002 — paginated, sorted, filtered transaction fetch
+  // REQ: FUNC-TXN-001, FUNC-TXN-002 — paginated, sorted, filtered transaction fetch.
+  // A 200 ms debounce prevents request storms when filter fields change rapidly;
+  // the stale-result guard in useApiCall drops in-flight responses that are
+  // superseded before they settle.
   useEffect(() => {
-    execute(() =>
-      GodzillaApi.getTransactions(token, {
-        ...appliedFilters,
-        limit: PAGE_SIZE,
-        offset,
-        sort_by: sortBy,
-        sort_order: sortOrder,
-      }),
-    );
+    const timerId = setTimeout(() => {
+      execute(() =>
+        GodzillaApi.getTransactions(token, {
+          ...appliedFilters,
+          limit: PAGE_SIZE,
+          offset,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        }),
+      );
+    }, 200);
+    return () => clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, refreshKey, offset, sortBy, sortOrder, appliedFilters]);
 
@@ -63,8 +61,7 @@ export function TransactionsTable({
   };
 
   const atFirstPage = offset === 0;
-  const atLastPage =
-    result.status === "success" && result.data.length < PAGE_SIZE;
+  const atLastPage = result.status === "success" && result.data.length < PAGE_SIZE;
   const isLoading = result.status === "loading";
 
   return (
@@ -96,14 +93,10 @@ export function TransactionsTable({
 
       {isLoading && <p className="muted">Loading…</p>}
       {result.status === "error" && (
-        <p className="error-text">
-          Failed to load transactions: {result.message}
-        </p>
+        <p className="error-text">Failed to load transactions: {result.message}</p>
       )}
       {result.status === "success" && result.data.length === 0 && (
-        <p className="muted">
-          No transactions. Sync a Plaid item to populate.
-        </p>
+        <p className="muted">No transactions. Sync a Plaid item to populate.</p>
       )}
       {result.status === "success" && result.data.length > 0 && (
         <table className="data-table" data-testid="transactions-table">
@@ -114,8 +107,7 @@ export function TransactionsTable({
                 onClick={() => handleSortClick("date")}
                 data-testid="sort-date"
               >
-                Date{" "}
-                {sortBy === "date" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+                Date {sortBy === "date" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
               </th>
               <th>Merchant</th>
               <th>Display Name</th>
@@ -126,8 +118,7 @@ export function TransactionsTable({
                 onClick={() => handleSortClick("amount")}
                 data-testid="sort-amount"
               >
-                Amount{" "}
-                {sortBy === "amount" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+                Amount {sortBy === "amount" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
               </th>
               <th>Currency</th>
             </tr>
@@ -138,9 +129,7 @@ export function TransactionsTable({
                 key={txn.transaction_id}
                 className={txn.is_excluded ? "excluded" : ""}
                 onClick={
-                  onSelectTransaction
-                    ? () => onSelectTransaction(txn.transaction_id)
-                    : undefined
+                  onSelectTransaction ? () => onSelectTransaction(txn.transaction_id) : undefined
                 }
                 style={onSelectTransaction ? { cursor: "pointer" } : undefined}
                 data-testid={`txn-row-${txn.transaction_id}`}
@@ -150,13 +139,9 @@ export function TransactionsTable({
                 <td>{txn.display_name}</td>
                 <td>{txn.category_id ?? "—"}</td>
                 <td>
-                  <span className={`badge badge-${txn.status}`}>
-                    {txn.status}
-                  </span>
+                  <span className={`badge badge-${txn.status}`}>{txn.status}</span>
                 </td>
-                <td
-                  className={`amount ${txn.amount < 0 ? "amount-negative" : ""}`}
-                >
+                <td className={`amount ${txn.amount < 0 ? "amount-negative" : ""}`}>
                   {txn.amount.toFixed(2)}
                 </td>
                 <td>{txn.currency}</td>

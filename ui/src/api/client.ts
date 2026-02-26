@@ -16,7 +16,7 @@
  * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-NET-001
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Account,
@@ -72,9 +72,7 @@ import type {
 
 // Internal helpers
 
-const API_BASE: string = import.meta.env.DEV
-  ? "/api"
-  : "https://127.0.0.1:8787";
+const API_BASE: string = import.meta.env.DEV ? "/api" : "https://127.0.0.1:8787";
 
 let unlockToken: string | null = null;
 
@@ -109,8 +107,8 @@ type TauriApiProxyResponse = {
 
 function hasTauriRuntime(): boolean {
   return (
-    typeof window !== "undefined"
-    && "__TAURI_INTERNALS__" in (window as unknown as Record<string, unknown>)
+    typeof window !== "undefined" &&
+    "__TAURI_INTERNALS__" in (window as unknown as Record<string, unknown>)
   );
 }
 
@@ -280,11 +278,7 @@ async function executeRequest(
   return fetchResponse(path, options, headers);
 }
 
-async function request<T>(
-  path: string,
-  apiToken: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, apiToken: string, options: RequestInit = {}): Promise<T> {
   const response = await executeRequest(path, apiToken, options);
   const responseText = new TextDecoder().decode(response.body);
 
@@ -334,8 +328,9 @@ async function requestBlob(
 }
 
 function buildQueryString<T extends object>(params: T): string {
-  const entries = Object.entries(params as Record<string, unknown>).filter(([, value]) =>
-    typeof value === "string" || typeof value === "number" || typeof value === "boolean",
+  const entries = Object.entries(params as Record<string, unknown>).filter(
+    ([, value]) =>
+      typeof value === "string" || typeof value === "number" || typeof value === "boolean",
   );
   if (entries.length === 0) return "";
   const qs = new URLSearchParams(entries.map(([key, value]) => [key, String(value)]));
@@ -371,10 +366,7 @@ export const GodzillaApi = {
     return request<Account[]>("/accounts", token);
   },
 
-  getTransactions(
-    token: string,
-    params: GetTransactionsParams = {},
-  ): Promise<Transaction[]> {
+  getTransactions(token: string, params: GetTransactionsParams = {}): Promise<Transaction[]> {
     const qs = buildQueryString(params);
     return request<Transaction[]>(`/transactions${qs}`, token);
   },
@@ -401,10 +393,7 @@ export const GodzillaApi = {
     });
   },
 
-  getBalances(
-    token: string,
-    params: GetBalancesParams = {},
-  ): Promise<BalanceSnapshot[]> {
+  getBalances(token: string, params: GetBalancesParams = {}): Promise<BalanceSnapshot[]> {
     const qs = buildQueryString(params);
     return request<BalanceSnapshot[]>(`/balances${qs}`, token);
   },
@@ -419,10 +408,7 @@ export const GodzillaApi = {
     return request<CashFlowReport>(`/reports/cash-flow${qs}`, token);
   },
 
-  getCategoryTrends(
-    token: string,
-    params: GetCategoryTrendsParams,
-  ): Promise<CategoryTrendsReport> {
+  getCategoryTrends(token: string, params: GetCategoryTrendsParams): Promise<CategoryTrendsReport> {
     const qs = buildQueryString({
       categories: params.categories.join(","),
       months: params.months,
@@ -462,11 +448,7 @@ export const GodzillaApi = {
     return request<Conflict[]>(`/conflicts?status=${encodeURIComponent(status)}`, token);
   },
 
-  resolveConflict(
-    token: string,
-    id: string,
-    body: ResolveConflictRequest,
-  ): Promise<Conflict> {
+  resolveConflict(token: string, id: string, body: ResolveConflictRequest): Promise<Conflict> {
     return request<Conflict>(`/conflicts/${encodeURIComponent(id)}/resolve`, token, {
       method: "POST",
       body: JSON.stringify(body),
@@ -480,21 +462,14 @@ export const GodzillaApi = {
     });
   },
 
-  plaidSync(
-    token: string,
-    body: PlaidSyncRequest,
-  ): Promise<PlaidSyncResult> {
+  plaidSync(token: string, body: PlaidSyncRequest): Promise<PlaidSyncResult> {
     return request<PlaidSyncResult>("/plaid/sync", token, {
       method: "POST",
       body: JSON.stringify(body),
     });
   },
 
-  unlinkItem(
-    token: string,
-    itemId: string,
-    mode: "keep" | "purge",
-  ): Promise<UnlinkItemResult> {
+  unlinkItem(token: string, itemId: string, mode: "keep" | "purge"): Promise<UnlinkItemResult> {
     return request<UnlinkItemResult>(
       `/plaid/items/${encodeURIComponent(itemId)}?mode=${encodeURIComponent(mode)}`,
       token,
@@ -598,22 +573,23 @@ export const GodzillaApi = {
 
 // React hook
 
-export function useApiCall<T>(): [
-  ApiResult<T>,
-  (fn: () => Promise<T>) => Promise<void>,
-] {
+export function useApiCall<T>(): [ApiResult<T>, (fn: () => Promise<T>) => Promise<void>] {
   const [result, setResult] = useState<ApiResult<T>>({ status: "idle" });
+  // Monotonically-increasing run ID; only the most recent call updates state.
+  const runIdRef = useRef(0);
 
   const execute = useCallback(async (fn: () => Promise<T>) => {
+    runIdRef.current += 1;
+    const runId = runIdRef.current;
     setResult({ status: "loading" });
     try {
       const data = await fn();
+      if (runId !== runIdRef.current) return; // stale result — discard
       setResult({ status: "success", data });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "An unexpected error occurred";
-      const statusCode =
-        err instanceof ApiError ? err.statusCode : undefined;
+      if (runId !== runIdRef.current) return; // stale result — discard
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      const statusCode = err instanceof ApiError ? err.statusCode : undefined;
       setResult({ status: "error", message, statusCode });
     }
   }, []);
