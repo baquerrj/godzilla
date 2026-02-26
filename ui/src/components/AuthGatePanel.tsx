@@ -96,10 +96,10 @@ export function AuthGatePanel({ token, onAuthenticated }: Props) {
             className="btn btn-primary"
             onClick={handleSetupPin}
             disabled={
-              setupResult.status === "loading"
-              || newPin.length < 4
-              || confirmPin.length < 4
-              || pinsMismatch
+              setupResult.status === "loading" ||
+              newPin.length < 4 ||
+              confirmPin.length < 4 ||
+              pinsMismatch
             }
             data-testid="setup-pin-btn"
           >

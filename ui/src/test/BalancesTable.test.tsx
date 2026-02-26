@@ -9,8 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { BalancesTable } from "../components/BalancesTable";
 
 vi.mock("../api/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {

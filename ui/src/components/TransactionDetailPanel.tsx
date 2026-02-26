@@ -111,23 +111,14 @@ export function TransactionDetailPanel({
   );
   const splitCanSave = txn !== null && !splitHasInvalidAmount && Math.abs(splitRemaining) <= 0.005;
 
-  const updateSplit = (
-    index: number,
-    field: keyof EditableSplitRow,
-    value: string,
-  ) => {
+  const updateSplit = (index: number, field: keyof EditableSplitRow, value: string) => {
     setSplitRows((rows) =>
-      rows.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [field]: value } : row,
-      ),
+      rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row)),
     );
   };
 
   const addSplitRow = () => {
-    setSplitRows((rows) => [
-      ...rows,
-      { amount: "0.00", category_id: "", notes: "" },
-    ]);
+    setSplitRows((rows) => [...rows, { amount: "0.00", category_id: "", notes: "" }]);
   };
 
   const removeSplitRow = (index: number) => {
@@ -176,9 +167,12 @@ export function TransactionDetailPanel({
         {txn && (
           <div className="detail-body">
             <dl className="detail-fields">
-              <dt>Date</dt><dd>{txn.date}</dd>
-              <dt>Display Name</dt><dd>{txn.display_name}</dd>
-              <dt>Merchant</dt><dd>{txn.merchant_name ?? "—"}</dd>
+              <dt>Date</dt>
+              <dd>{txn.date}</dd>
+              <dt>Display Name</dt>
+              <dd>{txn.display_name}</dd>
+              <dt>Merchant</dt>
+              <dd>{txn.merchant_name ?? "—"}</dd>
               <dt>Amount</dt>
               <dd className={`amount ${txn.amount < 0 ? "amount-negative" : ""}`}>
                 {txn.amount.toFixed(2)} {txn.currency}
@@ -228,8 +222,8 @@ export function TransactionDetailPanel({
                   checked={txn.is_transfer}
                   onChange={() => handleToggle("is_transfer")}
                   data-testid="detail-is-transfer"
-                />
-                {" "}Mark as transfer
+                />{" "}
+                Mark as transfer
               </label>
               <label>
                 <input
@@ -237,8 +231,8 @@ export function TransactionDetailPanel({
                   checked={txn.is_excluded}
                   onChange={() => handleToggle("is_excluded")}
                   data-testid="detail-is-excluded"
-                />
-                {" "}Exclude from budget
+                />{" "}
+                Exclude from budget
               </label>
             </div>
 
@@ -252,11 +246,15 @@ export function TransactionDetailPanel({
                 {patchResult.status === "loading" ? "Saving…" : "Save"}
               </button>
               {patchResult.status === "success" && (
-                <span className="muted" data-testid="detail-saved-msg"> Saved.</span>
+                <span className="muted" data-testid="detail-saved-msg">
+                  {" "}
+                  Saved.
+                </span>
               )}
               {patchResult.status === "error" && (
                 <span className="error-text" data-testid="detail-save-error">
-                  {" "}Error: {patchResult.message}
+                  {" "}
+                  Error: {patchResult.message}
                 </span>
               )}
             </div>
@@ -324,9 +322,7 @@ export function TransactionDetailPanel({
               </table>
               <div className="split-meta">
                 <span data-testid="split-total">Total: {splitTotal.toFixed(2)}</span>
-                <span data-testid="split-remaining">
-                  Remaining: {splitRemaining.toFixed(2)}
-                </span>
+                <span data-testid="split-remaining">Remaining: {splitRemaining.toFixed(2)}</span>
               </div>
               {splitHasInvalidAmount && (
                 <p className="error-text" data-testid="split-invalid-amount">
@@ -339,11 +335,7 @@ export function TransactionDetailPanel({
                 </p>
               )}
               <div className="detail-actions">
-                <button
-                  className="btn btn-sm"
-                  onClick={addSplitRow}
-                  data-testid="split-add"
-                >
+                <button className="btn btn-sm" onClick={addSplitRow} data-testid="split-add">
                   Add Split
                 </button>
                 <button

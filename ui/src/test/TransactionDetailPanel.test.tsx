@@ -11,8 +11,7 @@ import { TransactionDetailPanel } from "../components/TransactionDetailPanel";
 import type { Category, TransactionDetail } from "../api/types";
 
 vi.mock("../api/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {
@@ -221,9 +220,7 @@ describe("TransactionDetailPanel", () => {
       />,
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId("split-save")).not.toBeDisabled(),
-    );
+    await waitFor(() => expect(screen.getByTestId("split-save")).not.toBeDisabled());
     fireEvent.click(screen.getByTestId("split-save"));
 
     await waitFor(() => {

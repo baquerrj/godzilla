@@ -13,8 +13,7 @@ vi.mock("../utils/download", () => ({
 }));
 
 vi.mock("../api/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {

@@ -10,8 +10,7 @@ import { ConflictQueue } from "../components/ConflictQueue";
 import type { Conflict } from "../api/types";
 
 vi.mock("../api/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {
@@ -75,7 +74,11 @@ describe("ConflictQueue", () => {
   it("resolves conflict with local choice  REQ: FUNC-SYNC-007", async () => {
     const conflict = makeConflict("conf-2");
     mockGetConflicts.mockResolvedValue([conflict]);
-    mockResolveConflict.mockResolvedValue({ ...conflict, status: "resolved", resolution_choice: "local" });
+    mockResolveConflict.mockResolvedValue({
+      ...conflict,
+      status: "resolved",
+      resolution_choice: "local",
+    });
 
     render(<ConflictQueue token={TOKEN} refreshKey={0} />);
     await waitFor(() => screen.getByTestId("keep-local-conf-2"));

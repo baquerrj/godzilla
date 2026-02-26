@@ -141,7 +141,9 @@ export function DataManagementPanel({ token, onDataChanged }: Props) {
 
       <div className="m5-section panel-warning">
         <h3>Wipe</h3>
-        <p className="muted">Type <code>WIPE_LOCAL_DATA</code> to enable wipe.</p>
+        <p className="muted">
+          Type <code>WIPE_LOCAL_DATA</code> to enable wipe.
+        </p>
         <div className="m5-grid">
           <label>
             Confirmation

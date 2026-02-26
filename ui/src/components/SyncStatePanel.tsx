@@ -8,12 +8,7 @@
 
 import { useEffect } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
-import type {
-  PlaidLinkResult,
-  PlaidSyncResult,
-  SyncState,
-  UnlinkItemResult,
-} from "../api/types";
+import type { PlaidLinkResult, PlaidSyncResult, SyncState, UnlinkItemResult } from "../api/types";
 
 interface Props {
   token: string;
@@ -55,9 +50,10 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
 
   // REQ: FUNC-ACCT-008 — unlink institution with keep/purge modes.
   const handleUnlink = (itemId: string, mode: "keep" | "purge") => {
-    const warning = mode === "purge"
-      ? "Unlink and purge will delete linked local records. Continue?"
-      : "Unlink and keep preserves local ledger data but disables sync. Continue?";
+    const warning =
+      mode === "purge"
+        ? "Unlink and purge will delete linked local records. Continue?"
+        : "Unlink and keep preserves local ledger data but disables sync. Continue?";
     if (!window.confirm(warning)) {
       return;
     }
@@ -69,9 +65,9 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
   };
 
   const isBusy =
-    linkResult.status === "loading"
-    || syncResult.status === "loading"
-    || unlinkResult.status === "loading";
+    linkResult.status === "loading" ||
+    syncResult.status === "loading" ||
+    unlinkResult.status === "loading";
 
   return (
     <section className="panel" data-testid="sync-state-panel">
@@ -99,8 +95,8 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
       )}
       {syncResult.status === "success" && (
         <div className="alert alert-success" data-testid="sync-success">
-          Sync complete — added {syncResult.data.added}, modified{" "}
-          {syncResult.data.modified}, removed {syncResult.data.removed}
+          Sync complete — added {syncResult.data.added}, modified {syncResult.data.modified},
+          removed {syncResult.data.removed}
         </div>
       )}
       {syncResult.status === "error" && (
@@ -120,18 +116,12 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
         </div>
       )}
 
-      {stateResult.status === "loading" && (
-        <p className="muted">Loading…</p>
-      )}
+      {stateResult.status === "loading" && <p className="muted">Loading…</p>}
       {stateResult.status === "error" && (
-        <p className="error-text">
-          Failed to load sync state: {stateResult.message}
-        </p>
+        <p className="error-text">Failed to load sync state: {stateResult.message}</p>
       )}
       {stateResult.status === "success" && stateResult.data.length === 0 && (
-        <p className="muted">
-          No linked accounts. Use "Connect Sandbox Account" to add one.
-        </p>
+        <p className="muted">No linked accounts. Use "Connect Sandbox Account" to add one.</p>
       )}
       {stateResult.status === "success" && stateResult.data.length > 0 && (
         <table className="data-table" data-testid="sync-table">
@@ -149,15 +139,11 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
             {stateResult.data.map((item) => (
               <tr key={item.item_id}>
                 <td>
-                  <code title={item.item_id}>
-                    {item.item_id.slice(0, 12)}…
-                  </code>
+                  <code title={item.item_id}>{item.item_id.slice(0, 12)}…</code>
                 </td>
                 <td>{item.institution_id}</td>
                 <td>
-                  <span className={`badge badge-${item.status}`}>
-                    {item.status}
-                  </span>
+                  <span className={`badge badge-${item.status}`}>{item.status}</span>
                 </td>
                 <td>{item.last_sync_at_tz ?? item.last_sync_at_utc ?? "—"}</td>
                 <td>{item.last_sync_status ?? "—"}</td>

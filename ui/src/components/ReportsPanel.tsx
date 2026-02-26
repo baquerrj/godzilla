@@ -39,7 +39,10 @@ function defaultMonth(): string {
   return `${y}-${m}`;
 }
 
-function buildReportMonthOptions(monthsBack = 36, monthsForward = 24): Array<{ value: string; label: string }> {
+function buildReportMonthOptions(
+  monthsBack = 36,
+  monthsForward = 24,
+): Array<{ value: string; label: string }> {
   const now = new Date();
   const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
   const options: Array<{ value: string; label: string }> = [];
@@ -69,7 +72,12 @@ function monthBounds(month: string): { start: string; end: string } {
 function monthSpan(startDate: string, endDate: string): number {
   const [sy, sm] = startDate.split("-").slice(0, 2).map(Number);
   const [ey, em] = endDate.split("-").slice(0, 2).map(Number);
-  if (!Number.isFinite(sy) || !Number.isFinite(sm) || !Number.isFinite(ey) || !Number.isFinite(em)) {
+  if (
+    !Number.isFinite(sy) ||
+    !Number.isFinite(sm) ||
+    !Number.isFinite(ey) ||
+    !Number.isFinite(em)
+  ) {
     return 12;
   }
   const span = (ey - sy) * 12 + (em - sm) + 1;
@@ -108,7 +116,8 @@ export function ReportsPanel({
   const leafCategories = useMemo(
     () =>
       [...leafActiveCategories(categories)].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      ),
     [categories],
   );
   const monthOptions = useMemo(() => buildReportMonthOptions(), []);
@@ -212,7 +221,9 @@ export function ReportsPanel({
 
       <div className="reports-section">
         <h3>Monthly Overview</h3>
-        <p className="reports-help">Use Income, Expenses, or View to drill into filtered transactions.</p>
+        <p className="reports-help">
+          Use Income, Expenses, or View to drill into filtered transactions.
+        </p>
         {overviewResult.status === "loading" && <p className="muted">Loading…</p>}
         {overviewResult.status === "error" && (
           <p className="error-text">Failed to load monthly overview: {overviewResult.message}</p>
@@ -292,14 +303,19 @@ export function ReportsPanel({
 
       <div className="reports-section">
         <h3>Cash Flow</h3>
-        <p className="reports-help">Income and Expenses buttons apply month-specific transaction filters.</p>
+        <p className="reports-help">
+          Income and Expenses buttons apply month-specific transaction filters.
+        </p>
         {cashFlowResult.status === "loading" && <p className="muted">Loading…</p>}
         {cashFlowResult.status === "error" && (
           <p className="error-text">Failed to load cash flow: {cashFlowResult.message}</p>
         )}
         {cashFlowResult.status === "success" && (
           <div className="table-scroll">
-            <table className="data-table report-table report-table-cash-flow" data-testid="report-cash-flow">
+            <table
+              className="data-table report-table report-table-cash-flow"
+              data-testid="report-cash-flow"
+            >
               <colgroup>
                 <col className="report-col-month" />
                 <col className="report-col-amount" />
@@ -337,7 +353,8 @@ export function ReportsPanel({
                               startDate: bounds.start,
                               endDate: bounds.end,
                               flow: "income",
-                            })}
+                            })
+                          }
                         >
                           Income
                         </button>
@@ -349,7 +366,8 @@ export function ReportsPanel({
                               startDate: bounds.start,
                               endDate: bounds.end,
                               flow: "expense",
-                            })}
+                            })
+                          }
                         >
                           Expenses
                         </button>
@@ -365,7 +383,9 @@ export function ReportsPanel({
 
       <div className="reports-section">
         <h3>Category Trends</h3>
-        <p className="reports-help">Select one or more categories. Use Ctrl/Cmd + click to multi-select.</p>
+        <p className="reports-help">
+          Select one or more categories. Use Ctrl/Cmd + click to multi-select.
+        </p>
         <label className="reports-category-picker">
           Categories
           <select
@@ -386,7 +406,9 @@ export function ReportsPanel({
             Select categories to load trend data.
           </p>
         )}
-        {trendSelections.length > 0 && trendResult.status === "loading" && <p className="muted">Loading…</p>}
+        {trendSelections.length > 0 && trendResult.status === "loading" && (
+          <p className="muted">Loading…</p>
+        )}
         {trendSelections.length > 0 && trendResult.status === "error" && (
           <p className="error-text">Failed to load category trends: {trendResult.message}</p>
         )}
@@ -409,7 +431,8 @@ export function ReportsPanel({
                             endDate: bounds.end,
                             categoryId: series.category_id,
                             flow: "expense",
-                          })}
+                          })
+                        }
                       >
                         {point.month}: {point.amount.toFixed(2)}
                       </button>
@@ -424,14 +447,19 @@ export function ReportsPanel({
 
       <div className="reports-section">
         <h3>Net Worth</h3>
-        <p className="reports-help">Net worth equals assets minus liabilities from balance snapshots.</p>
+        <p className="reports-help">
+          Net worth equals assets minus liabilities from balance snapshots.
+        </p>
         {netWorthResult.status === "loading" && <p className="muted">Loading…</p>}
         {netWorthResult.status === "error" && (
           <p className="error-text">Failed to load net worth: {netWorthResult.message}</p>
         )}
         {netWorthResult.status === "success" && (
           <div className="table-scroll">
-            <table className="data-table report-table report-table-net-worth" data-testid="report-net-worth">
+            <table
+              className="data-table report-table report-table-net-worth"
+              data-testid="report-net-worth"
+            >
               <colgroup>
                 <col className="report-col-date" />
                 <col className="report-col-amount" />

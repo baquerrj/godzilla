@@ -36,18 +36,12 @@ interface Props {
   onReset: () => void;
 }
 
-export function TransactionFilters({
-  values,
-  accounts,
-  categories,
-  onChange,
-  onReset,
-}: Props) {
+export function TransactionFilters({ values, accounts, categories, onChange, onReset }: Props) {
   const leafCategories = leafActiveCategories(categories);
 
-  const set = (field: keyof FilterValues) => (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => onChange({ ...values, [field]: e.target.value });
+  const set =
+    (field: keyof FilterValues) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      onChange({ ...values, [field]: e.target.value });
 
   return (
     <div className="filter-bar" data-testid="transaction-filters">
@@ -115,11 +109,7 @@ export function TransactionFilters({
           </option>
         ))}
       </select>
-      <button
-        className="btn btn-sm"
-        onClick={onReset}
-        data-testid="filter-reset"
-      >
+      <button className="btn btn-sm" onClick={onReset} data-testid="filter-reset">
         Reset
       </button>
     </div>
