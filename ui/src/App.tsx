@@ -134,6 +134,7 @@ export function App() {
       setSelectedTxnId(null);
     }
   };
+  const panelStyle = (tab: AppTab) => (activeTab === tab ? undefined : { display: "none" as const });
 
   // REQ: FUNC-BUD-003 — drill-down from overspent budget row into transactions
   const handleBudgetDrillDown = (categoryId: string, month: string) => {
@@ -271,6 +272,7 @@ export function App() {
             role="tabpanel"
             aria-labelledby="tab-button-overview"
             hidden={activeTab !== "overview"}
+            style={panelStyle("overview")}
             className="tab-panel"
             data-testid="tab-panel-overview"
           >
@@ -290,6 +292,7 @@ export function App() {
             role="tabpanel"
             aria-labelledby="tab-button-transactions"
             hidden={activeTab !== "transactions"}
+            style={panelStyle("transactions")}
             className="tab-panel"
             data-testid="tab-panel-transactions"
           >
@@ -321,6 +324,7 @@ export function App() {
             role="tabpanel"
             aria-labelledby="tab-button-reports"
             hidden={activeTab !== "reports"}
+            style={panelStyle("reports")}
             className="tab-panel"
             data-testid="tab-panel-reports"
           >
@@ -346,6 +350,7 @@ export function App() {
             role="tabpanel"
             aria-labelledby="tab-button-data"
             hidden={activeTab !== "data"}
+            style={panelStyle("data")}
             className="tab-panel"
             data-testid="tab-panel-data"
           >
