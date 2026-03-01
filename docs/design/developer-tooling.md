@@ -36,6 +36,7 @@ None.
 
 ## API/interface changes
 - Add `Dockerfile.dev` with Python 3.12, Node.js 24 LTS, Rust stable, Git, and Linux build prerequisites.
+- Include DBus session/accessibility packages in the dev image so GTK-backed native Tauri dialogs work reliably in containerized Linux sessions.
 - Add `docker-compose.dev.yml` with pure named-volume workspace/data mounts and persistent dependency caches.
 - Add a stable container name (`godzilla-dev`) for repeatable manual container operations.
 - Add `docker-compose.dev.ssh-agent.yml` as an optional SSH agent forwarding overlay for Git SSH workflows.
@@ -54,6 +55,7 @@ None.
 
 ## Testing strategy and coverage mapping
 - Unit tests validate Dockerfile toolchain declarations, Compose service configuration, Dev Container wiring, and presence of operational setup documentation.
+- Tooling tests also pin the DBus/session packages required for native Linux dialog support in the container image.
 - Existing tooling tests continue validating lint/test/build dependency hygiene rules.
 
 ## UI Biome rollout strategy (pragmatic baseline)

@@ -8,6 +8,7 @@ Requirements: SEC-DATA-004
 - Node.js 24 LTS + npm 11
 - Rust stable (`rustc`, `cargo`, `rustup`)
 - Git + OpenSSH client + Linux build prerequisites for this project
+- Desktop session helpers for native GTK/Tauri dialogs (`dbus-x11`, `at-spi2-core`)
 
 ## Storage model (pure named volumes)
 - Source workspace volume: `godzilla-workspace` mounted at `/workspace`
@@ -53,7 +54,8 @@ export GODZILLA_REPO_URL=$(git remote get-url origin)
 $COMPOSE_DEV build dev
 $COMPOSE_DEV up -d dev
 $COMPOSE_DEV exec dev git clone $GODZILLA_REPO_URL /workspace/godzilla
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/actiavte && pip install -e ".[dev]" && npm install'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/activate && pip install -e ".[dev]"'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla/ui && npm install'
 ```
 
 ## Run and use locally
@@ -77,6 +79,11 @@ This mode requires a local Linux desktop with an active X server. It will not wo
 
 The GUI compose overlay defaults to an X11 path (`GDK_BACKEND=x11`) while keeping
 hardware acceleration available for better responsiveness.
+
+The dev image includes DBus session support (`dbus-x11`) and accessibility bus
+runtime (`at-spi2-core`) because native Linux file dialogs used by Tauri plugins
+can render incorrectly or emit `dconf` / `dbus-launch` errors when those pieces
+are missing in a containerized desktop session.
 
 Allow local Docker X11 clients from the host:
 
@@ -103,6 +110,13 @@ Run Tauri app inside the container:
 
 ```bash
 $COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && npm run tauri dev'
+```
+
+If you need to suppress accessibility bus noise in a minimal container session,
+set `NO_AT_BRIDGE=1` for that shell:
+
+```bash
+$COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && NO_AT_BRIDGE=1 npm run tauri dev'
 ```
 
 If you run Tauri outside the GUI overlay and see a crash like
@@ -174,7 +188,8 @@ When dependencies change in `Dockerfile.dev`, compose files, `pyproject.toml`, o
 $COMPOSE_DEV build --no-cache dev
 $COMPOSE_DEV up -d dev
 $COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && git pull --ff-only'
-$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/actiavte && pip install -e ".[dev]" && npm install'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla && python3 -m venv venv && . venv/bin/activate && pip install -e ".[dev]"'
+$COMPOSE_DEV exec dev bash -lc 'cd /workspace/godzilla/ui && npm install'
 ```
 
 ## Stop and cleanup

@@ -110,6 +110,8 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("https://sh.rustup.rs", dockerfile_text)
         self.assertIn("git", dockerfile_text)
         self.assertIn("openssh-client", dockerfile_text)
+        self.assertIn("dbus-x11", dockerfile_text)
+        self.assertIn("at-spi2-core", dockerfile_text)
         self.assertIn("REQ: SEC-DATA-004", dockerfile_text)
 
     def test_compose_exposes_dev_service_and_ports(self) -> None:
@@ -180,4 +182,6 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("## How to update the image", doc_text)
         self.assertIn("## VS Code connection to the running image", doc_text)
         self.assertIn("## Run Tauri GUI from container (Linux X11)", doc_text)
+        self.assertIn("dbus-x11", doc_text)
+        self.assertIn("at-spi2-core", doc_text)
         self.assertIn("do not copy private keys into the container", doc_text)

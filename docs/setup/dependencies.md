@@ -10,6 +10,8 @@ Install Tauri’s Linux prerequisites (Debian/Ubuntu example):
 ```bash
 sudo apt update
 sudo apt install libwebkit2gtk-4.1-dev \
+  dbus-x11 \
+  at-spi2-core \
   build-essential \
   curl \
   wget \
@@ -21,6 +23,11 @@ sudo apt install libwebkit2gtk-4.1-dev \
 ```
 
 For other Linux distros, use the distro-specific package lists on Tauri’s prerequisites page. citeturn3view2
+
+On minimal desktop sessions and containers, GTK-backed native dialogs also need a
+working DBus session helper. On Debian/Ubuntu that is typically provided by
+`dbus-x11`; `at-spi2-core` prevents missing accessibility bus/runtime issues for
+native file chooser dialogs.
 
 ## 2) Rust toolchain
 Install Rust via rustup:

@@ -17,9 +17,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/usr/local/cargo/bin:/home/${USERNAME}/.local/bin:${PATH}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    at-spi2-core \
     build-essential \
     ca-certificates \
     curl \
+    dbus-x11 \
     file \
     git \
     gnupg \
