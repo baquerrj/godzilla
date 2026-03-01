@@ -107,6 +107,12 @@ type TauriApiProxyResponse = {
   bodyBase64: string;
 };
 
+type ErrorDetailItem = {
+  loc?: Array<string | number>;
+  msg?: string;
+  type?: string;
+};
+
 function hasTauriRuntime(): boolean {
   return (
     typeof window !== "undefined"
@@ -128,12 +134,37 @@ function buildHeaders(apiToken: string, options: RequestInit): Headers {
   return headers;
 }
 
+function formatErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string" && detail) {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    const items = detail
+      .filter((item): item is ErrorDetailItem => typeof item === "object" && item !== null)
+      .map((item) => {
+        const location = Array.isArray(item.loc) ? item.loc.join(".") : null;
+        if (location && item.msg) {
+          return `${location}: ${item.msg}`;
+        }
+        return item.msg ?? item.type ?? null;
+      })
+      .filter((item): item is string => Boolean(item));
+    if (items.length > 0) {
+      return items.join("; ");
+    }
+  }
+
+  return null;
+}
+
 function parseErrorPayload(statusCode: number, rawBody: string): never {
   let message = `HTTP ${statusCode}`;
   try {
-    const body = JSON.parse(rawBody) as { detail?: string };
-    if (body.detail) {
-      message = body.detail;
+    const body = JSON.parse(rawBody) as { detail?: unknown };
+    const detailMessage = formatErrorDetail(body.detail);
+    if (detailMessage) {
+      message = detailMessage;
     }
   } catch {
     // Ignore JSON parse failure.
@@ -240,12 +271,12 @@ async function tauriResponse(
   options: RequestInit,
   headers: Headers,
 ): Promise<RuntimeHttpResponse> {
+  const bodyBase64 = await encodeRequestBody(options, headers);
   const request: TauriApiProxyRequest = {
     method: (options.method ?? "GET").toUpperCase(),
     path,
     headers: Array.from(headers.entries()).map(([name, value]) => ({ name, value })),
   };
-  const bodyBase64 = await encodeRequestBody(options, headers);
   if (bodyBase64) {
     request.bodyBase64 = bodyBase64;
   }

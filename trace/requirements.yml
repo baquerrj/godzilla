@@ -861,6 +861,7 @@
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_restore_recovers_database_and_secrets
   - ui/src/test/DataManagementPanel.test.tsx:restores backup file and notifies parent
+  - ui/src/test/ApiClientTransport.test.ts:preserves multipart headers for tauri restore uploads
   doc_refs:
   - docs/design/m5-export-backup-settings-audit.md
   - docs/test-strategy/m5-export-backup-settings-audit.md
@@ -1212,6 +1213,7 @@
   - godzilla_core/tests/test_api_layer.py:test_auth_status_reports_tls_fingerprint_when_tls_configured
   - ui/src/test/ApiClientTransport.test.ts:uses tauri proxy transport when tauri runtime is available
   - ui/src/test/ApiClientTransport.test.ts:surfaces pin mismatch from tauri proxy request failures
+  - ui/src/test/ApiClientTransport.test.ts:preserves multipart headers for tauri restore uploads
   - ui/src-tauri/src/lib.rs:resolved_pinned_fingerprint_uses_cert_hash_when_env_is_missing
   doc_refs:
   - docs/design/architecture-overview.md
@@ -1231,6 +1233,7 @@
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_rejects_non_loopback_host
   - godzilla_core/tests/test_api_layer.py:test_run_api_server_starts_with_loopback_host
   - ui/src/test/ApiClientTransport.test.ts:uses fetch transport when tauri runtime is unavailable
+  - ui/src/test/ApiClientTransport.test.ts:formats validation error arrays into readable messages
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md

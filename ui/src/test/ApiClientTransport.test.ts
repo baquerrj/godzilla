@@ -101,4 +101,77 @@ describe("api/client transport", () => {
     }
     expect(didLock).toBe(true);
   });
+
+  it("preserves multipart headers for tauri restore uploads  REQ: SEC-NET-001, FUNC-BKP-003", async () => {
+    tauriWindow.__TAURI_INTERNALS__ = {};
+    vi.stubGlobal(
+      "Request",
+      class {
+        headers = new Headers({
+          "Content-Type": "multipart/form-data; boundary=test-boundary",
+        });
+
+        async arrayBuffer(): Promise<ArrayBuffer> {
+          return new TextEncoder().encode("multipart payload").buffer;
+        }
+      } as typeof Request,
+    );
+    mockInvoke.mockResolvedValue({
+      status: 200,
+      headers: [{ name: "content-type", value: "application/json" }],
+      bodyBase64: btoa('{"restored_database":true,"restored_secrets":true,"schema_version":3}'),
+    });
+
+    await GodzillaApi.restoreBackup("tok", {
+      passphrase: "m5-passphrase",
+      file: new File(["backup"], "godzilla-backup.gzbk", {
+        type: "application/octet-stream",
+      }),
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "api_request",
+      expect.objectContaining({
+        request: expect.objectContaining({
+          method: "POST",
+          path: "/restore",
+          headers: expect.arrayContaining([
+            expect.objectContaining({
+              name: "content-type",
+              value: expect.stringMatching(/^multipart\/form-data; boundary=/),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
+  it("formats validation error arrays into readable messages  REQ: SEC-NET-002", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: [
+            { loc: ["body", "passphrase"], msg: "Field required" },
+            { loc: ["body", "backup_file"], msg: "Field required" },
+          ],
+        }),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    await expect(
+      GodzillaApi.restoreBackup("tok", {
+        passphrase: "m5-passphrase",
+        file: new File(["backup"], "godzilla-backup.gzbk"),
+      }),
+    ).rejects.toSatisfy(
+      (error: unknown) => error instanceof ApiError
+        && error.statusCode === 422
+        && error.message
+          === "body.passphrase: Field required; body.backup_file: Field required",
+    );
+  });
 });
