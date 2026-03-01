@@ -1,9 +1,6 @@
 /**
  * SettingsPanel: view/update persisted application settings.
  *
- * Settings are loaded by the parent (App) and passed as props to avoid
- * duplicate /settings requests alongside ExportPanel.
- *
  * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
  */
 
@@ -13,9 +10,7 @@ import type { SettingsResponse } from "../api/types";
 
 interface Props {
   token: string;
-  settings: SettingsResponse | null;
-  settingsLoading: boolean;
-  settingsError: string | null;
+  refreshKey: number;
   onSaved: () => void;
 }
 
@@ -57,18 +52,23 @@ function fromSettings(settings: SettingsResponse): SettingsFormState {
   };
 }
 
-export function SettingsPanel({ token, settings, settingsLoading, settingsError, onSaved }: Props) {
+export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
   const [form, setForm] = useState<SettingsFormState>(DEFAULT_FORM);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const [loadResult, executeLoad] = useApiCall<SettingsResponse>();
   const [saveResult, executeSave] = useApiCall<SettingsResponse>();
 
-  // Sync form whenever settings prop changes (initial load or post-save refresh).
   useEffect(() => {
-    if (settings) {
-      setForm(fromSettings(settings));
+    void executeLoad(() => GodzillaApi.getSettings(token));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, refreshKey]);
+
+  useEffect(() => {
+    if (loadResult.status === "success") {
+      setForm(fromSettings(loadResult.data));
     }
-  }, [settings]);
+  }, [loadResult]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -148,9 +148,7 @@ export function SettingsPanel({ token, settings, settingsLoading, settingsError,
             min={1}
             max={3650}
             value={form.retainLogsDays}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, retainLogsDays: event.target.value }))
-            }
+            onChange={(event) => setForm((prev) => ({ ...prev, retainLogsDays: event.target.value }))}
             data-testid="settings-retain-logs-input"
           />
         </label>
@@ -161,9 +159,7 @@ export function SettingsPanel({ token, settings, settingsLoading, settingsError,
             min={1}
             max={1440}
             value={form.autoLockMinutes}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, autoLockMinutes: event.target.value }))
-            }
+            onChange={(event) => setForm((prev) => ({ ...prev, autoLockMinutes: event.target.value }))}
             data-testid="settings-auto-lock-input"
           />
         </label>
@@ -230,13 +226,17 @@ export function SettingsPanel({ token, settings, settingsLoading, settingsError,
         </button>
       </form>
 
-      {settingsLoading && <p className="muted">Loading settings…</p>}
-      {settingsError && <p className="error-text">Failed to load settings: {settingsError}</p>}
+      {loadResult.status === "loading" && <p className="muted">Loading settings…</p>}
+      {loadResult.status === "error" && (
+        <p className="error-text">Failed to load settings: {loadResult.message}</p>
+      )}
       {localError && <p className="error-text">{localError}</p>}
       {saveResult.status === "error" && (
         <p className="error-text">Failed to save settings: {saveResult.message}</p>
       )}
-      {saveResult.status === "success" && <p className="alert alert-success">Settings saved.</p>}
+      {saveResult.status === "success" && (
+        <p className="alert alert-success">Settings saved.</p>
+      )}
     </section>
   );
 }

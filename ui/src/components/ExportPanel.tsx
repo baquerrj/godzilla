@@ -1,9 +1,6 @@
 /**
  * ExportPanel: transaction/categories/audit exports with download actions.
  *
- * Settings are loaded by the parent (App) and passed as props to avoid
- * duplicate /settings requests alongside SettingsPanel.
- *
  * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-AUD-004, FUNC-SET-005
  */
 
@@ -19,15 +16,14 @@ import { downloadBlob } from "../utils/download";
 interface Props {
   token: string;
   filters: GetTransactionsParams;
-  settings: SettingsResponse | null;
-  settingsError: string | null;
+  refreshKey: number;
 }
 
 function normalizeMonth(value: string): string | undefined {
   return /^\d{4}-\d{2}$/.test(value) ? value : undefined;
 }
 
-export function ExportPanel({ token, filters, settings, settingsError }: Props) {
+export function ExportPanel({ token, filters, refreshKey }: Props) {
   const [includeRawPayloads, setIncludeRawPayloads] = useState(false);
   const [categoriesBudgetsFormat, setCategoriesBudgetsFormat] = useState<"csv" | "json">("csv");
   const [categoriesBudgetsMonth, setCategoriesBudgetsMonth] = useState("");
@@ -36,14 +32,19 @@ export function ExportPanel({ token, filters, settings, settingsError }: Props) 
   const [auditEnd, setAuditEnd] = useState("");
   const [auditLimit, setAuditLimit] = useState("200");
 
+  const [settingsResult, executeSettings] = useApiCall<SettingsResponse>();
   const [exportResult, executeExport] = useApiCall<string>();
 
-  // Sync the include-raw-payloads toggle from settings whenever settings change.
   useEffect(() => {
-    if (settings) {
-      setIncludeRawPayloads(settings.export_defaults.include_raw_payloads);
+    void executeSettings(() => GodzillaApi.getSettings(token));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, refreshKey]);
+
+  useEffect(() => {
+    if (settingsResult.status === "success") {
+      setIncludeRawPayloads(settingsResult.data.export_defaults.include_raw_payloads);
     }
-  }, [settings]);
+  }, [settingsResult]);
 
   const handleExportTransactions = () => {
     void executeExport(async () => {
@@ -208,8 +209,8 @@ export function ExportPanel({ token, filters, settings, settingsError }: Props) 
         </button>
       </div>
 
-      {settingsError && (
-        <p className="error-text">Failed to load export defaults: {settingsError}</p>
+      {settingsResult.status === "error" && (
+        <p className="error-text">Failed to load export defaults: {settingsResult.message}</p>
       )}
       {exportResult.status === "error" && (
         <p className="error-text">Export failed: {exportResult.message}</p>

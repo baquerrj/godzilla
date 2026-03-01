@@ -1,33 +1,43 @@
 /**
  * Accounts table: lists all linked accounts with current balance.
  *
- * Accounts data is fetched by the parent (App) to avoid duplicate
- * API calls when the same data is needed for filter lookups.
- *
  * REQ: FUNC-ACCT-003
  */
 
+import { useEffect } from "react";
+import { GodzillaApi, useApiCall } from "../api/client";
 import type { Account } from "../api/types";
 
 interface Props {
-  accounts: Account[];
-  loading: boolean;
-  error: string | null;
+  token: string;
+  refreshKey: number;
 }
 
-export function AccountsTable({ accounts, loading, error }: Props) {
+export function AccountsTable({ token, refreshKey }: Props) {
+  const [result, execute] = useApiCall<Account[]>();
+
+  // REQ: FUNC-ACCT-003 — fetch accounts on mount and refresh
+  useEffect(() => {
+    execute(() => GodzillaApi.getAccounts(token));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, refreshKey]);
+
   return (
     <section className="panel" data-testid="accounts-panel">
       <div className="panel-header">
         <h2>Accounts</h2>
       </div>
 
-      {loading && <p className="muted">Loading…</p>}
-      {error && <p className="error-text">Failed to load accounts: {error}</p>}
-      {!loading && !error && accounts.length === 0 && (
+      {result.status === "loading" && <p className="muted">Loading…</p>}
+      {result.status === "error" && (
+        <p className="error-text">
+          Failed to load accounts: {result.message}
+        </p>
+      )}
+      {result.status === "success" && result.data.length === 0 && (
         <p className="muted">No accounts. Sync a Plaid item to populate.</p>
       )}
-      {!loading && !error && accounts.length > 0 && (
+      {result.status === "success" && result.data.length > 0 && (
         <table className="data-table" data-testid="accounts-table">
           <thead>
             <tr>
@@ -41,13 +51,15 @@ export function AccountsTable({ accounts, loading, error }: Props) {
             </tr>
           </thead>
           <tbody>
-            {accounts.map((acct) => (
+            {result.data.map((acct) => (
               <tr key={acct.account_id}>
                 <td>{acct.name}</td>
                 <td>{acct.account_type}</td>
                 <td>{acct.subtype ?? "—"}</td>
                 <td>{acct.mask ? `••••${acct.mask}` : "—"}</td>
-                <td className="amount">{acct.balance !== null ? acct.balance.toFixed(2) : "—"}</td>
+                <td className="amount">
+                  {acct.balance !== null ? acct.balance.toFixed(2) : "—"}
+                </td>
                 <td>{acct.currency}</td>
                 <td>{acct.institution_id}</td>
               </tr>
