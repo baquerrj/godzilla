@@ -109,14 +109,14 @@ $COMPOSE_DEV_GUI up -d --force-recreate dev
 Run Tauri app inside the container:
 
 ```bash
-$COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && npm run tauri dev'
+$COMPOSE_DEV_GUI exec dev bash -lc 'source /usr/local/cargo/env && cd /workspace/godzilla/ui && npm run tauri dev'
 ```
 
 If you need to suppress accessibility bus noise in a minimal container session,
 set `NO_AT_BRIDGE=1` for that shell:
 
 ```bash
-$COMPOSE_DEV_GUI exec dev bash -lc 'cd /workspace/godzilla/ui && NO_AT_BRIDGE=1 npm run tauri dev'
+$COMPOSE_DEV_GUI exec dev bash -lc 'source /usr/local/cargo/env && cd /workspace/godzilla/ui && NO_AT_BRIDGE=1 npm run tauri dev'
 ```
 
 If you run Tauri outside the GUI overlay and see a crash like
@@ -124,7 +124,7 @@ If you run Tauri outside the GUI overlay and see a crash like
 retry with:
 
 ```bash
-GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri dev
+source /usr/local/cargo/env && GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri dev
 ```
 
 After you are done, revoke X11 access:
