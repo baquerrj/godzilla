@@ -5,6 +5,8 @@ services:
     environment:
       # Forward host X11 display into the container for GUI apps such as Tauri.
       DISPLAY: ${DISPLAY:-:0}
+      # Forward the host Xauthority cookie so GTK/Tauri can authenticate to X11.
+      XAUTHORITY: ${XAUTHORITY:-/home/vscode/.Xauthority}
       # Default to X11 with hardware acceleration when available.
       GDK_BACKEND: x11
       XDG_SESSION_TYPE: x11
@@ -14,3 +16,4 @@ services:
       WEBKIT_DISABLE_COMPOSITING_MODE: ${GODZILLA_GUI_DISABLE_COMPOSITING:-0}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:${XAUTHORITY:-/home/vscode/.Xauthority}:ro

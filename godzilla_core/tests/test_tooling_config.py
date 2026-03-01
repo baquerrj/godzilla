@@ -164,7 +164,9 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("services:", compose_text)
         self.assertIn("  dev:", compose_text)
         self.assertIn("DISPLAY:", compose_text)
+        self.assertIn("XAUTHORITY:", compose_text)
         self.assertIn("- /tmp/.X11-unix:/tmp/.X11-unix:rw", compose_text)
+        self.assertIn(".Xauthority", compose_text)
         self.assertIn("REQ: SEC-DATA-004", compose_text)
 
     def test_docker_setup_doc_includes_install_and_update_workflow(self) -> None:
@@ -184,4 +186,5 @@ class ToolingConfigTests(unittest.TestCase):
         self.assertIn("## Run Tauri GUI from container (Linux X11)", doc_text)
         self.assertIn("dbus-x11", doc_text)
         self.assertIn("at-spi2-core", doc_text)
+        self.assertIn("XAUTHORITY", doc_text)
         self.assertIn("do not copy private keys into the container", doc_text)

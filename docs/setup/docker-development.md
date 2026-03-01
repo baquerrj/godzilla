@@ -85,10 +85,22 @@ runtime (`at-spi2-core`) because native Linux file dialogs used by Tauri plugins
 can render incorrectly or emit `dconf` / `dbus-launch` errors when those pieces
 are missing in a containerized desktop session.
 
+The GUI overlay also forwards the host Xauthority cookie into the container so
+GTK can authenticate to the host X server. Without `XAUTHORITY`, Tauri may
+panic during startup with `Failed to initialize GTK` even when `DISPLAY` and the
+X11 socket mount are present.
+
 Allow local Docker X11 clients from the host:
 
 ```bash
 xhost +local:docker
+```
+
+If your host shell does not already export `XAUTHORITY`, set it explicitly
+before starting the GUI overlay:
+
+```bash
+export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
 ```
 
 Start container with GUI overlay:
@@ -110,6 +122,13 @@ Run Tauri app inside the container:
 
 ```bash
 $COMPOSE_DEV_GUI exec dev bash -lc 'source /usr/local/cargo/env && cd /workspace/godzilla/ui && npm run tauri dev'
+```
+
+If GTK still fails to initialize, verify the forwarded GUI environment inside
+the container:
+
+```bash
+$COMPOSE_DEV_GUI exec dev bash -lc 'echo DISPLAY=$DISPLAY; echo XAUTHORITY=$XAUTHORITY; ls -l /tmp/.X11-unix; ls -l ${XAUTHORITY:-$HOME/.Xauthority}'
 ```
 
 If you need to suppress accessibility bus noise in a minimal container session,
