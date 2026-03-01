@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DataManagementPanel } from "../components/DataManagementPanel";
 
 vi.mock("../utils/download", () => ({
-  downloadBlob: vi.fn(),
+  saveBlob: vi.fn(),
 }));
 
 vi.mock("../api/client", async () => {
@@ -27,7 +27,7 @@ vi.mock("../api/client", async () => {
 });
 
 import { GodzillaApi } from "../api/client";
-import { downloadBlob } from "../utils/download";
+import { saveBlob } from "../utils/download";
 
 const TOKEN = "tok";
 
@@ -35,7 +35,7 @@ const mockCreateBackup = vi.mocked(GodzillaApi.createBackup);
 const mockRestoreBackup = vi.mocked(GodzillaApi.restoreBackup);
 const mockWipeData = vi.mocked(GodzillaApi.wipeData);
 const mockReinitializeDatabase = vi.mocked(GodzillaApi.reinitializeDatabase);
-const mockDownloadBlob = vi.mocked(downloadBlob);
+const mockSaveBlob = vi.mocked(saveBlob);
 
 describe("DataManagementPanel", () => {
   beforeEach(() => {
@@ -45,6 +45,7 @@ describe("DataManagementPanel", () => {
       filename: "godzilla-backup.gzbk",
       contentType: "application/octet-stream",
     });
+    mockSaveBlob.mockResolvedValue(true);
     mockRestoreBackup.mockResolvedValue({
       restored_database: true,
       restored_secrets: true,
@@ -73,7 +74,22 @@ describe("DataManagementPanel", () => {
         passphrase: "m5-passphrase",
         include_secrets: true,
       });
-      expect(mockDownloadBlob).toHaveBeenCalledWith(expect.any(Blob), "godzilla-backup.gzbk");
+      expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), "godzilla-backup.gzbk");
+      expect(screen.getByText("Backup saved.")).toBeInTheDocument();
+    });
+  });
+
+  it("reports when backup save is canceled  REQ: FUNC-BKP-001", async () => {
+    mockSaveBlob.mockResolvedValue(false);
+    render(<DataManagementPanel token={TOKEN} onDataChanged={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId("backup-passphrase-input"), {
+      target: { value: "m5-passphrase" },
+    });
+    fireEvent.click(screen.getByTestId("backup-download-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Backup save canceled.")).toBeInTheDocument();
     });
   });
 

@@ -6,7 +6,7 @@
 
 import { type FormEvent, useState } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
-import { downloadBlob } from "../utils/download";
+import { saveBlob } from "../utils/download";
 
 interface Props {
   token: string;
@@ -30,8 +30,8 @@ export function DataManagementPanel({ token, onDataChanged }: Props) {
         passphrase: backupPassphrase,
         include_secrets: includeSecrets,
       });
-      downloadBlob(result.blob, result.filename ?? "godzilla-backup.gzbk");
-      return "Backup downloaded.";
+      const saved = await saveBlob(result.blob, result.filename ?? "godzilla-backup.gzbk");
+      return saved ? "Backup saved." : "Backup save canceled.";
     });
   };
 

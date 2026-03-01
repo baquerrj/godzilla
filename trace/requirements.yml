@@ -824,9 +824,11 @@
   - godzilla_core/api/app.py:create_backup
   - ui/src/api/client.ts:GodzillaApi.createBackup
   - ui/src/components/DataManagementPanel.tsx:DataManagementPanel
+  - ui/src/utils/download.ts:saveBlob
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_backup_returns_encrypted_blob
   - ui/src/test/DataManagementPanel.test.tsx:downloads encrypted backup
+  - ui/src/test/DataManagementPanel.test.tsx:reports when backup save is canceled
   doc_refs:
   - docs/design/m5-export-backup-settings-audit.md
   - docs/test-strategy/m5-export-backup-settings-audit.md

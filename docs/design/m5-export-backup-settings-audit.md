@@ -57,6 +57,7 @@ flowchart LR
 3. `POST /backup`
    - JSON body with passphrase and optional secrets inclusion.
    - Returns encrypted binary attachment.
+   - Desktop Tauri runtime prompts with a native save dialog before writing the encrypted backup file.
 4. `POST /restore`
    - Multipart form with passphrase and backup file.
    - Decrypts + verifies envelope integrity, atomically replaces DB files, reruns migrations.
