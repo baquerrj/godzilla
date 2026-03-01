@@ -12,7 +12,6 @@ import csv
 import json
 import math
 import os
-import re
 import ssl
 import sys
 import time
@@ -191,19 +190,13 @@ def unlock_with_pin(
 
 
 def build_scenarios(now: datetime) -> dict[str, list[EndpointCall]]:
-    """Build the per-tab API call sets that reflect the post-S1 call graph.
-
-    Post-S1 changes:
-    - overview_first_load: /accounts is fetched once (accountsTable.getAccounts removed).
-    - data_first_load: /settings is fetched once (exportPanel.getSettings removed).
-    """
     month, month_start, month_end = month_bounds(now)
     overview_calls = [
-        # S1-1: accounts fetched once in App; AccountsTable receives it as a prop.
         EndpointCall(name="app.getAccounts", path="/accounts"),
         EndpointCall(name="app.getCategories", path="/categories"),
         EndpointCall(name="syncState.getSyncState", path="/sync-state"),
         EndpointCall(name="conflictQueue.getConflicts", path="/conflicts?status=open"),
+        EndpointCall(name="accountsTable.getAccounts", path="/accounts"),
         EndpointCall(name="balancesTable.getBalances", path="/balances?limit=100"),
     ]
     transactions_calls = [
@@ -228,8 +221,8 @@ def build_scenarios(now: datetime) -> dict[str, list[EndpointCall]]:
         ),
     ]
     data_calls = [
-        # S1-2: settings fetched once in App; both SettingsPanel and ExportPanel receive it.
-        EndpointCall(name="app.getSettings", path="/settings"),
+        EndpointCall(name="settingsPanel.getSettings", path="/settings"),
+        EndpointCall(name="exportPanel.getSettings", path="/settings"),
     ]
     return {
         "overview_first_load": overview_calls,
@@ -406,15 +399,6 @@ def write_outputs(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Profile first-load API latency by tab.")
     parser.add_argument(
-        "--batch",
-        default=os.environ.get("GODZILLA_PROFILE_BATCH", "s1"),
-        help=(
-            "Batch label used in output file names, e.g. 'baseline', 's1', 's2' "
-            "(default: %(default)s). Output files use the convention "
-            "<batch>-<yyyymmddThhmmssZ>-<artifact>."
-        ),
-    )
-    parser.add_argument(
         "--base-url",
         default=os.environ.get("GODZILLA_PROFILE_BASE_URL", "http://127.0.0.1:8787"),
         help="API base URL (default: %(default)s)",
@@ -532,6 +516,7 @@ def main() -> int:
         )
 
     summary = summarize(samples)
+    base_name = f"first-load-latency-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
     raw_payload = {
         "generated_at_utc": started_at.isoformat(),
         "base_url": args.base_url,
@@ -552,8 +537,6 @@ def main() -> int:
         "samples": samples,
     }
 
-    batch = re.sub(r"[^a-z0-9_-]", "", args.batch.lower()) or "batch"
-    base_name = f"{batch}-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
     output_paths = write_outputs(Path(args.output_dir), base_name, raw_payload, summary)
     print(json.dumps({k: str(v) for k, v in output_paths.items()}, indent=2))
     return 0
