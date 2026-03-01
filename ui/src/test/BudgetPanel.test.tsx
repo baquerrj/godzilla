@@ -10,7 +10,8 @@ import { BudgetPanel } from "../components/BudgetPanel";
 import type { BudgetLine, Category } from "../api/types";
 
 vi.mock("../api/client", async () => {
-  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual =
+    await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {
@@ -66,7 +67,12 @@ describe("BudgetPanel", () => {
   it("renders empty state when no budgets  REQ: FUNC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByText(/no budgets set/i)).toBeInTheDocument();
@@ -76,7 +82,12 @@ describe("BudgetPanel", () => {
   it("renders rows with planned/actual/remaining amounts  REQ: FUNC-BUD-002", async () => {
     mockGetBudgets.mockResolvedValue([makeLine()]);
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("budget-table")).toBeInTheDocument();
@@ -93,7 +104,12 @@ describe("BudgetPanel", () => {
     const overspent = makeLine({ is_overspent: true, planned: 20, actual: 45, remaining: -25 });
     mockGetBudgets.mockResolvedValue([overspent]);
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       const row = screen.getByTestId("budget-row-bud-1");
@@ -120,7 +136,12 @@ describe("BudgetPanel", () => {
   it("uses a constrained month selector and refetches for selected month  REQ: FUNC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
 
     const monthSelect = await screen.findByTestId("budget-month-input");
@@ -139,7 +160,12 @@ describe("BudgetPanel", () => {
     mockCreateBudget.mockResolvedValue(newLine);
 
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => screen.getByTestId("budget-category-select"));
 
@@ -152,13 +178,10 @@ describe("BudgetPanel", () => {
     fireEvent.click(screen.getByTestId("budget-add-btn"));
 
     await waitFor(() => {
-      expect(mockCreateBudget).toHaveBeenCalledWith(
-        TOKEN,
-        expect.objectContaining({
-          category_id: "food_coffee",
-          amount: 75,
-        }),
-      );
+      expect(mockCreateBudget).toHaveBeenCalledWith(TOKEN, expect.objectContaining({
+        category_id: "food_coffee",
+        amount: 75,
+      }));
     });
   });
 
@@ -170,7 +193,12 @@ describe("BudgetPanel", () => {
     );
 
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => screen.getByTestId("budget-category-select"));
 
@@ -192,7 +220,12 @@ describe("BudgetPanel", () => {
     mockDeleteBudget.mockResolvedValue(undefined);
 
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => screen.getByTestId("budget-delete-bud-1"));
     fireEvent.click(screen.getByTestId("budget-delete-bud-1"));
@@ -205,7 +238,12 @@ describe("BudgetPanel", () => {
   it("shows error message on fetch failure", async () => {
     mockGetBudgets.mockRejectedValue(new Error("Network error"));
     render(
-      <BudgetPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <BudgetPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByText(/failed to load budgets/i)).toBeInTheDocument();

@@ -33,7 +33,9 @@ export function ConflictQueue({ token, refreshKey }: Props) {
 
   const isBusy = resolveResult.status === "loading";
   const conflicts =
-    result.status === "success" ? result.data.filter((c) => c.status === "open") : [];
+    result.status === "success"
+      ? result.data.filter((c) => c.status === "open")
+      : [];
 
   if (result.status === "success" && conflicts.length === 0) {
     return null;
@@ -46,8 +48,7 @@ export function ConflictQueue({ token, refreshKey }: Props) {
           Conflicts
           {result.status === "success" && (
             <span className="badge badge-warning" data-testid="conflict-count">
-              {" "}
-              {conflicts.length}
+              {" "}{conflicts.length}
             </span>
           )}
         </h2>

@@ -11,7 +11,8 @@ import { TransactionsTable } from "../components/TransactionsTable";
 import type { Transaction } from "../api/types";
 
 vi.mock("../api/client", async () => {
-  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual =
+    await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {
@@ -82,14 +83,18 @@ describe("TransactionsTable", () => {
     mockGetTransactions.mockRejectedValue(new Error("DB error"));
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
-      expect(screen.getByText(/failed to load transactions/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/failed to load transactions/i),
+      ).toBeInTheDocument();
     });
   });
 
   it("next page is disabled when fewer rows than page size  REQ: FUNC-TXN-001", async () => {
     mockGetTransactions.mockResolvedValue([makeTxn("t1")]);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
-    await waitFor(() => expect(screen.getByTestId("next-btn")).toBeDisabled());
+    await waitFor(() =>
+      expect(screen.getByTestId("next-btn")).toBeDisabled(),
+    );
     expect(screen.getByTestId("prev-btn")).toBeDisabled();
   });
 
@@ -98,7 +103,9 @@ describe("TransactionsTable", () => {
     const fullPage = Array.from({ length: 50 }, (_, i) => makeTxn(`t${i}`));
     mockGetTransactions.mockResolvedValue(fullPage);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
-    await waitFor(() => expect(screen.getByTestId("next-btn")).not.toBeDisabled());
+    await waitFor(() =>
+      expect(screen.getByTestId("next-btn")).not.toBeDisabled(),
+    );
 
     await userEvent.click(screen.getByTestId("next-btn"));
     await waitFor(() => {
@@ -162,7 +169,13 @@ describe("TransactionsTable", () => {
   it("calls onSelectTransaction when a row is clicked  REQ: FUNC-TXN-003", async () => {
     mockGetTransactions.mockResolvedValue([makeTxn("txn-choose")]);
     const onSelect = vi.fn();
-    render(<TransactionsTable token={TOKEN} refreshKey={0} onSelectTransaction={onSelect} />);
+    render(
+      <TransactionsTable
+        token={TOKEN}
+        refreshKey={0}
+        onSelectTransaction={onSelect}
+      />,
+    );
     await waitFor(() => screen.getByTestId("txn-row-txn-choose"));
     await userEvent.click(screen.getByTestId("txn-row-txn-choose"));
     expect(onSelect).toHaveBeenCalledWith("txn-choose");

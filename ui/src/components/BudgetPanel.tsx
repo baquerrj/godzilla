@@ -23,10 +23,7 @@ function defaultMonth(): string {
   return `${y}-${m}`;
 }
 
-function buildBudgetMonthOptions(
-  monthsBack = 36,
-  monthsForward = 24,
-): Array<{ value: string; label: string }> {
+function buildBudgetMonthOptions(monthsBack = 36, monthsForward = 24): Array<{ value: string; label: string }> {
   const now = new Date();
   const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
   const options: Array<{ value: string; label: string }> = [];

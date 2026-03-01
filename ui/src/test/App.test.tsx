@@ -20,7 +20,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 // Mock all API calls — components are tested in isolation elsewhere.
 vi.mock("../api/client", async () => {
-  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual =
+    await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {

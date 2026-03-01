@@ -11,7 +11,8 @@ import { ReportsPanel } from "../components/ReportsPanel";
 import type { Category } from "../api/types";
 
 vi.mock("../api/client", async () => {
-  const actual = await vi.importActual<typeof import("../api/client")>("../api/client");
+  const actual =
+    await vi.importActual<typeof import("../api/client")>("../api/client");
   return {
     ...actual,
     GodzillaApi: {
@@ -107,7 +108,12 @@ describe("ReportsPanel", () => {
 
   it("renders report sections and data  REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005", async () => {
     render(
-      <ReportsPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
@@ -126,7 +132,12 @@ describe("ReportsPanel", () => {
 
   it("requests all report endpoints on load  REQ: FUNC-REP-008", async () => {
     render(
-      <ReportsPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(mockGetMonthlyOverview).toHaveBeenCalled();
@@ -138,7 +149,12 @@ describe("ReportsPanel", () => {
 
   it("requests category trends after categories are selected  REQ: FUNC-REP-004", async () => {
     render(
-      <ReportsPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("report-trend-categories")).toBeInTheDocument();
@@ -185,7 +201,12 @@ describe("ReportsPanel", () => {
 
   it("updates range-driven report calls when month changes  REQ: FUNC-REP-008", async () => {
     render(
-      <ReportsPanel token={TOKEN} refreshKey={0} categories={CATEGORIES} onDrillDown={vi.fn()} />,
+      <ReportsPanel
+        token={TOKEN}
+        refreshKey={0}
+        categories={CATEGORIES}
+        onDrillDown={vi.fn()}
+      />,
     );
     await waitFor(() => {
       expect(mockGetMonthlyOverview).toHaveBeenCalled();

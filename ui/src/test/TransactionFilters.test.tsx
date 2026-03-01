@@ -94,7 +94,9 @@ describe("TransactionFilters", () => {
     fireEvent.change(screen.getByTestId("filter-merchant"), {
       target: { value: "Starbucks" },
     });
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ merchant: "Starbucks" }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ merchant: "Starbucks" }),
+    );
   });
 
   it("calls onReset when Reset is clicked  REQ: FUNC-TXN-002", () => {
@@ -126,6 +128,8 @@ describe("TransactionFilters", () => {
     fireEvent.change(screen.getByTestId("filter-account"), {
       target: { value: "acc_1" },
     });
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ account_id: "acc_1" }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ account_id: "acc_1" }),
+    );
   });
 });

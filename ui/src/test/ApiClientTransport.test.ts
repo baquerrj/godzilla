@@ -70,10 +70,9 @@ describe("api/client transport", () => {
     mockInvoke.mockRejectedValue(new Error("TLS certificate pin mismatch"));
 
     await expect(GodzillaApi.getAccounts("tok")).rejects.toSatisfy(
-      (error: unknown) =>
-        error instanceof ApiError &&
-        error.statusCode === 0 &&
-        error.message.includes("pin mismatch"),
+      (error: unknown) => error instanceof ApiError
+        && error.statusCode === 0
+        && error.message.includes("pin mismatch"),
     );
   });
 
@@ -93,10 +92,9 @@ describe("api/client transport", () => {
     window.addEventListener("godzilla-lock", onLock);
     try {
       await expect(GodzillaApi.getAccounts("tok")).rejects.toSatisfy(
-        (error: unknown) =>
-          error instanceof ApiError &&
-          error.statusCode === 423 &&
-          error.message === "App is locked",
+        (error: unknown) => error instanceof ApiError
+          && error.statusCode === 423
+          && error.message === "App is locked",
       );
     } finally {
       window.removeEventListener("godzilla-lock", onLock);

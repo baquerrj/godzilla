@@ -30,10 +30,14 @@ export function BalancesTable({ token, refreshKey }: Props) {
 
       {result.status === "loading" && <p className="muted">Loading…</p>}
       {result.status === "error" && (
-        <p className="error-text">Failed to load balances: {result.message}</p>
+        <p className="error-text">
+          Failed to load balances: {result.message}
+        </p>
       )}
       {result.status === "success" && result.data.length === 0 && (
-        <p className="muted">No balance snapshots. Sync a Plaid item to populate.</p>
+        <p className="muted">
+          No balance snapshots. Sync a Plaid item to populate.
+        </p>
       )}
       {result.status === "success" && result.data.length > 0 && (
         <table className="data-table" data-testid="balances-table">
@@ -50,7 +54,9 @@ export function BalancesTable({ token, refreshKey }: Props) {
               <tr key={snap.snapshot_id}>
                 <td>{snap.date}</td>
                 <td>
-                  <code title={snap.account_id}>{snap.account_name}</code>
+                  <code title={snap.account_id}>
+                    {snap.account_name}
+                  </code>
                 </td>
                 <td className="amount">{snap.balance.toFixed(2)}</td>
                 <td>{snap.currency}</td>
