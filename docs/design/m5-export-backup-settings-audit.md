@@ -52,8 +52,10 @@ flowchart LR
    - Reuses transaction filters from `/transactions`.
    - Emits one CSV row per split for split transactions.
    - `include_raw_payloads` optional; defaults to `export_defaults.include_raw_payloads`.
+   - Desktop Tauri runtime prompts with a native save dialog before writing the export file.
 2. `GET /export/categories-budgets`
    - `format=csv|json`, optional `month=YYYY-MM`.
+   - Desktop Tauri runtime prompts with a native save dialog before writing the export file.
 3. `POST /backup`
    - JSON body with passphrase and optional secrets inclusion.
    - Returns encrypted binary attachment.
@@ -71,6 +73,7 @@ flowchart LR
    - PUT applies retention side effects (`provider_raw`, `audit_log` pruning).
 8. `GET /audit-log`
    - Supports filters, pagination, and `format=json|csv`.
+   - Desktop Tauri runtime prompts with a native save dialog before writing CSV export output.
 9. `/balances`
    - Includes `account_name` for user-friendly display.
 

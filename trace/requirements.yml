@@ -767,10 +767,12 @@
   - ui/src/api/types.ts:ExportTransactionsParams
   - ui/src/api/client.ts:GodzillaApi.exportTransactions
   - ui/src/components/ExportPanel.tsx:ExportPanel
+  - ui/src/utils/download.ts:saveBlob
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_export_transactions_csv_includes_splits_tags_and_user_fields
   - godzilla_core/tests/test_api_layer.py:test_export_transactions_respects_filters
   - ui/src/test/ExportPanel.test.tsx:uses settings default and exports filtered transactions
+  - ui/src/test/ExportPanel.test.tsx:reports when transactions export save is canceled
   doc_refs:
   - docs/design/m5-export-backup-settings-audit.md
   - docs/test-strategy/m5-export-backup-settings-audit.md
@@ -786,6 +788,7 @@
   - ui/src/api/client.ts:GodzillaApi.exportCategoriesBudgetsCsv
   - ui/src/api/client.ts:GodzillaApi.exportCategoriesBudgetsJson
   - ui/src/components/ExportPanel.tsx:ExportPanel
+  - ui/src/utils/download.ts:saveBlob
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_export_categories_budgets_json_and_csv
   - godzilla_core/tests/test_api_layer.py:test_export_endpoints_auth_and_validation
@@ -1066,6 +1069,7 @@
   - godzilla_core/api/app.py:get_audit_log
   - ui/src/api/client.ts:GodzillaApi.exportAuditLogCsv
   - ui/src/components/ExportPanel.tsx:ExportPanel
+  - ui/src/utils/download.ts:saveBlob
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_audit_log_csv_export
   - godzilla_core/tests/test_api_layer.py:test_audit_log_auth_and_validation

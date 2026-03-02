@@ -114,7 +114,7 @@ describe("api/client transport", () => {
         async arrayBuffer(): Promise<ArrayBuffer> {
           return new TextEncoder().encode("multipart payload").buffer;
         }
-      } as typeof Request,
+      } as unknown as typeof Request,
     );
     mockInvoke.mockResolvedValue({
       status: 200,

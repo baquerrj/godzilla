@@ -24,7 +24,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 export async function saveBlob(blob: Blob, filename: string): Promise<boolean> {
-  // REQ: FUNC-BKP-001 — desktop runtime uses an explicit native save destination.
+  // REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-AUD-004, FUNC-BKP-001
+  // Desktop runtime uses an explicit native save destination.
   if (hasTauriRuntime()) {
     const [{ save }, { writeFile }] = await Promise.all([
       import("@tauri-apps/plugin-dialog"),

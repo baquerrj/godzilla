@@ -11,7 +11,7 @@ import type {
   GetTransactionsParams,
   SettingsResponse,
 } from "../api/types";
-import { downloadBlob } from "../utils/download";
+import { saveBlob } from "../utils/download";
 
 interface Props {
   token: string;
@@ -52,8 +52,8 @@ export function ExportPanel({ token, filters, refreshKey }: Props) {
         ...filters,
         include_raw_payloads: includeRawPayloads,
       });
-      downloadBlob(result.blob, result.filename ?? "transactions-export.csv");
-      return "Transactions export downloaded.";
+      const saved = await saveBlob(result.blob, result.filename ?? "transactions-export.csv");
+      return saved ? "Transactions export saved." : "Transactions export save canceled.";
     });
   };
 
@@ -62,8 +62,10 @@ export function ExportPanel({ token, filters, refreshKey }: Props) {
       const month = normalizeMonth(categoriesBudgetsMonth);
       if (categoriesBudgetsFormat === "csv") {
         const result = await GodzillaApi.exportCategoriesBudgetsCsv(token, { month });
-        downloadBlob(result.blob, result.filename ?? "categories-budgets-export.csv");
-        return "Categories/budgets CSV export downloaded.";
+        const saved = await saveBlob(result.blob, result.filename ?? "categories-budgets-export.csv");
+        return saved
+          ? "Categories/budgets CSV export saved."
+          : "Categories/budgets CSV export save canceled.";
       }
 
       const payload: CategoriesBudgetsExportJson = await GodzillaApi.exportCategoriesBudgetsJson(
@@ -73,8 +75,10 @@ export function ExportPanel({ token, filters, refreshKey }: Props) {
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
       });
-      downloadBlob(blob, "categories-budgets-export.json");
-      return "Categories/budgets JSON export downloaded.";
+      const saved = await saveBlob(blob, "categories-budgets-export.json");
+      return saved
+        ? "Categories/budgets JSON export saved."
+        : "Categories/budgets JSON export save canceled.";
     });
   };
 
@@ -87,8 +91,8 @@ export function ExportPanel({ token, filters, refreshKey }: Props) {
         end: auditEnd || undefined,
         limit: Number.isFinite(limitValue) ? Math.min(Math.max(limitValue, 1), 200) : 200,
       });
-      downloadBlob(result.blob, result.filename ?? "audit-log-export.csv");
-      return "Audit log CSV export downloaded.";
+      const saved = await saveBlob(result.blob, result.filename ?? "audit-log-export.csv");
+      return saved ? "Audit log CSV export saved." : "Audit log CSV export save canceled.";
     });
   };
 

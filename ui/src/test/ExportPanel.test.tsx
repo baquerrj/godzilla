@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ExportPanel } from "../components/ExportPanel";
 
 vi.mock("../utils/download", () => ({
-  downloadBlob: vi.fn(),
+  saveBlob: vi.fn(),
 }));
 
 vi.mock("../api/client", async () => {
@@ -28,7 +28,7 @@ vi.mock("../api/client", async () => {
 });
 
 import { GodzillaApi } from "../api/client";
-import { downloadBlob } from "../utils/download";
+import { saveBlob } from "../utils/download";
 
 const TOKEN = "tok";
 
@@ -37,7 +37,7 @@ const mockExportTransactions = vi.mocked(GodzillaApi.exportTransactions);
 const mockExportCategoriesBudgetsCsv = vi.mocked(GodzillaApi.exportCategoriesBudgetsCsv);
 const mockExportCategoriesBudgetsJson = vi.mocked(GodzillaApi.exportCategoriesBudgetsJson);
 const mockExportAuditLogCsv = vi.mocked(GodzillaApi.exportAuditLogCsv);
-const mockDownloadBlob = vi.mocked(downloadBlob);
+const mockSaveBlob = vi.mocked(saveBlob);
 
 describe("ExportPanel", () => {
   beforeEach(() => {
@@ -68,6 +68,7 @@ describe("ExportPanel", () => {
       categories: [],
       budgets: [],
     });
+    mockSaveBlob.mockResolvedValue(true);
     mockExportAuditLogCsv.mockResolvedValue({
       blob: new Blob(["csv"], { type: "text/csv" }),
       filename: "audit-log-export.csv",
@@ -96,7 +97,23 @@ describe("ExportPanel", () => {
         amount_min: 10,
         include_raw_payloads: true,
       });
-      expect(mockDownloadBlob).toHaveBeenCalledWith(expect.any(Blob), "transactions-export.csv");
+      expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), "transactions-export.csv");
+      expect(screen.getByText("Transactions export saved.")).toBeInTheDocument();
+    });
+  });
+
+  it("reports when transactions export save is canceled  REQ: FUNC-EXP-001", async () => {
+    mockSaveBlob.mockResolvedValue(false);
+    render(<ExportPanel token={TOKEN} refreshKey={0} filters={{}} />);
+
+    await waitFor(() => {
+      expect(mockGetSettings).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByTestId("export-transactions-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Transactions export save canceled.")).toBeInTheDocument();
     });
   });
 
@@ -117,7 +134,8 @@ describe("ExportPanel", () => {
 
     await waitFor(() => {
       expect(mockExportCategoriesBudgetsJson).toHaveBeenCalledWith(TOKEN, { month: "2026-01" });
-      expect(mockDownloadBlob).toHaveBeenCalledWith(expect.any(Blob), "categories-budgets-export.json");
+      expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), "categories-budgets-export.json");
+      expect(screen.getByText("Categories/budgets JSON export saved.")).toBeInTheDocument();
     });
   });
 
@@ -150,7 +168,8 @@ describe("ExportPanel", () => {
         end: "2026-02-15",
         limit: 150,
       });
-      expect(mockDownloadBlob).toHaveBeenCalledWith(expect.any(Blob), "audit-log-export.csv");
+      expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), "audit-log-export.csv");
+      expect(screen.getByText("Audit log CSV export saved.")).toBeInTheDocument();
     });
   });
 });
