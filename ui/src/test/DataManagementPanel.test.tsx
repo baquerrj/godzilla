@@ -97,6 +97,8 @@ describe("DataManagementPanel", () => {
     const onDataChanged = vi.fn();
     render(<DataManagementPanel token={TOKEN} onDataChanged={onDataChanged} />);
 
+    // TODO: Add a restore error-path component test that asserts backend
+    // validation/detail messages are rendered clearly in the panel UI.
     const file = new File(["payload"], "backup.gzbk", { type: "application/octet-stream" });
     fireEvent.change(screen.getByTestId("restore-passphrase-input"), {
       target: { value: "m5-passphrase" },
