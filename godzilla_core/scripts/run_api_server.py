@@ -9,6 +9,7 @@ import argparse
 import os
 from pathlib import Path
 
+from godzilla_core.db.migrations import main as run_migrations
 import uvicorn
 
 _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -32,10 +33,23 @@ def main() -> int:
         default=None,
         help="Path to TLS private key (PEM). Falls back to GODZILLA_TLS_KEY.",
     )
+    parser.add_argument(
+        "--migrations",
+        action="store_true",
+        default=False,
+        help="Run database migrations before starting the server")
+
     args = parser.parse_args()
 
     if args.host not in _ALLOWED_HOSTS:
         raise SystemExit("Host must be a loopback address")
+
+    if args.migrations:
+        print("Running database migrations...")
+        try:
+            run_migrations()
+        except Exception as e:
+            raise SystemExit(f"Database migration failed: {e}") from e
 
     tls_cert = args.tls_cert or os.environ.get("GODZILLA_TLS_CERT")
     tls_key = args.tls_key or os.environ.get("GODZILLA_TLS_KEY")
