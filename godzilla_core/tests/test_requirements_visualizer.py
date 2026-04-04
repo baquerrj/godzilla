@@ -75,6 +75,9 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
             self.assertIn("TECH-SYS-004", html)
             self.assertIn("Total requirements", html)
             self.assertIn("parent_requirement_id", html)
+            self.assertIn("Relationship Tree", html)
+            self.assertIn("focus-requirement-select", html)
+            self.assertIn("Focused Requirement", html)
             self.assertIn("godzilla_core/util/time.py:local_timestamp_metadata", html)
 
     def test_main_returns_error_for_missing_file(self) -> None:
@@ -183,6 +186,8 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
         self.assertIn("ACC-SYS-001", html)
         self.assertIn("ACC-SYS-003", html)
         self.assertIn("ACC-ACCT-006", html)
+        self.assertIn("Focused Requirement", html)
+        self.assertIn("descendant-tree-root", html)
         self.assertIn(
             "skip: godzilla_core/tests/test_requirement_traceability.py:"
             "test_func_acct_006_scheduled_refresh_trace_stub",

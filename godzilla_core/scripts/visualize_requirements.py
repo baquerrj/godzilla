@@ -553,6 +553,166 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       font-size: 1rem;
       font-weight: 700;
     }}
+    .tree-card-button {{
+      width: 100%;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }}
+    .relationship-controls {{
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }}
+    .focus-tree-shell {{
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }}
+    .focus-tree-canvas {{
+      min-width: max-content;
+      display: grid;
+      justify-items: center;
+      gap: 16px;
+      padding: 8px 12px 20px;
+    }}
+    .ancestor-chain {{
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }}
+    .ancestor-step {{
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }}
+    .tree-connector-vertical {{
+      width: 2px;
+      height: 18px;
+      background: #d4c3aa;
+    }}
+    .focus-stage {{
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }}
+    .focus-label {{
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }}
+    .relationship-node {{
+      min-width: 240px;
+      max-width: 340px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-strong);
+      box-shadow: 0 10px 24px var(--shadow);
+      text-align: left;
+    }}
+    .relationship-node:hover {{
+      border-color: #b59d78;
+      transform: translateY(-1px);
+    }}
+    .relationship-node.is-focus {{
+      min-width: 300px;
+      border-width: 2px;
+      border-color: var(--accent);
+      background: linear-gradient(180deg, #fdfcf8, #eef8f9);
+    }}
+    .relationship-node.is-path {{
+      background: #faf4ea;
+    }}
+    .relationship-node-title {{
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }}
+    .relationship-node-subtitle {{
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }}
+    .descendant-tree,
+    .descendant-tree ul {{
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      position: relative;
+    }}
+    .descendant-tree ul {{
+      padding-top: 24px;
+    }}
+    .descendant-tree ul::before {{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 2px;
+      height: 18px;
+      background: #d4c3aa;
+      transform: translateX(-50%);
+    }}
+    .descendant-tree li {{
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      padding: 0 8px;
+    }}
+    .descendant-tree li::before,
+    .descendant-tree li::after {{
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 2px;
+      background: #d4c3aa;
+    }}
+    .descendant-tree li::before {{
+      right: 50%;
+    }}
+    .descendant-tree li::after {{
+      left: 50%;
+    }}
+    .descendant-tree li:only-child::before,
+    .descendant-tree li:only-child::after {{
+      display: none;
+    }}
+    .descendant-tree li:first-child::before {{
+      display: none;
+    }}
+    .descendant-tree li:last-child::after {{
+      display: none;
+    }}
+    .descendant-tree-root {{
+      padding-top: 0;
+    }}
+    .descendant-tree-root::before,
+    .descendant-tree-root > li::before,
+    .descendant-tree-root > li::after {{
+      display: none;
+    }}
+    .empty-tree-state {{
+      padding: 18px 20px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      color: var(--muted);
+      background: rgba(255, 253, 249, 0.75);
+    }}
     .muted {{
       color: var(--muted);
     }}
@@ -629,6 +789,20 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     </section>
 
     <section class="section">
+      <h2>Relationship Tree</h2>
+      <p class="results-label">
+        Center any requirement to see parent nodes flowing in above it and child
+        requirements branching out below it.
+      </p>
+      <div class="relationship-controls">
+        <select id="focus-requirement-select"></select>
+      </div>
+      <div class="focus-tree-shell">
+        <div class="focus-tree-canvas" id="focus-tree-root"></div>
+      </div>
+    </section>
+
+    <section class="section">
       <h2>Search and Filter</h2>
       <div class="controls">
         <input
@@ -659,12 +833,66 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
 
   <script>
     const data = {view_model_json};
+    const requirementsById = new Map(
+      data.requirements.map((entry) => [entry.requirement_id, entry])
+    );
+    const childrenByParentId = new Map();
+    const focusState = {{
+      requirementId: data.requirements[0]?.requirement_id || null,
+    }};
+
+    data.requirements.forEach((entry) => {{
+      const parentId = entry.parent_requirement_id || "__root__";
+      if (!childrenByParentId.has(parentId)) {{
+        childrenByParentId.set(parentId, []);
+      }}
+      childrenByParentId.get(parentId).push(entry.requirement_id);
+    }});
+
+    childrenByParentId.forEach((childIds) => {{
+      childIds.sort((leftId, rightId) => leftId.localeCompare(rightId));
+    }});
 
     const createBadge = (label, className = "") => {{
       const span = document.createElement("span");
       span.className = `badge ${{className}}`.trim();
       span.textContent = label;
       return span;
+    }};
+
+    const createRequirementNode = (entry, variant = "") => {{
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `relationship-node ${{variant}}`.trim();
+      button.dataset.requirementId = entry.requirement_id;
+      button.addEventListener("click", () => setFocusRequirement(entry.requirement_id));
+
+      const title = document.createElement("span");
+      title.className = "relationship-node-title";
+      title.textContent = entry.requirement_id;
+      button.appendChild(title);
+
+      const subtitle = document.createElement("span");
+      subtitle.className = "relationship-node-subtitle";
+      subtitle.textContent = entry.title;
+      button.appendChild(subtitle);
+
+      const badges = document.createElement("div");
+      badges.className = "badge-row";
+      badges.appendChild(
+        createBadge(entry.requirement_type, `type-${{entry.requirement_type}}`)
+      );
+      badges.appendChild(
+        createBadge(
+          entry.implementation_status || "unspecified",
+          `status-${{(entry.implementation_status || "unspecified").replaceAll(" ", "-")}}`
+        )
+      );
+      badges.appendChild(
+        createBadge(entry.verification_method || "unspecified", "method")
+      );
+      button.appendChild(badges);
+      return button;
     }};
 
     const populateOverview = () => {{
@@ -703,11 +931,16 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
 
       const card = document.createElement("div");
       card.className = "tree-card";
+      const cardButton = document.createElement("button");
+      cardButton.type = "button";
+      cardButton.className = "tree-card-button";
+      cardButton.dataset.requirementId = node.requirement_id;
+      cardButton.addEventListener("click", () => setFocusRequirement(node.requirement_id));
 
       const title = document.createElement("div");
       title.className = "tree-title";
       title.textContent = `${{node.requirement_id}}: ${{node.title}}`;
-      card.appendChild(title);
+      cardButton.appendChild(title);
 
       const badges = document.createElement("div");
       badges.className = "badge-row";
@@ -724,7 +957,8 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       if (node.verification_method) {{
         badges.appendChild(createBadge(node.verification_method, "method"));
       }}
-      card.appendChild(badges);
+      cardButton.appendChild(badges);
+      card.appendChild(cardButton);
       wrapper.appendChild(card);
 
       if (node.children.length) {{
@@ -740,6 +974,124 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     const populateHierarchy = () => {{
       const root = document.getElementById("hierarchy-root");
       data.hierarchy.forEach((node) => renderTreeNode(node, root));
+    }};
+
+    const getAncestorEntries = (requirementId) => {{
+      const ancestors = [];
+      let current = requirementsById.get(requirementId);
+      const visited = new Set();
+      while (current?.parent_requirement_id) {{
+        const parentId = current.parent_requirement_id;
+        if (visited.has(parentId) || !requirementsById.has(parentId)) {{
+          break;
+        }}
+        const parent = requirementsById.get(parentId);
+        ancestors.unshift(parent);
+        visited.add(parentId);
+        current = parent;
+      }}
+      return ancestors;
+    }};
+
+    const renderDescendantBranch = (requirementId) => {{
+      const branchItem = document.createElement("li");
+      const entry = requirementsById.get(requirementId);
+      branchItem.appendChild(createRequirementNode(entry));
+
+      const childIds = childrenByParentId.get(requirementId) || [];
+      if (childIds.length) {{
+        const childList = document.createElement("ul");
+        childIds.forEach((childId) => {{
+          childList.appendChild(renderDescendantBranch(childId));
+        }});
+        branchItem.appendChild(childList);
+      }}
+      return branchItem;
+    }};
+
+    const renderFocusTree = () => {{
+      const root = document.getElementById("focus-tree-root");
+      root.innerHTML = "";
+      if (!focusState.requirementId || !requirementsById.has(focusState.requirementId)) {{
+        const emptyState = document.createElement("div");
+        emptyState.className = "empty-tree-state";
+        emptyState.textContent = "No requirement is available to center in the tree.";
+        root.appendChild(emptyState);
+        return;
+      }}
+
+      const focusEntry = requirementsById.get(focusState.requirementId);
+      const ancestors = getAncestorEntries(focusEntry.requirement_id);
+      if (ancestors.length) {{
+        const ancestorChain = document.createElement("div");
+        ancestorChain.className = "ancestor-chain";
+        ancestors.forEach((entry, index) => {{
+          if (index > 0) {{
+            const connector = document.createElement("div");
+            connector.className = "tree-connector-vertical";
+            ancestorChain.appendChild(connector);
+          }}
+          const step = document.createElement("div");
+          step.className = "ancestor-step";
+          step.appendChild(createRequirementNode(entry, "is-path"));
+          ancestorChain.appendChild(step);
+        }});
+        const connector = document.createElement("div");
+        connector.className = "tree-connector-vertical";
+        ancestorChain.appendChild(connector);
+        root.appendChild(ancestorChain);
+      }}
+
+      const focusStage = document.createElement("div");
+      focusStage.className = "focus-stage";
+      const focusLabel = document.createElement("div");
+      focusLabel.className = "focus-label";
+      focusLabel.textContent = "Focused Requirement";
+      focusStage.appendChild(focusLabel);
+      focusStage.appendChild(createRequirementNode(focusEntry, "is-focus"));
+      root.appendChild(focusStage);
+
+      const childIds = childrenByParentId.get(focusEntry.requirement_id) || [];
+      if (childIds.length) {{
+        const connector = document.createElement("div");
+        connector.className = "tree-connector-vertical";
+        root.appendChild(connector);
+
+        const descendantList = document.createElement("ul");
+        descendantList.className = "descendant-tree descendant-tree-root";
+        childIds.forEach((childId) => {{
+          descendantList.appendChild(renderDescendantBranch(childId));
+        }});
+        root.appendChild(descendantList);
+      }}
+    }};
+
+    const populateFocusSelect = () => {{
+      const select = document.getElementById("focus-requirement-select");
+      data.requirements.forEach((entry) => {{
+        const option = document.createElement("option");
+        option.value = entry.requirement_id;
+        option.textContent = `${{entry.requirement_id}}: ${{entry.title}}`;
+        select.appendChild(option);
+      }});
+      if (focusState.requirementId) {{
+        select.value = focusState.requirementId;
+      }}
+      select.addEventListener("change", (event) => {{
+        setFocusRequirement(event.target.value);
+      }});
+    }};
+
+    const setFocusRequirement = (requirementId) => {{
+      if (!requirementsById.has(requirementId)) {{
+        return;
+      }}
+      focusState.requirementId = requirementId;
+      const select = document.getElementById("focus-requirement-select");
+      if (select && select.value !== requirementId) {{
+        select.value = requirementId;
+      }}
+      renderFocusTree();
     }};
 
     const buildSelectOptions = (elementId, label, options) => {{
@@ -876,6 +1228,8 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
 
     populateOverview();
     populateHierarchy();
+    populateFocusSelect();
+    renderFocusTree();
     populateTable();
     buildSelectOptions("type-filter", "types", data.filter_options.requirement_types);
     buildSelectOptions(
