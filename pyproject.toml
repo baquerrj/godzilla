@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "godzilla-core"
 version = "0.1.0"
 description = "Core services for the Godzilla personal budgeting app."
-readme = "docs/product-requirements-document.md"
+readme = "docs/vision.md"
 requires-python = ">=3.12"
 dependencies = [
   "cryptography>=43.0.0",

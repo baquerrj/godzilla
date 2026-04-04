@@ -2,6 +2,8 @@
 
 Requirements: SYS-001, SYS-002, SYS-003, FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005, FUNC-ACCT-008, FUNC-ACCT-009, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008, FUNC-TXN-009, FUNC-CAT-001, FUNC-CAT-002, FUNC-CAT-003, FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, FUNC-REP-005, FUNC-REP-006, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, SEC-CRY-001, SEC-CRY-003, SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-DATA-005, SEC-DATA-006, SEC-DATA-007
 
+This document supplements `architecture-overview.md`, which is the canonical MVP architecture source.
+
 ## Problem statement
 Define a normalized, encrypted SQLite schema that supports sync, offline edits, conflicts, budgeting, reporting, and audit logging, with retention controls and provenance tracking.
 

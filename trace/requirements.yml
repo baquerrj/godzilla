@@ -914,7 +914,7 @@
   doc_refs:
   - docs/design/m5-export-backup-settings-audit.md
   - docs/test-strategy/m5-export-backup-settings-audit.md
-  - docs/product-requirements-document.md
+  - docs/requirements/requirements.md
   - docs/plan.md
 - requirement_id: FUNC-SET-001
   title: Timezone and currency

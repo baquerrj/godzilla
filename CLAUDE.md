@@ -103,7 +103,7 @@ docs/design/    Markdown design docs with Mermaid diagrams
 Follow the traceability policy in `AGENTS.md`:
 - Add `REQ:` tags in production modules/functions/classes and tests.
 - Update `trace/requirements.yml` when requirements are impacted.
-- Use requirement IDs from `docs/product-requirements-document.md`.
+- Use requirement IDs from `docs/requirements/requirements.md`.
 
 ## Code Quality
 

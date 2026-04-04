@@ -9,8 +9,9 @@ import argparse
 import os
 from pathlib import Path
 
-from godzilla_core.db.migrations import main as run_migrations
 import uvicorn
+
+from godzilla_core.db.migrations import main as run_migrations
 
 _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
@@ -37,7 +38,8 @@ def main() -> int:
         "--migrations",
         action="store_true",
         default=False,
-        help="Run database migrations before starting the server")
+        help="Run database migrations before starting the server",
+    )
 
     args = parser.parse_args()
 

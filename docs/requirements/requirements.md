@@ -1,106 +1,14 @@
-## Contents
+# MVP Requirements
 
-* [Product Requirements Document (PRD): Personal Budgeting App (Monarch-like, single-user)](#product-requirements-document-prd-personal-budgeting-app-monarch-like-single-user)
-  * * [1. Summary](#1-summary)
-    * [2. Goals](#2-goals)
-    * [3. Non-goals](#3-non-goals)
-    * [4. Target User and Primary Use Cases](#4-target-user-and-primary-use-cases)
-    * [5. Success Metrics (Personal)](#5-success-metrics-personal)
-    * [6. Assumptions and Constraints](#6-assumptions-and-constraints)
-    * [7. MVP Scope](#7-mvp-scope)
-    * [8. User Stories (MVP)](#8-user-stories-mvp)
-    * [9. Requirements](#9-requirements)
-      * [9.1 System requirements](#91-system-requirements)
-      * [9.2 Account linking and institution management (Plaid)](#92-account-linking-and-institution-management-plaid)
-      * [9.3 Sync and ingestion](#93-sync-and-ingestion)
-      * [9.4 Transactions](#94-transactions)
-      * [9.5 Categories](#95-categories)
-      * [9.6 Budgets](#96-budgets)
-        * [9.7 Dashboards and Reports](#97-dashboards-and-reports)
-      * [9.8 Export, Backup, and Restore](#98-export-backup-and-restore)
-      * [9.9 Settings](#99-settings)
-      * [9.10 Audit Logging](#910-audit-logging)
-      * [9.11 Secrets Management and Cryptography](#911-secrets-management-and-cryptography)
-      * [9.12 Access Control and Session Security](#912-access-control-and-session-security)
-      * [9.13 Transport and Network Security](#913-transport-and-network-security)
-      * [9.14 Secure Coding, Data Handling, and Privacy Controls](#914-secure-coding-data-handling-and-privacy-controls)
-    * [10. Data Model (Conceptual, MVP)](#10-data-model-conceptual-mvp)
-    * [11. UX Requirements (MVP)](#11-ux-requirements-mvp)
-      * [Conflicts (MVP)](#conflicts-mvp)
-    * [12. Non-functional Requirements (MVP)](#12-non-functional-requirements-mvp)
-    * [13. Open Questions (to finalize implementation details)](#13-open-questions-to-finalize-implementation-details)
-    * [14. Milestones (Suggested)](#14-milestones-suggested)
+This document is the canonical MVP requirements source. Requirement IDs and parent-child
+relationships are preserved from the original PRD.
 
-# Product Requirements Document (PRD): Personal Budgeting App (Monarch-like, single-user)
+Related MVP source docs:
+- [Vision](../vision.md)
+- [Architecture](../design/architecture-overview.md)
+- [Execution plan](../plan.md)
 
-### 1. Summary
-
-A personal budgeting and net-worth app for a single user that aggregates financial accounts via Plaid, categorizes transactions, supports budgeting, and provides dashboards, reports, exports, and encrypted backup/restore. Although single-user, it follows secure-by-design practices appropriate for financial data.
-
-### 2. Goals
-
-* Provide a unified view of accounts, transactions, budgets, cash flow,  and net worth.
-* Fast monthly budgeting workflow with automated categorization and easy manual corrections.
-* Track trends over time (spend by category, income vs expenses, savings rate).
-* Strong privacy and security for financial data.
-* Clear provenance of imported vs user-edited data.
-
-### 3. Non-goals
-
-* Multi-user support (family sharing), subscription billing, or public distribution.
-* Trading/investment execution or deep investment analytics.
-* Full accounting software features (invoicing, double-entry bookkeeping).
-
-### 4. Target User and Primary Use Cases
-
-Single user.
-
-* Daily/weekly: review new transactions, fix categories, mark transfers, add notes/tags.
-* Monthly: set/adjust budgets, review budget performance, reconcile anomalies.
-* Quarterly/yearly: analyze trends, plan savings goals, export data, archive backups.
-
-### 5. Success Metrics (Personal)
-
-* Monthly close time ≤ 30 minutes.
-* Categorization accuracy after learning ≥ 90%.
-* Data freshness aligns with Plaid-supported update cadence; manual refresh works.
-* No plaintext storage of tokens/secrets; no secrets in logs; encryption at rest enabled.
-* Backups and restores succeed reliably and are verifiable.
-
-### 6. Assumptions and Constraints
-
-* Deployment target for MVP is a local-only desktop app; self-hosted server + client comes after MVP.
-* Database is SQLite.
-* Full-database encryption is required; no OS keychain requirement.
-* Access control is app-level PIN only; primary OS target is Linux.
-* Accounts are linked via Plaid (Link flow) and updated via Plaid sync endpoints; Plaid products used are Transactions (up to 24 months), Balance, and Identity.
-* Single-user, but with strong access control and secret handling.
-* Must support common account types: checking, savings, credit cards, loans, investments (balances at minimum).
-* App may operate offline for viewing/editing already-synced data (sync requires network); conflicts are queued in a dedicated conflict resolution view.
-* Raw provider payloads and diagnostic logs are retained by default (configurable).
-* Backups are password-based and stored locally.
-
-### 7. MVP Scope
-
-In MVP: linking accounts, syncing transactions, categorization, transaction management, offline edits with conflict resolution, monthly and per-category budgeting, dashboards/reports, exports, encrypted backup/restore, settings, audit logging, secure storage/redaction.
-Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budgets, investment analytics.
-
-### 8. User Stories (MVP)
-
-* As a user, I can link a financial institution using Plaid and see connected accounts.
-* As a user, I can refresh/sync transactions and see newly imported items.
-* As a user, I can categorize transactions and the app remembers/copies my choices.
-* As a user, I can mark transactions as transfer, exclude from budget, or split a transaction.
-* As a user, I can resolve sync conflicts from offline edits in a dedicated conflicts view.
-* As a user, I can create monthly budgets per category and see remaining amounts.
-* As a user, I can view monthly cash flow (income, expenses, savings).
-* As a user, I can view net worth over time from account balances.
-* As a user, I can search, filter, and export transactions (CSV).
-* As a user, I can back up and restore the app database securely.
-
-### 9. Requirements
-
-#### 9.1 System requirements
+## System requirements
 
 | requirement ID | requirement title         | requirement body (including "shall" statements)                                                                                  | verification plan                                                                                                           | unit test                                   | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------ |
@@ -109,7 +17,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | SYS-003        | Secure-by-design baseline | The application shall enforce secure handling of financial data (tokens, balances, transactions) even for single-user operation. | Security review checklist; confirm encryption, redaction, access control, and secret storage are enabled.                   | | SYS-001                                                |
 | SYS-004        | Timestamp metadata | The application shall store UTC timestamps along with the local timezone identifier and offset at the time of write for all timestamped records, transaction entries, security records, and audit logs. | Review logs and databases; verify each timestamped record includes UTC, timezone ID, and offset metadata. | |                                                 |
 
-#### 9.2 Account linking and institution management (Plaid)
+## Account linking and institution management (Plaid)
 
 | requirement ID | requirement title                       | requirement body (including "shall" statements)                                                                                                                       | verification plan                                                                                                                     | unit test                                      | parent requirement ID (if it is a derived requirement) |
 | -------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
@@ -123,7 +31,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-ACCT-008  | Unlink institution                      | The system shall allow the user to unlink an institution and shall revoke/delete associated tokens and cached raw payloads per retention settings.                    | Unlink item; confirm tokens removed; accounts/transactions handled per policy; sync no longer runs for that item.                     | | SYS-003                                                |
 | FUNC-ACCT-009  | Identity owner display                  | The system shall retrieve and persist account owner names from Plaid Identity (when available) and shall display account owner names in the account UI.              | Link item with Identity; confirm owner names stored and shown in UI.                                                                  |  | FUNC-ACCT-003                                          |
 
-#### 9.3 Sync and ingestion
+## Sync and ingestion
 
 | requirement ID | requirement title            | requirement body (including "shall" statements)                                                                                                            | verification plan                                                                                    | unit test                                     | parent requirement ID (if it is a derived requirement) |
 | -------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
@@ -135,7 +43,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-SYNC-006  | Conflict detection           | The system shall detect conflicts between offline edits and incoming provider data during sync.                                                                     | Edit offline; sync conflicting data; verify conflict flagged.                                    |  | FUNC-SYNC-005                                          |
 | FUNC-SYNC-007  | Conflict resolution queue    | The system shall queue detected conflicts in a dedicated conflict resolution view for user selection before applying incoming changes.                                | Trigger conflict; confirm it appears in conflict view and can be resolved.                      |  | FUNC-SYNC-006                                          |
 
-#### 9.4 Transactions
+## Transactions
 
 | requirement ID | requirement title                | requirement body (including "shall" statements)                                                                                                                                      | verification plan                                                              | unit test                                      | parent requirement ID (if it is a derived requirement) |
 | -------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------ |
@@ -149,7 +57,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-TXN-008   | Split transactions               | The system shall allow splitting a transaction into multiple lines with independent categories and amounts, and the split total shall equal the original amount.                     | Create split; verify sum; verify budgets reflect split lines.                  |         | FUNC-TXN-003                                           |
 | FUNC-TXN-009   | Deduplication heuristic fallback | If a provider transaction identifier is unavailable, the system shall apply a deterministic deduplication heuristic (date, amount, merchant, account) and flag conflicts for review. | Ingest crafted duplicates without IDs; confirm single record or conflict flag. |  | FUNC-SYNC-002                                          |
 
-#### 9.5 Categories
+## Categories
 
 | requirement ID | requirement title         | requirement body (including "shall" statements)                                                                                                                         | verification plan                                                                  | unit test                                   | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------ |
@@ -157,7 +65,7 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-CAT-002   | Category management       | The system shall allow creating, renaming, and deactivating categories; deactivated categories shall not be assignable but historical assignments shall remain visible. | Deactivate category; attempt assignment blocked; historical records still display. |  | FUNC-CAT-001                                           |
 | FUNC-CAT-003   | Provider category mapping | The system shall ingest provider category signals (when available) and shall propose an initial category mapping that is user-editable.                                 | Sync provider categories; verify suggested mapping; override persists.             | | FUNC-SYNC-004                                          |
 
-#### 9.6 Budgets
+## Budgets
 
 | requirement ID | requirement title      | requirement body (including "shall" statements)                                                                                                                | verification plan                                                           | unit test                                     | parent requirement ID (if it is a derived requirement) |
 | -------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
@@ -166,9 +74,9 @@ Out of MVP: rules engine v2, advanced forecasting, receipt scanning, shared budg
 | FUNC-BUD-003   | Overspend highlighting | The system shall highlight overspent categories and allow drill-down to contributing transactions.                                                             | Force overspend; confirm highlight and drill-down list correctness.         | | FUNC-BUD-002                                           |
 | FUNC-BUD-004   | Budget inclusion rules | The system shall exclude transfers and explicitly excluded transactions from budget actuals by default, and shall apply these rules consistently across views. | Create set of transfers/excluded; verify budgets and category totals match. |      | FUNC-TXN-006                                           |
 
-##### 9.7 Dashboards and Reports
+## Dashboards and Reports
 
-Dashboards provide at-a-glance visibility, while reports provide drill-down and time-series analysis. All metrics must respect inclusion rules (e.g., transfers excluded from budgets) and allow drill-down to underlying transactions.
+Dashboards provide at-a-glance visibility, while reports provide drill-down and time-series analysis. All metrics must respect inclusion rules (for example, transfers excluded from budgets) and allow drill-down to underlying transactions.
 
 | requirement ID | requirement title           | requirement body (including "shall" statements)                                                                                                     | verification plan                                                                      | unit test                                     | parent requirement ID (if it is a derived requirement) |
 | -------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
@@ -181,7 +89,7 @@ Dashboards provide at-a-glance visibility, while reports provide drill-down and 
 | FUNC-REP-007   | Inclusion rules consistency | The system shall apply budget inclusion rules consistently across dashboards and reports and shall label any metric that includes excluded items.   | Create transfers/excluded; compare budget vs report totals; note labels.               |        | FUNC-BUD-004                                           |
 | FUNC-REP-008   | Date navigation             | The system shall allow selecting a reporting period (month picker and custom date range) and shall update all visible metrics accordingly.          | Change month/range; verify all widgets reflect same period.                            |  | FUNC-REP-001                                           |
 
-#### 9.8 Export, Backup, and Restore
+## Export, Backup, and Restore
 
 Exports enable analysis outside the app; backups enable recovery and portability. Backup must be encrypted and integrity-checked.
 
@@ -197,7 +105,7 @@ Exports enable analysis outside the app; backups enable recovery and portability
 | FUNC-BKP-005   | Backup scheduling (optional) | If deployed with a scheduler, the system shall support scheduled backups at a configurable interval and shall retain a configurable number of backups.                | Configure schedule; verify backup creation and rotation.                                                   |                  | FUNC-BKP-001                                           |
 | FUNC-BKP-006   | Database re-initialization   | The system shall provide a database re-initialization action that recreates the encrypted local schema after wipe so link and sync workflows can start again from a clean state without restarting the API process. | Run wipe, run re-initialize, then link/sync; confirm schema exists and workflows succeed from clean state. | | FUNC-BKP-004                                           |
 
-#### 9.9 Settings
+## Settings
 
 Settings govern localization, budgeting behavior, privacy controls, retention, and sync behavior.
 
@@ -209,9 +117,9 @@ Settings govern localization, budgeting behavior, privacy controls, retention, a
 | FUNC-SET-004   | Sync configuration    | The system shall allow enabling/disabling scheduled sync (if available) and configuring sync frequency.                                        | Toggle schedule; confirm scheduler behavior changes.                           |                       | FUNC-ACCT-006                                          |
 | FUNC-SET-005   | Export defaults       | The system shall allow configuring default export behavior (e.g., include/exclude raw payloads) and shall apply defaults in the export UI.     | Change defaults; export; verify settings persisted.                            |                    | FUNC-EXP-003                                           |
 
-#### 9.10 Audit Logging
+## Audit Logging
 
-Audit logs are local/system logs intended to record significant events without leaking secrets. Logs must be redact-safe.
+Audit logs are local or system logs intended to record significant events without leaking secrets. Logs must be redact-safe.
 
 | requirement ID | requirement title       | requirement body (including "shall" statements)                                                                                                                                 | verification plan                                                                       | unit test                                            | parent requirement ID (if it is a derived requirement) |
 | -------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
@@ -220,7 +128,7 @@ Audit logs are local/system logs intended to record significant events without l
 | FUNC-AUD-003   | Log retention           | The system shall enforce log retention settings and shall rotate/prune logs automatically.                                                                                      | Configure retention; generate logs; verify rotation/pruning occurs.                     |                        | FUNC-SET-002                                           |
 | FUNC-AUD-004   | Audit export (optional) | The system shall support exporting the audit log for troubleshooting, with secrets redacted.                                                                                    | Export audit log; verify format and absence of secrets.                                 |                         | FUNC-AUD-002                                           |
 
-#### 9.11 Secrets Management and Cryptography
+## Secrets Management and Cryptography
 
 | requirement ID | requirement title              | requirement body (including "shall" statements)                                                                                                                   | verification plan                                                                                | unit test                                     | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------ |
@@ -229,7 +137,7 @@ Audit logs are local/system logs intended to record significant events without l
 | SEC-CRY-003    | Encrypted backups              | The system shall encrypt backups with authenticated encryption and shall require a passphrase for restore.                                                        | Attempt to read backup; confirm unreadable; restore requires passphrase and validates integrity. |       | FUNC-BKP-001                                           |
 | SEC-CRY-004    | Secret rotation and revocation | The system shall support revoking Plaid access by deleting item tokens and shall support regenerating application encryption keys with a re-encryption procedure. | Unlink and confirm token invalidation; rotate keys and confirm data still decrypts.              | | SYS-003                                                |
 
-#### 9.12 Access Control and Session Security
+## Access Control and Session Security
 
 | requirement ID | requirement title        | requirement body (including "shall" statements)                                                                                                                             | verification plan                                                          | unit test                                      | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
@@ -238,7 +146,7 @@ Audit logs are local/system logs intended to record significant events without l
 | SEC-ACC-003    | Unlock configuration     | The system shall allow configuring the application PIN and shall store unlock secrets only in secure storage.                                                           | Change PIN; verify persistence and secure storage.                          |    | SEC-ACC-001                                            |
 | SEC-ACC-004    | Authorization boundaries | If a client-server architecture is used, the system shall enforce authorization on all API endpoints and shall not trust client-provided identifiers for access to secrets. | Attempt unauthorized API calls; verify 401/403; verify server-side checks. |             | SYS-003                                                |
 
-#### 9.13 Transport and Network Security
+## Transport and Network Security
 
 | requirement ID | requirement title         | requirement body (including "shall" statements)                                                                                          | verification plan                                                                  | unit test                                  | parent requirement ID (if it is a derived requirement) |
 | -------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------ |
@@ -246,7 +154,7 @@ Audit logs are local/system logs intended to record significant events without l
 | SEC-NET-002    | Secure local endpoints    | If local APIs are exposed (loopback), the system shall bind to localhost only and shall require authentication for sensitive operations. | Inspect bind address; attempt remote access; ensure blocked; verify auth required. |             | SEC-ACC-004                                            |
 | SEC-NET-003    | Rate limiting and backoff | The system shall implement retry with exponential backoff for transient errors and shall respect Plaid rate limits.                      | Simulate 429 and transient failures; verify backoff and stop conditions.           |  | FUNC-ACCT-007                                          |
 
-#### 9.14 Secure Coding, Data Handling, and Privacy Controls
+## Secure Coding, Data Handling, and Privacy Controls
 
 | requirement ID | requirement title    | requirement body (including "shall" statements)                                                                                                                   | verification plan                                                                 | unit test                                        | parent requirement ID (if it is a derived requirement) |
 | -------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------ |
@@ -258,59 +166,34 @@ Audit logs are local/system logs intended to record significant events without l
 | SEC-DATA-006   | Data deletion        | The system shall support deleting all local financial data and secrets (wipe) and shall confirm completion.                                                       | Run wipe; verify db removed and secrets cleared; app reset.                       |              | FUNC-BKP-004                                           |
 | SEC-DATA-007   | Provenance integrity | The system shall preserve provenance markers for user overrides and shall not overwrite user-edited fields during sync unless explicitly reset by the user.       | Edit category; sync; confirm unchanged; use reset control (if present) to revert. |    | FUNC-SYNC-004                                          |
 
-### 10. Data Model (Conceptual, MVP)
+## UX Requirements
 
-* Institution
-* PlaidItem (institution connection)
-* Account (belongs to item; type/subtype; mask; balances; owner names when available)
-* Transaction (provider ids; posted/pending; category; user overrides; flags; splits; provenance)
-* Category (hierarchy; active flag)
-* Budget (month; category; amount)
-* Tag (optional MVP)
-* BalanceSnapshot (account; date; balance)
+- "Uncategorized" queue for fast triage.
+- Bulk actions: set category, exclude, mark transfer.
+- Clear indicators for overridden fields.
+- Global search and filter-first transaction exploration.
+- Consistent month navigation across budget and reports.
+- Conflict resolution queue for offline sync conflicts.
 
-### 11. UX Requirements (MVP)
+### Conflicts
 
-* “Uncategorized” queue for fast triage.
-* Bulk actions: set category, exclude, mark transfer.
-* Clear indicators for overridden fields.
-* Global search and filter-first transaction exploration.
-* Consistent month navigation across budget and reports.
-* Conflict resolution queue for offline sync conflicts.
+- A dedicated conflicts queue groups unresolved items for batch review.
+- Each conflict view shows local vs provider values and the last updated timestamps.
+- Users can resolve conflicts by choosing local or provider values per field.
 
-#### Conflicts (MVP)
-
-* A dedicated conflicts queue groups unresolved items for batch review.
-* Each conflict view shows local vs provider values and the last updated timestamps.
-* Users can resolve conflicts by choosing local or provider values per field.
-
-### 12. Non-functional Requirements (MVP)
+## Non-functional Requirements
 
 Performance and reliability
 
-* The system shall complete a typical incremental sync within a reasonable time for personal datasets and provide progress/status.
-* The UI shall remain responsive during sync by using background tasks/async operations.
-* The system shall tolerate partial failures (one institution fails) without corrupting local state.
+- The system shall complete a typical incremental sync within a reasonable time for personal datasets and provide progress or status.
+- The UI shall remain responsive during sync by using background tasks or async operations.
+- The system shall tolerate partial failures (one institution fails) without corrupting local state.
 
 Maintainability
 
-* Requirements traced to unit tests and verification plans (tables in Section 9).
-* Centralized configuration for retention, logging, encryption, and sync behavior.
+- Requirements traced to unit tests and verification plans in the requirement tables above.
+- Centralized configuration for retention, logging, encryption, and sync behavior.
 
 Portability
 
-* The system shall support backup/restore between devices (subject to key/passphrase availability).
-
-### 13. Open Questions (to finalize implementation details)
-
-* Post-MVP: server + client architecture details and hosting model.
-* Post-MVP: database choice for server deployment (if needed).
-
-### 14. Milestones (Suggested)
-
-* M1: Plaid Link + account listing + secure token storage + manual sync
-* M2: Transaction list/detail + categorization overrides + inclusion rules + search/filters
-* M3: Budgets + monthly view + overspend drill-down
-* M4: Dashboards/reports + net worth snapshots
-* M5: Export + encrypted backup/restore + wipe + settings + audit logging hardening
-* M6: Security review pass (redaction, TLS, dependency scanning, retention enforcement)
+- The system shall support backup and restore between devices, subject to key and passphrase availability.

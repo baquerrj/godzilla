@@ -1,16 +1,18 @@
 # AGENTS.md (Repository Agent Guide)
 
 This repository implements a single-user personal budgeting app. Agent work must stay
-inside PRD scope and maintain strict requirement traceability.
+inside MVP definition scope and maintain strict requirement traceability.
 
 ## 1) Authority and scope
-- The PRD is the source of truth. Do not implement features outside it unless explicitly authorized.
-- Preferred PRD path: `docs/product-requirements-document.md`.
+- The canonical MVP definition docs are the source of truth. Do not implement features outside them unless explicitly authorized.
+- Product vision path: `docs/vision.md`.
+- Product architecture path: `docs/design/architecture-overview.md`.
+- Product requirements path: `docs/requirements/requirements.md`.
 - Current milestone plan: `docs/plan.md`.
 - This file defines policy. `CLAUDE.md` provides project context and operational examples.
 
 ## 2) Requirement IDs and decomposition
-- Use stable requirement IDs from the PRD (for example `SYS-003`, `FUNC-ACCT-002`, `SEC-CRY-001`).
+- Use stable requirement IDs from `docs/requirements/requirements.md` (for example `SYS-003`, `FUNC-ACCT-002`, `SEC-CRY-001`).
 - Preserve parent-child requirement relationships when adding derived requirements.
 - Keep requirements small. One requirement should express one "shall" behavior.
 
@@ -76,7 +78,7 @@ Recommended doc sections:
 
 ## 7) Definition of done
 Before submission:
-1. Implementation matches PRD requirements (no scope creep).
+1. Implementation matches MVP requirements (no scope creep).
 2. `REQ:` tags are present in production code and tests.
 3. `trace/requirements.yml` is updated and consistent.
 4. Design docs are updated/created when needed.
@@ -98,7 +100,7 @@ Node/UI check commands:
 - Biome is currently applied with a pragmatic baseline; deferred rules and rollout order are documented in `docs/design/developer-tooling.md`.
 
 ## 8) Agent workflow checklist
-1. Identify impacted requirement IDs in the PRD.
+1. Identify impacted requirement IDs in `docs/requirements/requirements.md`.
 2. Plan implementation and required design doc updates.
 3. Implement code with `REQ:` tags.
 4. Add/update tests with `REQ:` tags.

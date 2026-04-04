@@ -1,5 +1,14 @@
 # MVP Plan
 
+## MVP Definition
+
+The canonical MVP definition is split across:
+- [Vision](vision.md)
+- [Architecture](design/architecture-overview.md)
+- [Requirements](requirements/requirements.md)
+
+Use this file only as the execution tracker for milestone and verification work.
+
 Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
