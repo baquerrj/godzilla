@@ -31,7 +31,7 @@ Maintain bidirectional links:
   3. Inline comment next to narrow-scope logic
 
 ### 3.2 Requirement tags in tests
-- Every requirement must be traced to a unit test that verifies it in the requirements table in `docs/requirements/requirements.md`
+- Every requirement must be traced to a unit test that verifies it in the requirements table in `docs/requirements/requirements.md` **and** in `trace/requirements.yml`
   - If a requirement cannot be verified via unit test, identify the test methodology to verify the requirement (e.g. component, system, manual, etc.)
 - Use the same `REQ:` tag format in tests.
 - If a requirement is not currently testable, add a tracked `SKIP`/`XFAIL` test stub with rationale and linked issue/task.
