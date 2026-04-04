@@ -21,6 +21,10 @@
  */
 
 // Response models (read)
+export interface AccountOwner {
+  names?: string[];
+}
+
 export interface Account {
   account_id: string;
   provider_account_id: string;
@@ -32,7 +36,7 @@ export interface Account {
   mask: string | null;
   balance: number | null;
   currency: string;
-  owner_names: unknown[];
+  owner_names: AccountOwner[];
 }
 
 export interface Transaction {
@@ -281,6 +285,10 @@ export interface RestoreResponse {
   schema_version: number;
 }
 
+export interface BackupPassphraseStatus {
+  scheduled_passphrase_configured: boolean;
+}
+
 export interface WipeRequest {
   confirm: "WIPE_LOCAL_DATA";
 }
@@ -312,6 +320,29 @@ export interface SyncSettings {
   schedule_enabled: boolean;
   frequency_minutes: number;
   scheduler_supported: boolean;
+  last_run: {
+    status: string;
+    started_at_utc: string;
+    finished_at_utc: string;
+    summary: Record<string, unknown>;
+    error_message: string | null;
+  } | null;
+}
+
+export interface BackupSettings {
+  schedule_enabled: boolean;
+  frequency_minutes: number;
+  retention_count: number;
+  directory: string | null;
+  scheduler_supported: boolean;
+  scheduled_passphrase_configured: boolean;
+  last_run: {
+    status: string;
+    started_at_utc: string;
+    finished_at_utc: string;
+    summary: Record<string, unknown>;
+    error_message: string | null;
+  } | null;
 }
 
 export interface SettingsResponse {
@@ -321,6 +352,7 @@ export interface SettingsResponse {
   export_defaults: ExportDefaults;
   security: SecuritySettings;
   sync: SyncSettings;
+  backup: BackupSettings;
 }
 
 export interface UpdateSettingsRequest {
@@ -329,7 +361,10 @@ export interface UpdateSettingsRequest {
   retention?: Partial<RetentionSettings>;
   export_defaults?: Partial<ExportDefaults>;
   security?: Partial<Omit<SecuritySettings, "scheduler_supported">>;
-  sync?: Partial<Omit<SyncSettings, "scheduler_supported">>;
+  sync?: Partial<Omit<SyncSettings, "scheduler_supported" | "last_run">>;
+  backup?: Partial<
+    Omit<BackupSettings, "scheduler_supported" | "scheduled_passphrase_configured" | "last_run">
+  >;
 }
 
 export interface AuditLogEntry {

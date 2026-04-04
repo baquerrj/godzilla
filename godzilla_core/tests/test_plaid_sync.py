@@ -28,6 +28,7 @@ from godzilla_core.integrations.plaid_sync import (
     _get_plaid_institution_id_for_item,
     _get_sync_cursor,
     _insert_balance_snapshot,
+    _provider_fingerprint,
     _resolve_category_id,
     _retention_enabled,
     _update_sync_state,
@@ -455,8 +456,57 @@ class PlaidSyncIngestionTests(unittest.TestCase):
         _apply_transaction(self.conn, self.account_id, txn, retention_enabled=False)
         count = self.conn.execute("SELECT COUNT(*) FROM transaction_record").fetchone()[0]
         self.assertEqual(count, 1)
-        row = self.conn.execute("SELECT provider_transaction_id FROM transaction_record").fetchone()
+        row = self.conn.execute(
+            "SELECT provider_transaction_id, provider_fingerprint FROM transaction_record"
+        ).fetchone()
         self.assertIsNone(row[0])
+        self.assertEqual(row[1], _provider_fingerprint(txn))
+
+    def test_apply_transaction_fallback_replay_is_idempotent_for_same_fingerprint(self) -> None:
+        """Provider-ID-less replays with the same fingerprint update in place.
+
+        REQ: ACC-TXN-009, TECH-TXN-009-FALLBACK, TECH-TXN-009-CONFLICT
+        """
+
+        txn = {
+            "date": "2026-01-07",
+            "amount": 9.99,
+            "iso_currency_code": "USD",
+            "name": "Anonymous",
+            "merchant_name": "Coffee Shop",
+        }
+        _apply_transaction(self.conn, self.account_id, txn, retention_enabled=False)
+        updated = dict(txn)
+        updated["merchant_name"] = "Coffee Shop"
+        _apply_transaction(self.conn, self.account_id, updated, retention_enabled=False)
+        count = self.conn.execute("SELECT COUNT(*) FROM transaction_record").fetchone()[0]
+        conflict_count = self.conn.execute("SELECT COUNT(*) FROM conflict").fetchone()[0]
+        self.assertEqual(count, 1)
+        self.assertEqual(conflict_count, 0)
+
+    def test_apply_transaction_fallback_collision_creates_conflict(self) -> None:
+        """Provider-ID-less collisions with different fingerprints queue review work.
+
+        REQ: ACC-TXN-009, TECH-TXN-009-CONFLICT
+        """
+
+        original = {
+            "date": "2026-01-07",
+            "amount": 9.99,
+            "iso_currency_code": "USD",
+            "name": "Anonymous",
+            "merchant_name": "Coffee Shop",
+        }
+        changed = dict(original)
+        changed["original_description"] = "DIFFERENT"
+        _apply_transaction(self.conn, self.account_id, original, retention_enabled=False)
+        _apply_transaction(self.conn, self.account_id, changed, retention_enabled=False)
+        row = self.conn.execute(
+            "SELECT field_name, status FROM conflict WHERE entity_id = ?",
+            (_fallback_transaction_id(self.account_id, original),),
+        ).fetchone()
+        self.assertEqual(row[0], "dedup_identity")
+        self.assertEqual(row[1], "open")
 
     def test_get_plaid_institution_id_for_item(self) -> None:
         """_get_plaid_institution_id_for_item resolves the institution ID for a known item.

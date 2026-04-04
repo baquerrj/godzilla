@@ -1,7 +1,7 @@
 /**
  * Tests for AccountsTable component.
  *
- * REQ: ACC-ACCT-003
+ * REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-UI
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -32,7 +32,7 @@ const TOKEN = "tok";
 describe("AccountsTable", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows empty state when no accounts  REQ: ACC-ACCT-003", async () => {
+  it("shows empty state when no accounts", async () => {
     mockGetAccounts.mockResolvedValue([]);
     render(<AccountsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -40,7 +40,7 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("renders account rows  REQ: ACC-ACCT-003", async () => {
+  it("renders account rows and owner names", async () => {
     mockGetAccounts.mockResolvedValue([
       {
         account_id: "acc1",
@@ -53,7 +53,7 @@ describe("AccountsTable", () => {
         mask: "0000",
         balance: 1200.5,
         currency: "USD",
-        owner_names: [],
+        owner_names: [{ names: ["Alex Example", "Jordan Example"] }],
       },
     ]);
     render(<AccountsTable token={TOKEN} refreshKey={0} />);
@@ -62,10 +62,11 @@ describe("AccountsTable", () => {
       expect(screen.getByText("Plaid Checking")).toBeInTheDocument();
       expect(screen.getByText("1200.50")).toBeInTheDocument();
       expect(screen.getByText("••••0000")).toBeInTheDocument();
+      expect(screen.getByText("Alex Example, Jordan Example")).toBeInTheDocument();
     });
   });
 
-  it("shows error on fetch failure  REQ: ACC-ACCT-003", async () => {
+  it("shows error on fetch failure", async () => {
     mockGetAccounts.mockRejectedValue(new Error("Network error"));
     render(<AccountsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -75,7 +76,7 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("re-fetches when refreshKey changes  REQ: ACC-ACCT-003", async () => {
+  it("re-fetches when refreshKey changes", async () => {
     mockGetAccounts.mockResolvedValue([]);
     const { rerender } = render(
       <AccountsTable token={TOKEN} refreshKey={0} />,

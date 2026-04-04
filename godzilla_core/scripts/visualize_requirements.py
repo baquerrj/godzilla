@@ -256,12 +256,8 @@ def _counter_items(counter: Counter[str]) -> list[dict[str, Any]]:
 def build_view_model(entries: list[RequirementEntry], source_path: Path) -> dict[str, Any]:
     """Build the view model consumed by the static HTML page."""
     requirement_type_counts = Counter(entry.requirement_type for entry in entries)
-    status_counts = Counter(
-        entry.implementation_status or "unspecified" for entry in entries
-    )
-    verification_counts = Counter(
-        entry.verification_method or "unspecified" for entry in entries
-    )
+    status_counts = Counter(entry.implementation_status or "unspecified" for entry in entries)
+    verification_counts = Counter(entry.verification_method or "unspecified" for entry in entries)
 
     return {
         "source_path": str(source_path),

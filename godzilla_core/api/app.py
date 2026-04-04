@@ -2,19 +2,20 @@
 
 REQ: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003,
 REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004,
-REQ: ACC-ACCT-005, ACC-ACCT-007, ACC-ACCT-008, ACC-SYNC-001, ACC-TXN-001,
+REQ: ACC-ACCT-005, ACC-ACCT-006, ACC-ACCT-007, ACC-ACCT-008, ACC-SYNC-001, ACC-TXN-001,
 REQ: ACC-TXN-002, ACC-TXN-003, ACC-TXN-004, ACC-TXN-005,
-REQ: ACC-TXN-006, ACC-TXN-007, ACC-TXN-008,
+REQ: ACC-TXN-006, ACC-TXN-007, ACC-TXN-008, ACC-TXN-009,
 REQ: ACC-CAT-001, ACC-CAT-002,
 REQ: ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007,
 REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004,
 REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
 REQ: ACC-REP-006, ACC-REP-007, ACC-REP-008,
 REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003,
-REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004,
+REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-005,
 REQ: ACC-BKP-006,
 REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
 REQ: ACC-AUD-001, ACC-AUD-003, ACC-AUD-004,
+REQ: TECH-ACCT-006-RUNTIME, TECH-ACCT-009-UI, TECH-TXN-009-CONFLICT,
 REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-DATA-003,
 REQ: TECH-SEC-NET-001
 """
@@ -29,7 +30,7 @@ import json
 import logging
 import os
 import ssl
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import date, datetime, timedelta, timezone
 from hmac import compare_digest
 from pathlib import Path
@@ -62,7 +63,12 @@ from godzilla_core.integrations.plaid_client import (
     PlaidConfigError,
     link_sandbox_item,
 )
-from godzilla_core.integrations.plaid_sync import SyncError, sync_item_transactions_and_balances
+from godzilla_core.integrations.plaid_sync import (
+    SyncError,
+    SyncResult,
+    sync_item_transactions_and_balances,
+)
+from godzilla_core.scheduler.runtime import JobCoordinator, LocalSchedulerRuntime, SchedulerPlan
 from godzilla_core.security.auth import generate_pin_salt, hash_pin, verify_pin
 from godzilla_core.security.backup import (
     BackupError,
@@ -85,6 +91,7 @@ _DISALLOWED_PLAID_LINK_PRODUCTS = {"balance"}
 _PIN_HASH_SECRET_KEY = "app_pin_hash"
 _PIN_SALT_SECRET_KEY = "app_pin_salt"
 _PIN_UPDATED_AT_SECRET_KEY = "app_pin_updated_at_utc"
+_SCHEDULED_BACKUP_PASSPHRASE_KEY = "scheduled_backup_passphrase"
 _UNLOCK_HEADER_NAME = "X-App-Unlock-Token"
 _UNLOCK_EXEMPT_PATHS = {"/auth/status", "/auth/setup-pin", "/auth/unlock"}
 _UNLOCK_SESSIONS: dict[str, datetime] = {}
@@ -590,12 +597,28 @@ class SyncSettingsResponse(BaseModel):
     schedule_enabled: bool
     frequency_minutes: int
     scheduler_supported: bool
+    last_run: dict[str, Any] | None = None
+
+
+class BackupSettingsResponse(BaseModel):
+    """Scheduled backup settings and runtime status.
+
+    REQ: ACC-BKP-005, ACC-SET-004
+    """
+
+    schedule_enabled: bool
+    frequency_minutes: int
+    retention_count: int
+    directory: str | None
+    scheduler_supported: bool
+    scheduled_passphrase_configured: bool
+    last_run: dict[str, Any] | None = None
 
 
 class SettingsResponse(BaseModel):
     """Consolidated settings read model.
 
-    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005, ACC-BKP-005
     """
 
     timezone: str
@@ -604,6 +627,7 @@ class SettingsResponse(BaseModel):
     export_defaults: ExportDefaultsResponse
     security: SecuritySettingsResponse
     sync: SyncSettingsResponse
+    backup: BackupSettingsResponse
 
 
 class RetentionSettingsPatch(BaseModel):
@@ -644,6 +668,18 @@ class SyncSettingsPatch(BaseModel):
     frequency_minutes: int | None = Field(default=None, ge=5, le=10080)
 
 
+class BackupSettingsPatch(BaseModel):
+    """Partial update for scheduled backup settings.
+
+    REQ: ACC-BKP-005
+    """
+
+    schedule_enabled: bool | None = None
+    frequency_minutes: int | None = Field(default=None, ge=5, le=10080)
+    retention_count: int | None = Field(default=None, ge=1, le=365)
+    directory: str | None = None
+
+
 class UpdateSettingsRequest(BaseModel):
     """Partial settings update payload.
 
@@ -656,6 +692,25 @@ class UpdateSettingsRequest(BaseModel):
     export_defaults: ExportDefaultsPatch | None = None
     security: SecuritySettingsPatch | None = None
     sync: SyncSettingsPatch | None = None
+    backup: BackupSettingsPatch | None = None
+
+
+class BackupPassphraseRequest(BaseModel):
+    """Secret payload for unattended scheduled backups.
+
+    REQ: ACC-BKP-005
+    """
+
+    passphrase: str = Field(min_length=1, max_length=512)
+
+
+class BackupPassphraseStatusResponse(BaseModel):
+    """Returns whether a scheduled backup passphrase is configured.
+
+    REQ: ACC-BKP-005
+    """
+
+    scheduled_passphrase_configured: bool
 
 
 class AuthStatusTlsResponse(BaseModel):
@@ -1297,7 +1352,7 @@ def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def plaid_sync(request: PlaidSyncRequest) -> PlaidSyncResponse:
         """Run manual incremental sync for one Plaid item.
 
-        REQ: ACC-ACCT-005, ACC-SYNC-001
+        REQ: ACC-ACCT-005, ACC-SYNC-001, ACC-ACCT-006, TECH-ACCT-006-RUNTIME
         """
         _log_event(
             logging.INFO,
@@ -1305,10 +1360,17 @@ def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
             {"item_id": request.item_id, "institution_id": request.institution_id},
         )
         try:
-            result = sync_item_transactions_and_balances(
-                provider_item_id=request.item_id,
-                plaid_institution_id=request.institution_id,
+            ran, result = app.state.job_coordinator.run_exclusive(
+                "sync",
+                lambda: sync_item_transactions_and_balances(
+                    provider_item_id=request.item_id,
+                    plaid_institution_id=request.institution_id,
+                ),
             )
+            if not ran:
+                raise HTTPException(status_code=409, detail="Sync already in progress")
+            if not isinstance(result, SyncResult):
+                raise HTTPException(status_code=500, detail="Sync job did not return a result")
             _log_event(
                 logging.INFO,
                 "sync_success",
@@ -1807,11 +1869,67 @@ def _validate_timezone_name(timezone_name: str) -> None:
         raise HTTPException(status_code=422, detail="Invalid timezone") from exc
 
 
+def _scheduler_supported() -> bool:
+    """Return whether the local runtime supports background scheduling.
+
+    REQ: ACC-ACCT-006, ACC-BKP-005, TECH-ACCT-006-RUNTIME
+    """
+    return True
+
+
+def _serialize_job_run_summary(row: tuple[Any, ...] | None) -> dict[str, Any] | None:
+    """Convert a scheduled job row into a compact response payload.
+
+    REQ: ACC-ACCT-006, ACC-BKP-005
+    """
+    if row is None:
+        return None
+    summary_payload = json.loads(str(row[3]))
+    if not isinstance(summary_payload, dict):
+        summary_payload = {"value": summary_payload}
+    return {
+        "status": str(row[0]),
+        "started_at_utc": str(row[1]),
+        "finished_at_utc": str(row[2]),
+        "summary": summary_payload,
+        "error_message": str(row[4]) if row[4] is not None else None,
+    }
+
+
+def _load_latest_job_run(
+    conn: sqlcipher.Connection,
+    job_type: Literal["sync", "backup"],
+) -> dict[str, Any] | None:
+    """Load the latest scheduled job summary for one job type.
+
+    REQ: ACC-ACCT-006, ACC-BKP-005
+    """
+    row = conn.execute(
+        "SELECT status, started_at_utc, finished_at_utc, summary_json, error_message "
+        "FROM scheduled_job_run WHERE job_type = ? "
+        "ORDER BY started_at_utc DESC, job_run_id DESC LIMIT 1",
+        (job_type,),
+    ).fetchone()
+    return _serialize_job_run_summary(row)
+
+
+def _scheduled_backup_passphrase_configured() -> bool:
+    """Return whether an unattended scheduled backup passphrase exists.
+
+    REQ: ACC-BKP-005
+    """
+    try:
+        secret_store = store_from_env()
+    except SecretStoreError:
+        return False
+    return bool(secret_store.get_secret(_SCHEDULED_BACKUP_PASSPHRASE_KEY))
+
+
 def _default_settings_payload() -> SettingsResponse:
     """Return default settings payload used for bootstrap reads.
 
     REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
-    REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
+    REQ: ACC-ACCT-006, ACC-BKP-005, TECH-ACCT-006-CONFIG
     """
     return SettingsResponse(
         timezone="UTC",
@@ -1825,7 +1943,17 @@ def _default_settings_payload() -> SettingsResponse:
         sync=SyncSettingsResponse(
             schedule_enabled=False,
             frequency_minutes=360,
-            scheduler_supported=False,
+            scheduler_supported=_scheduler_supported(),
+            last_run=None,
+        ),
+        backup=BackupSettingsResponse(
+            schedule_enabled=False,
+            frequency_minutes=1440,
+            retention_count=7,
+            directory=None,
+            scheduler_supported=_scheduler_supported(),
+            scheduled_passphrase_configured=_scheduled_backup_passphrase_configured(),
+            last_run=None,
         ),
     )
 
@@ -1861,12 +1989,13 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     """Load consolidated settings from DB, falling back to defaults.
 
     REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
-    REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
+    REQ: ACC-ACCT-006, ACC-BKP-005, TECH-ACCT-006-CONFIG
     """
     default = _default_settings_payload()
     settings_row = conn.execute(
         "SELECT timezone, currency, auto_lock_minutes, sync_schedule_enabled, "
-        "sync_frequency_minutes "
+        "sync_frequency_minutes, backup_schedule_enabled, backup_frequency_minutes, "
+        "backup_retention_count, backup_directory "
         "FROM settings ORDER BY updated_at_utc DESC, rowid DESC LIMIT 1"
     ).fetchone()
     retention_row = conn.execute(
@@ -1883,6 +2012,16 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     auto_lock_minutes = int(settings_row[2]) if settings_row else default.security.auto_lock_minutes
     schedule_enabled = bool(settings_row[3]) if settings_row else default.sync.schedule_enabled
     frequency_minutes = int(settings_row[4]) if settings_row else default.sync.frequency_minutes
+    backup_schedule_enabled = (
+        bool(settings_row[5]) if settings_row else default.backup.schedule_enabled
+    )
+    backup_frequency_minutes = (
+        int(settings_row[6]) if settings_row else default.backup.frequency_minutes
+    )
+    backup_retention_count = (
+        int(settings_row[7]) if settings_row else default.backup.retention_count
+    )
+    backup_directory = str(settings_row[8]) if settings_row and settings_row[8] else None
     retain_raw_payloads = (
         bool(retention_row[0]) if retention_row else default.retention.retain_raw_payloads
     )
@@ -1904,7 +2043,17 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
         sync=SyncSettingsResponse(
             schedule_enabled=schedule_enabled,
             frequency_minutes=frequency_minutes,
-            scheduler_supported=False,
+            scheduler_supported=_scheduler_supported(),
+            last_run=_load_latest_job_run(conn, "sync"),
+        ),
+        backup=BackupSettingsResponse(
+            schedule_enabled=backup_schedule_enabled,
+            frequency_minutes=backup_frequency_minutes,
+            retention_count=backup_retention_count,
+            directory=backup_directory,
+            scheduler_supported=_scheduler_supported(),
+            scheduled_passphrase_configured=_scheduled_backup_passphrase_configured(),
+            last_run=_load_latest_job_run(conn, "backup"),
         ),
     )
 
@@ -1912,7 +2061,7 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
 def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse) -> None:
     """Persist consolidated settings across singleton settings tables.
 
-    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005, ACC-BKP-005
     """
     utc, tz, offset = local_timestamp_metadata()
     settings_row = conn.execute(
@@ -1936,10 +2085,13 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
     )
     conn.execute(
         "INSERT OR REPLACE INTO settings ("
-        "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+        "id, timezone, currency, auto_lock_minutes, "
+        "sync_schedule_enabled, sync_frequency_minutes, "
+        "backup_schedule_enabled, backup_frequency_minutes, "
+        "backup_retention_count, backup_directory, "
         "created_at_utc, created_at_tz, created_at_offset_minutes, "
         "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
-        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             settings_id,
             settings.timezone,
@@ -1947,6 +2099,10 @@ def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse)
             settings.security.auto_lock_minutes,
             1 if settings.sync.schedule_enabled else 0,
             settings.sync.frequency_minutes,
+            1 if settings.backup.schedule_enabled else 0,
+            settings.backup.frequency_minutes,
+            settings.backup.retention_count,
+            settings.backup.directory,
             settings_created[0],
             settings_created[1],
             settings_created[2],
@@ -2023,6 +2179,190 @@ def _apply_retention_pruning(
 
     purged_audit = _prune_audit_log(conn, retain_logs_days)
     return {"purged_raw_payloads": purged_raw, "purged_audit_rows": purged_audit}
+
+
+def _record_scheduled_job_run(  # noqa: PLR0913
+    conn: sqlcipher.Connection,
+    *,
+    job_type: Literal["sync", "backup"],
+    status: Literal["success", "partial", "failed"],
+    started_meta: tuple[str, str, int],
+    summary: dict[str, Any],
+    error_message: str | None = None,
+) -> None:
+    """Persist one scheduled sync or backup execution summary.
+
+    REQ: ACC-ACCT-006, ACC-BKP-005
+    """
+    finished_utc, finished_tz, finished_offset = local_timestamp_metadata()
+    conn.execute(
+        "INSERT INTO scheduled_job_run ("
+        "job_run_id, job_type, status, started_at_utc, started_at_tz, started_at_offset_minutes, "
+        "finished_at_utc, finished_at_tz, finished_at_offset_minutes, summary_json, error_message"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            str(uuid4()),
+            job_type,
+            status,
+            started_meta[0],
+            started_meta[1],
+            started_meta[2],
+            finished_utc,
+            finished_tz,
+            finished_offset,
+            json.dumps(summary, sort_keys=True),
+            error_message,
+        ),
+    )
+
+
+def _run_scheduled_sync_job() -> None:
+    """Run scheduled sync across all linked items and persist summary state.
+
+    REQ: ACC-ACCT-006, TECH-ACCT-006-RUNTIME
+    """
+    started_meta = local_timestamp_metadata()
+    with _db_connection() as conn:
+        items = conn.execute(
+            "SELECT provider_item_id, institution.plaid_institution_id "
+            "FROM plaid_item JOIN institution ON institution.id = plaid_item.institution_id "
+            "WHERE plaid_item.is_unlinked = 0 ORDER BY plaid_item.created_at_utc ASC"
+        ).fetchall()
+    successes = 0
+    failures = 0
+    totals = {"added": 0, "modified": 0, "removed": 0, "balance_accounts": 0}
+    errors: list[str] = []
+    for item_id, institution_id in items:
+        try:
+            result = sync_item_transactions_and_balances(
+                provider_item_id=str(item_id),
+                plaid_institution_id=str(institution_id) if institution_id else None,
+            )
+            successes += 1
+            totals["added"] += result.added
+            totals["modified"] += result.modified
+            totals["removed"] += result.removed
+            totals["balance_accounts"] += result.balance_accounts
+        except SyncError as exc:
+            failures += 1
+            errors.append(f"{item_id}: {exc}")
+    summary = {
+        "items_total": len(items),
+        "items_succeeded": successes,
+        "items_failed": failures,
+        **totals,
+    }
+    status: Literal["success", "partial", "failed"]
+    if failures == 0:
+        status = "success"
+    elif successes > 0:
+        status = "partial"
+    else:
+        status = "failed"
+    with _db_connection() as conn:
+        _record_scheduled_job_run(
+            conn,
+            job_type="sync",
+            status=status,
+            started_meta=started_meta,
+            summary=summary,
+            error_message="; ".join(errors) if errors else None,
+        )
+        conn.commit()
+
+
+def _build_backup_blob(*, passphrase: str, include_secrets: bool) -> tuple[bytes, bool]:
+    """Read local database files and construct an encrypted backup blob.
+
+    REQ: ACC-BKP-001, ACC-BKP-005, TECH-SEC-CRY-003
+    """
+    db_path_raw, _ = _read_database_settings()
+    db_path = _expand_path(db_path_raw)
+    if not db_path.exists():
+        raise BackupError("Database file not found")
+
+    secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
+    secrets_path = _expand_path(secrets_path_raw) if secrets_path_raw else None
+    db_bytes = _read_file_bytes(db_path)
+    include_secret_bytes = bool(include_secrets and secrets_path and secrets_path.exists())
+    secrets_bytes = (
+        _read_file_bytes(secrets_path) if include_secret_bytes and secrets_path else None
+    )
+    secrets_name = secrets_path.name if include_secret_bytes and secrets_path else None
+    blob = create_backup_blob(
+        db_bytes=db_bytes,
+        db_filename=db_path.name,
+        passphrase=passphrase,
+        secrets_bytes=secrets_bytes,
+        secrets_filename=secrets_name,
+    )
+    return blob, include_secret_bytes
+
+
+def _prune_backup_files(directory: Path, retention_count: int) -> int:
+    """Delete oldest scheduled backup files beyond the configured count.
+
+    REQ: ACC-BKP-005
+    """
+    files = sorted(directory.glob("*.gzbk"), key=lambda path: path.stat().st_mtime, reverse=True)
+    removed = 0
+    for path in files[retention_count:]:
+        path.unlink(missing_ok=True)
+        removed += 1
+    return removed
+
+
+def _run_scheduled_backup_job() -> None:
+    """Run scheduled encrypted backup into the configured directory.
+
+    REQ: ACC-BKP-005
+    """
+    started_meta = local_timestamp_metadata()
+    with _db_connection() as conn:
+        settings = _load_settings(conn)
+    summary: dict[str, Any]
+    status: Literal["success", "partial", "failed"] = "failed"
+    error_message: str | None = None
+    try:
+        if not settings.backup.directory:
+            raise BackupError("Backup directory is not configured")
+        if not settings.backup.schedule_enabled or not _scheduler_supported():
+            raise BackupError("Scheduled backup is disabled")
+        secret_store = store_from_env()
+        passphrase = secret_store.get_secret(_SCHEDULED_BACKUP_PASSPHRASE_KEY)
+        if not passphrase:
+            raise BackupError("Scheduled backup passphrase is not configured")
+        blob, include_secrets = _build_backup_blob(passphrase=passphrase, include_secrets=True)
+        target_dir = _expand_path(settings.backup.directory)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        target_path = target_dir / f"godzilla-scheduled-backup-{stamp}.gzbk"
+        _write_file_bytes_atomic(target_path, blob)
+        pruned = _prune_backup_files(target_dir, settings.backup.retention_count)
+        summary = {
+            "path": str(target_path),
+            "size_bytes": len(blob),
+            "retention_count": settings.backup.retention_count,
+            "pruned_files": pruned,
+            "included_secrets": include_secrets,
+        }
+        status = "success"
+    except (BackupError, SecretStoreError) as exc:
+        summary = {
+            "directory": settings.backup.directory,
+            "retention_count": settings.backup.retention_count,
+        }
+        error_message = str(exc)
+    with _db_connection() as conn:
+        _record_scheduled_job_run(
+            conn,
+            job_type="backup",
+            status=status,
+            started_meta=started_meta,
+            summary=summary,
+            error_message=error_message,
+        )
+        conn.commit()
 
 
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
@@ -3424,28 +3764,15 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
 
         REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-005, TECH-SEC-CRY-003, TECH-SEC-CRY-003-ENVELOPE
         """
-        db_path_raw, _ = _read_database_settings()
-        db_path = _expand_path(db_path_raw)
-        if not db_path.exists():
-            raise HTTPException(status_code=404, detail="Database file not found")
-
-        secrets_path_raw = os.environ.get("GODZILLA_SECRETS_PATH")
-        secrets_path = _expand_path(secrets_path_raw) if secrets_path_raw else None
-        db_bytes = _read_file_bytes(db_path)
-        include_secrets = bool(request.include_secrets and secrets_path and secrets_path.exists())
-        secrets_bytes = _read_file_bytes(secrets_path) if include_secrets and secrets_path else None
-        secrets_name = secrets_path.name if include_secrets and secrets_path else None
-
         try:
-            blob = create_backup_blob(
-                db_bytes=db_bytes,
-                db_filename=db_path.name,
+            blob, include_secrets = _build_backup_blob(
                 passphrase=request.passphrase,
-                secrets_bytes=secrets_bytes,
-                secrets_filename=secrets_name,
+                include_secrets=bool(request.include_secrets),
             )
         except BackupError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+            detail = "Database file not found" if "not found" in str(exc).lower() else str(exc)
+            status_code = 404 if "not found" in str(exc).lower() else 422
+            raise HTTPException(status_code=status_code, detail=detail) from exc
 
         _log_event(
             logging.INFO,
@@ -3626,10 +3953,14 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
         response_model=SettingsResponse,
         dependencies=[Depends(require_api_key)],
     )
-    async def update_settings(request: UpdateSettingsRequest) -> SettingsResponse:
+    async def update_settings(  # noqa: PLR0912
+        request: UpdateSettingsRequest,
+        http_request: Request,
+    ) -> SettingsResponse:
         """Partially update consolidated settings and apply retention pruning.
 
-        REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
+        REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+        REQ: ACC-ACCT-006, ACC-BKP-005
         """
         with _db_connection() as conn:
             current = _load_settings(conn)
@@ -3661,6 +3992,15 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
                     updated.sync.schedule_enabled = request.sync.schedule_enabled
                 if request.sync.frequency_minutes is not None:
                     updated.sync.frequency_minutes = request.sync.frequency_minutes
+            if request.backup is not None:
+                if request.backup.schedule_enabled is not None:
+                    updated.backup.schedule_enabled = request.backup.schedule_enabled
+                if request.backup.frequency_minutes is not None:
+                    updated.backup.frequency_minutes = request.backup.frequency_minutes
+                if request.backup.retention_count is not None:
+                    updated.backup.retention_count = request.backup.retention_count
+                if request.backup.directory is not None:
+                    updated.backup.directory = request.backup.directory.strip() or None
 
             _upsert_settings_row(conn, updated)
             prune_result = _apply_retention_pruning(
@@ -3668,8 +4008,10 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 retain_raw_payloads=updated.retention.retain_raw_payloads,
                 retain_logs_days=updated.retention.retain_logs_days,
             )
+            updated = _load_settings(conn)
             conn.commit()
 
+        http_request.app.state.scheduler.reload()
         _log_event(
             logging.INFO,
             "settings_updated",
@@ -3682,10 +4024,58 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
                 "auto_lock_minutes": updated.security.auto_lock_minutes,
                 "sync_schedule_enabled": updated.sync.schedule_enabled,
                 "sync_frequency_minutes": updated.sync.frequency_minutes,
+                "backup_schedule_enabled": updated.backup.schedule_enabled,
+                "backup_frequency_minutes": updated.backup.frequency_minutes,
+                "backup_retention_count": updated.backup.retention_count,
+                "backup_directory_configured": bool(updated.backup.directory),
+                "scheduled_backup_passphrase_configured": (
+                    updated.backup.scheduled_passphrase_configured
+                ),
                 **prune_result,
             },
         )
         return updated
+
+    @app.put(
+        "/settings/backup-passphrase",
+        response_model=BackupPassphraseStatusResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def put_backup_passphrase(
+        request: BackupPassphraseRequest,
+        http_request: Request,
+    ) -> BackupPassphraseStatusResponse:
+        """Store unattended backup passphrase in the encrypted secrets store.
+
+        REQ: ACC-BKP-005
+        """
+        try:
+            secret_store = store_from_env()
+            secret_store.set_secret(_SCHEDULED_BACKUP_PASSPHRASE_KEY, request.passphrase)
+        except SecretStoreError as exc:
+            raise HTTPException(status_code=500, detail="Secrets store is not configured") from exc
+        http_request.app.state.scheduler.reload()
+        _log_event(logging.INFO, "backup_passphrase_updated", {"configured": True})
+        return BackupPassphraseStatusResponse(scheduled_passphrase_configured=True)
+
+    @app.delete(
+        "/settings/backup-passphrase",
+        response_model=BackupPassphraseStatusResponse,
+        dependencies=[Depends(require_api_key)],
+    )
+    async def delete_backup_passphrase(http_request: Request) -> BackupPassphraseStatusResponse:
+        """Delete unattended scheduled backup passphrase from secure storage.
+
+        REQ: ACC-BKP-005
+        """
+        try:
+            secret_store = store_from_env()
+            secret_store.delete_secret(_SCHEDULED_BACKUP_PASSPHRASE_KEY)
+        except SecretStoreError as exc:
+            raise HTTPException(status_code=500, detail="Secrets store is not configured") from exc
+        http_request.app.state.scheduler.reload()
+        _log_event(logging.INFO, "backup_passphrase_updated", {"configured": False})
+        return BackupPassphraseStatusResponse(scheduled_passphrase_configured=False)
 
 
 async def get_transaction_detail_internal(
@@ -3783,7 +4173,47 @@ def create_app() -> FastAPI:
     REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004, TECH-SEC-ACC-001,
     REQ: TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-NET-001
     """
-    app = FastAPI(title="Godzilla Core API", version="0.1.0")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> Iterator[None]:
+        """Start and stop the local background scheduler with the app lifecycle.
+
+        REQ: ACC-ACCT-006, ACC-BKP-005, TECH-ACCT-006-RUNTIME
+        """
+        app.state.scheduler.start()
+        try:
+            yield
+        finally:
+            app.state.scheduler.stop()
+
+    app = FastAPI(title="Godzilla Core API", version="0.1.0", lifespan=lifespan)
+    app.state.job_coordinator = JobCoordinator()
+
+    def load_scheduler_plan() -> SchedulerPlan:
+        with _db_connection() as conn:
+            settings = _load_settings(conn)
+        backup_enabled = bool(
+            settings.backup.schedule_enabled
+            and settings.backup.directory
+            and settings.backup.scheduled_passphrase_configured
+            and settings.backup.scheduler_supported
+        )
+        return SchedulerPlan(
+            sync_enabled=bool(settings.sync.schedule_enabled and settings.sync.scheduler_supported),
+            sync_frequency_minutes=settings.sync.frequency_minutes,
+            backup_enabled=backup_enabled,
+            backup_frequency_minutes=settings.backup.frequency_minutes,
+        )
+
+    app.state.scheduler = LocalSchedulerRuntime(
+        load_plan=load_scheduler_plan,
+        run_sync_job=lambda: app.state.job_coordinator.run_exclusive(
+            "sync", _run_scheduled_sync_job
+        ),
+        run_backup_job=lambda: app.state.job_coordinator.run_exclusive(
+            "backup", _run_scheduled_backup_job
+        ),
+    )
     _register_auth_routes(app)
     _register_plaid_routes(app)
     _register_read_routes(app)

@@ -9,7 +9,7 @@ This document is the canonical MVP architecture source. Use `architecture-compon
 Build a local-only desktop budgeting application that aggregates financial accounts via Plaid, supports offline edits, and provides budgeting, reporting, export, and encrypted backup/restore while maintaining strong security and traceability.
 
 ## Architecture overview
-The MVP is a single-process desktop application with a local data store (SQLite) protected by full-database encryption. The app integrates with Plaid for linking and sync, supports offline edits with conflict detection and a conflict resolution queue, and centralizes security controls (PIN access gate, secrets, crypto, redaction). Optional scheduling is supported when a scheduler is present.
+The MVP is a single-process desktop application with a local data store (SQLite) protected by full-database encryption. The app integrates with Plaid for linking and sync, supports offline edits with conflict detection and a conflict resolution queue, centralizes security controls (PIN access gate, secrets, crypto, redaction), and now includes an in-process local scheduler for recurring sync and backup jobs.
 
 ## Implementation stack (MVP)
 - Shell: Tauri v2 (Rust) with a React UI.
@@ -100,8 +100,9 @@ flowchart LR
 - Structured audit logging with redaction and retention.
 
 ### Scheduler (optional)
-- When present, triggers scheduled sync and backup jobs.
-- Surfaces run outcomes in UI.
+- The local runtime now hosts an in-process scheduler that reloads persisted settings, enforces single-flight execution, and triggers scheduled sync and backup jobs.
+- Scheduled run outcomes are persisted to `scheduled_job_run` and surfaced through settings/UI status summaries.
+- Scheduled backups require all of: scheduler support, a configured output directory, and a scheduled backup passphrase stored in the encrypted secrets store.
 
 ## Data flow: sync and conflict resolution
 ```mermaid
@@ -132,6 +133,7 @@ The conceptual MVP data model consists of:
 - PlaidItem (institution connection)
 - Account (belongs to item; type/subtype; mask; balances; owner names when available)
 - Transaction (provider ids; posted/pending; category; user overrides; flags; splits; provenance)
+- ScheduledJobRun (job type; status; timestamps; summary payload; optional error message)
 - Category (hierarchy; active flag)
 - Budget (month; category; amount)
 - Tag (optional MVP)
@@ -158,7 +160,9 @@ Implementation detail lives in supporting docs:
 
 ## Testing strategy and coverage mapping
 - Unit tests for sync ingestion, conflict detection/queue, budgeting math, and inclusion rules.
+- Integration tests for scheduled sync/backup orchestration, provider-ID-less dedup conflicts, and benchmark dataset generation.
 - Component tests for Plaid sync with cursor, offline edit reconciliation, backup/restore, and encrypted DB behavior.
+- Opt-in Playwright perf tests validate responsiveness and layout requirements against a deterministic benchmark dataset.
 - Security tests for PIN gating, redaction, and secret storage absence in logs.
 
 ## Rollout and migration notes

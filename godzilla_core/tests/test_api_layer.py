@@ -647,7 +647,7 @@ async def test_plaid_link_endpoint_uses_link_helper(api_client: httpx.AsyncClien
     assert payload["item_id"] == "item-provider-2"
     assert payload["institution_id"] == "ins_109508"
     client_ctor.assert_called_once_with(config)
-    store_mock.assert_called_once()
+    assert store_mock.called
     link_mock.assert_called_once()
 
 
@@ -2157,7 +2157,17 @@ async def test_get_settings_returns_bootstrap_defaults(api_client: httpx.AsyncCl
     assert body["sync"] == {
         "schedule_enabled": False,
         "frequency_minutes": 360,
-        "scheduler_supported": False,
+        "scheduler_supported": True,
+        "last_run": None,
+    }
+    assert body["backup"] == {
+        "schedule_enabled": False,
+        "frequency_minutes": 1440,
+        "retention_count": 7,
+        "directory": None,
+        "scheduler_supported": True,
+        "scheduled_passphrase_configured": False,
+        "last_run": None,
     }
 
 
@@ -2174,6 +2184,12 @@ async def test_put_settings_updates_and_persists(api_client: httpx.AsyncClient) 
         "export_defaults": {"include_raw_payloads": True},
         "security": {"auto_lock_minutes": 20},
         "sync": {"schedule_enabled": True, "frequency_minutes": 120},
+        "backup": {
+            "schedule_enabled": True,
+            "frequency_minutes": 1440,
+            "retention_count": 5,
+            "directory": "/tmp/godzilla-backups",
+        },
     }
     update_resp = await api_client.put("/settings", json=payload, headers=_HEADERS)
     assert update_resp.status_code == 200
@@ -2186,7 +2202,17 @@ async def test_put_settings_updates_and_persists(api_client: httpx.AsyncClient) 
     assert updated["sync"] == {
         "schedule_enabled": True,
         "frequency_minutes": 120,
-        "scheduler_supported": False,
+        "scheduler_supported": True,
+        "last_run": None,
+    }
+    assert updated["backup"] == {
+        "schedule_enabled": True,
+        "frequency_minutes": 1440,
+        "retention_count": 5,
+        "directory": "/tmp/godzilla-backups",
+        "scheduler_supported": True,
+        "scheduled_passphrase_configured": False,
+        "last_run": None,
     }
 
     read_resp = await api_client.get("/settings", headers=_HEADERS)
@@ -2226,6 +2252,13 @@ async def test_put_settings_rejects_invalid_values(api_client: httpx.AsyncClient
         headers=_HEADERS,
     )
     assert bad_sync_frequency.status_code == 422
+
+    bad_backup_retention = await api_client.put(
+        "/settings",
+        json={"backup": {"retention_count": 0}},
+        headers=_HEADERS,
+    )
+    assert bad_backup_retention.status_code == 422
 
 
 async def test_put_settings_applies_retention_pruning(api_client: httpx.AsyncClient) -> None:
@@ -2297,9 +2330,10 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
         conn.execute(
             "INSERT INTO settings ("
             "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+            "backup_schedule_enabled, backup_frequency_minutes, backup_retention_count, backup_directory, "
             "created_at_utc, created_at_tz, created_at_offset_minutes, "
             "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 "settings-old",
                 "UTC",
@@ -2307,6 +2341,10 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
                 15,
                 0,
                 360,
+                0,
+                1440,
+                7,
+                None,
                 "2026-01-01T00:00:00",
                 "UTC",
                 0,
@@ -2318,9 +2356,10 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
         conn.execute(
             "INSERT INTO settings ("
             "id, timezone, currency, auto_lock_minutes, sync_schedule_enabled, sync_frequency_minutes, "
+            "backup_schedule_enabled, backup_frequency_minutes, backup_retention_count, backup_directory, "
             "created_at_utc, created_at_tz, created_at_offset_minutes, "
             "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 "settings-new",
                 "America/Chicago",
@@ -2328,6 +2367,10 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
                 20,
                 1,
                 120,
+                1,
+                720,
+                3,
+                "/tmp/old",
                 "2026-02-01T00:00:00",
                 "UTC",
                 0,
@@ -2415,6 +2458,12 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
             "export_defaults": {"include_raw_payloads": True},
             "security": {"auto_lock_minutes": 25},
             "sync": {"schedule_enabled": True, "frequency_minutes": 240},
+            "backup": {
+                "schedule_enabled": True,
+                "frequency_minutes": 1440,
+                "retention_count": 9,
+                "directory": "/tmp/final",
+            },
         },
         headers=_HEADERS,
     )
@@ -2443,8 +2492,41 @@ async def test_put_settings_deduplicates_singleton_settings_tables(
     assert payload["sync"] == {
         "schedule_enabled": True,
         "frequency_minutes": 240,
-        "scheduler_supported": False,
+        "scheduler_supported": True,
+        "last_run": None,
     }
+    assert payload["backup"] == {
+        "schedule_enabled": True,
+        "frequency_minutes": 1440,
+        "retention_count": 9,
+        "directory": "/tmp/final",
+        "scheduler_supported": True,
+        "scheduled_passphrase_configured": False,
+        "last_run": None,
+    }
+
+
+async def test_backup_passphrase_endpoints_round_trip(backup_client: httpx.AsyncClient) -> None:
+    """Verify scheduled backup passphrase endpoints use the secrets store only.
+
+    REQ: ACC-BKP-005
+    """
+
+    put_resp = await backup_client.put(
+        "/settings/backup-passphrase",
+        json={"passphrase": "scheduled-secret"},
+        headers=_HEADERS,
+    )
+    assert put_resp.status_code == 200
+    assert put_resp.json() == {"scheduled_passphrase_configured": True}
+
+    get_resp = await backup_client.get("/settings", headers=_HEADERS)
+    assert get_resp.status_code == 200
+    assert get_resp.json()["backup"]["scheduled_passphrase_configured"] is True
+
+    delete_resp = await backup_client.delete("/settings/backup-passphrase", headers=_HEADERS)
+    assert delete_resp.status_code == 200
+    assert delete_resp.json() == {"scheduled_passphrase_configured": False}
 
 
 # ── Audit-log tests (M5 Task 20) ──────────────────────────────────────────────

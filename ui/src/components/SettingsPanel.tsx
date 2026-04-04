@@ -2,7 +2,7 @@
  * SettingsPanel: view/update persisted application settings.
  *
  * REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
- * REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
+ * REQ: ACC-ACCT-006, ACC-BKP-005, TECH-ACCT-006-CONFIG
  */
 
 import { type FormEvent, useEffect, useState } from "react";
@@ -25,6 +25,13 @@ interface SettingsFormState {
   syncScheduleEnabled: boolean;
   syncFrequencyMinutes: string;
   schedulerSupported: boolean;
+  syncLastRunSummary: string;
+  backupScheduleEnabled: boolean;
+  backupFrequencyMinutes: string;
+  backupRetentionCount: string;
+  backupDirectory: string;
+  backupPassphraseConfigured: boolean;
+  backupLastRunSummary: string;
 }
 
 const DEFAULT_FORM: SettingsFormState = {
@@ -37,7 +44,38 @@ const DEFAULT_FORM: SettingsFormState = {
   syncScheduleEnabled: false,
   syncFrequencyMinutes: "360",
   schedulerSupported: false,
+  syncLastRunSummary: "No scheduled sync has run yet.",
+  backupScheduleEnabled: false,
+  backupFrequencyMinutes: "1440",
+  backupRetentionCount: "7",
+  backupDirectory: "",
+  backupPassphraseConfigured: false,
+  backupLastRunSummary: "No scheduled backup has run yet.",
 };
+
+function summarizeRun(
+  value:
+    | {
+        status: string;
+        finished_at_utc: string;
+        summary: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+): string {
+  if (!value) {
+    return "No scheduled run has completed yet.";
+  }
+  const itemTotal = value.summary.items_total;
+  const prunedFiles = value.summary.pruned_files;
+  if (typeof itemTotal === "number") {
+    return `${value.status} at ${value.finished_at_utc} (${itemTotal} item(s))`;
+  }
+  if (typeof prunedFiles === "number") {
+    return `${value.status} at ${value.finished_at_utc} (${prunedFiles} file(s) pruned)`;
+  }
+  return `${value.status} at ${value.finished_at_utc}`;
+}
 
 function fromSettings(settings: SettingsResponse): SettingsFormState {
   return {
@@ -50,15 +88,24 @@ function fromSettings(settings: SettingsResponse): SettingsFormState {
     syncScheduleEnabled: settings.sync.schedule_enabled,
     syncFrequencyMinutes: String(settings.sync.frequency_minutes),
     schedulerSupported: settings.sync.scheduler_supported,
+    syncLastRunSummary: summarizeRun(settings.sync.last_run),
+    backupScheduleEnabled: settings.backup.schedule_enabled,
+    backupFrequencyMinutes: String(settings.backup.frequency_minutes),
+    backupRetentionCount: String(settings.backup.retention_count),
+    backupDirectory: settings.backup.directory ?? "",
+    backupPassphraseConfigured: settings.backup.scheduled_passphrase_configured,
+    backupLastRunSummary: summarizeRun(settings.backup.last_run),
   };
 }
 
 export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
   const [form, setForm] = useState<SettingsFormState>(DEFAULT_FORM);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [backupPassphrase, setBackupPassphrase] = useState("");
 
   const [loadResult, executeLoad] = useApiCall<SettingsResponse>();
   const [saveResult, executeSave] = useApiCall<SettingsResponse>();
+  const [passphraseResult, executePassphraseAction] = useApiCall<string>();
 
   useEffect(() => {
     void executeLoad(() => GodzillaApi.getSettings(token));
@@ -78,7 +125,17 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
     const retainLogsDays = Number.parseInt(form.retainLogsDays, 10);
     const autoLockMinutes = Number.parseInt(form.autoLockMinutes, 10);
     const syncFrequencyMinutes = Number.parseInt(form.syncFrequencyMinutes, 10);
-    if (![retainLogsDays, autoLockMinutes, syncFrequencyMinutes].every(Number.isFinite)) {
+    const backupFrequencyMinutes = Number.parseInt(form.backupFrequencyMinutes, 10);
+    const backupRetentionCount = Number.parseInt(form.backupRetentionCount, 10);
+    if (
+      ![
+        retainLogsDays,
+        autoLockMinutes,
+        syncFrequencyMinutes,
+        backupFrequencyMinutes,
+        backupRetentionCount,
+      ].every(Number.isFinite)
+    ) {
       setLocalError("Settings values must use valid numbers.");
       return;
     }
@@ -101,10 +158,34 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
           schedule_enabled: form.syncScheduleEnabled,
           frequency_minutes: syncFrequencyMinutes,
         },
+        backup: {
+          schedule_enabled: form.backupScheduleEnabled,
+          frequency_minutes: backupFrequencyMinutes,
+          retention_count: backupRetentionCount,
+          directory: form.backupDirectory.trim() || null,
+        },
       });
       setForm(fromSettings(updated));
       onSaved();
       return updated;
+    });
+  };
+
+  const handleSaveBackupPassphrase = () => {
+    void executePassphraseAction(async () => {
+      await GodzillaApi.setScheduledBackupPassphrase(token, backupPassphrase);
+      setBackupPassphrase("");
+      setForm((current) => ({ ...current, backupPassphraseConfigured: true }));
+      return "Scheduled backup passphrase saved.";
+    });
+  };
+
+  const handleClearBackupPassphrase = () => {
+    void executePassphraseAction(async () => {
+      await GodzillaApi.clearScheduledBackupPassphrase(token);
+      setBackupPassphrase("");
+      setForm((current) => ({ ...current, backupPassphraseConfigured: false }));
+      return "Scheduled backup passphrase cleared.";
     });
   };
 
@@ -114,7 +195,7 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
         <h2>Settings</h2>
       </div>
       <p className="muted" data-testid="settings-help-text">
-        Auto-lock and sync schedule values persist now; runtime enforcement is planned for M6.
+        Scheduler-backed sync and backup settings persist and now drive the local runtime.
       </p>
 
       <form className="m5-grid" onSubmit={handleSubmit}>
@@ -177,8 +258,54 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
             data-testid="settings-sync-frequency-input"
           />
         </label>
+        <label>
+          Backup frequency (minutes)
+          <input
+            type="number"
+            min={5}
+            max={10080}
+            value={form.backupFrequencyMinutes}
+            onChange={(event) => {
+              setForm((prev) => ({ ...prev, backupFrequencyMinutes: event.target.value }));
+            }}
+            data-testid="settings-backup-frequency-input"
+          />
+        </label>
+        <label>
+          Backup retention count
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={form.backupRetentionCount}
+            onChange={(event) => {
+              setForm((prev) => ({ ...prev, backupRetentionCount: event.target.value }));
+            }}
+            data-testid="settings-backup-retention-input"
+          />
+        </label>
+        <label>
+          Backup directory
+          <input
+            type="text"
+            value={form.backupDirectory}
+            onChange={(event) => {
+              setForm((prev) => ({ ...prev, backupDirectory: event.target.value }));
+            }}
+            data-testid="settings-backup-directory-input"
+          />
+        </label>
         <label className="m5-static-label" data-testid="settings-scheduler-supported">
           Scheduler support: {form.schedulerSupported ? "enabled" : "disabled"}
+        </label>
+        <label className="m5-static-label" data-testid="settings-sync-last-run">
+          Scheduled sync: {form.syncLastRunSummary}
+        </label>
+        <label className="m5-static-label" data-testid="settings-backup-passphrase-status">
+          Scheduled backup passphrase: {form.backupPassphraseConfigured ? "configured" : "missing"}
+        </label>
+        <label className="m5-static-label" data-testid="settings-backup-last-run">
+          Scheduled backup: {form.backupLastRunSummary}
         </label>
 
         <label className="m5-inline-toggle">
@@ -217,6 +344,18 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
           Sync schedule enabled
         </label>
 
+        <label className="m5-inline-toggle">
+          <input
+            type="checkbox"
+            checked={form.backupScheduleEnabled}
+            onChange={(event) => {
+              setForm((prev) => ({ ...prev, backupScheduleEnabled: event.target.checked }));
+            }}
+            data-testid="settings-backup-schedule-toggle"
+          />
+          Backup schedule enabled
+        </label>
+
         <button
           type="submit"
           className="btn btn-primary btn-sm"
@@ -227,6 +366,41 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
         </button>
       </form>
 
+      <div className="m5-section">
+        <h3>Scheduled Backup Passphrase</h3>
+        <div className="m5-grid">
+          <label>
+            Passphrase
+            <input
+              type="password"
+              value={backupPassphrase}
+              onChange={(event) => setBackupPassphrase(event.target.value)}
+              data-testid="settings-backup-passphrase-input"
+            />
+          </label>
+        </div>
+        <div className="panel-actions">
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={!backupPassphrase || passphraseResult.status === "loading"}
+            onClick={handleSaveBackupPassphrase}
+            data-testid="settings-backup-passphrase-save-btn"
+          >
+            Save Scheduled Backup Passphrase
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={!form.backupPassphraseConfigured || passphraseResult.status === "loading"}
+            onClick={handleClearBackupPassphrase}
+            data-testid="settings-backup-passphrase-clear-btn"
+          >
+            Clear Scheduled Backup Passphrase
+          </button>
+        </div>
+      </div>
+
       {loadResult.status === "loading" && <p className="muted">Loading settings…</p>}
       {loadResult.status === "error" && (
         <p className="error-text">Failed to load settings: {loadResult.message}</p>
@@ -235,8 +409,12 @@ export function SettingsPanel({ token, refreshKey, onSaved }: Props) {
       {saveResult.status === "error" && (
         <p className="error-text">Failed to save settings: {saveResult.message}</p>
       )}
-      {saveResult.status === "success" && (
-        <p className="alert alert-success">Settings saved.</p>
+      {saveResult.status === "success" && <p className="alert alert-success">Settings saved.</p>}
+      {passphraseResult.status === "error" && (
+        <p className="error-text">Passphrase update failed: {passphraseResult.message}</p>
+      )}
+      {passphraseResult.status === "success" && (
+        <p className="alert alert-success">{passphraseResult.data}</p>
       )}
     </section>
   );

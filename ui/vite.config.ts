@@ -5,6 +5,7 @@
  */
 
 /// <reference types="vitest" />
+import { configDefaults } from "vitest/config";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -26,6 +27,7 @@ export default defineConfig(async () => ({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: false,
+    exclude: [...configDefaults.exclude, "perf/**"],
   },
   plugins: [react()],
 

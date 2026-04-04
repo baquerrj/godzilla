@@ -78,6 +78,7 @@ erDiagram
 - `id` (uuid, pk)
 - `account_id` (uuid, fk account.id, not null)
 - `provider_transaction_id` (text, nullable) // may be null
+- `provider_fingerprint` (text, nullable) // deterministic fallback collision fingerprint when provider ID is absent
 - `date` (date, not null)
 - `amount` (decimal, not null)
 - `currency` (text, not null)
@@ -194,6 +195,13 @@ Single-row table (single-user scope).
 - `id` (uuid, pk)
 - `timezone` (text, not null)
 - `currency` (text, not null)
+- `auto_lock_minutes` (int, not null default 15)
+- `sync_schedule_enabled` (bool, not null default false)
+- `sync_frequency_minutes` (int, not null default 360)
+- `backup_schedule_enabled` (bool, not null default false)
+- `backup_frequency_minutes` (int, not null default 1440)
+- `backup_retention_count` (int, not null default 7)
+- `backup_directory` (text, nullable)
 - `created_at_utc` (timestamp, not null)
 - `created_at_tz` (text, not null)
 - `created_at_offset_minutes` (int, not null)
@@ -223,6 +231,19 @@ Single-row table.
 - `updated_at_utc` (timestamp, not null)
 - `updated_at_tz` (text, not null)
 - `updated_at_offset_minutes` (int, not null)
+
+### scheduled_job_run
+- `job_run_id` (uuid, pk)
+- `job_type` (text enum, not null) // sync, backup
+- `status` (text enum, not null) // success, partial, failed
+- `started_at_utc` (timestamp, not null)
+- `started_at_tz` (text, not null)
+- `started_at_offset_minutes` (int, not null)
+- `finished_at_utc` (timestamp, not null)
+- `finished_at_tz` (text, not null)
+- `finished_at_offset_minutes` (int, not null)
+- `summary_json` (json, not null)
+- `error_message` (text, nullable)
 
 ### pin_config
 Single-row table.

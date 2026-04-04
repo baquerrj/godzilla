@@ -1,12 +1,13 @@
 /**
  * Accounts table: lists all linked accounts with current balance.
  *
- * REQ: ACC-ACCT-003
+ * REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-UI
  */
 
 import { useEffect } from "react";
 import { GodzillaApi, useApiCall } from "../api/client";
 import type { Account } from "../api/types";
+import { formatOwnerNames } from "./accountOwnerNames";
 
 interface Props {
   token: string;
@@ -16,7 +17,7 @@ interface Props {
 export function AccountsTable({ token, refreshKey }: Props) {
   const [result, execute] = useApiCall<Account[]>();
 
-  // REQ: ACC-ACCT-003 — fetch accounts on mount and refresh
+  // REQ: ACC-ACCT-003, ACC-ACCT-009 — fetch accounts on mount and refresh
   useEffect(() => {
     execute(() => GodzillaApi.getAccounts(token));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,7 +54,14 @@ export function AccountsTable({ token, refreshKey }: Props) {
           <tbody>
             {result.data.map((acct) => (
               <tr key={acct.account_id}>
-                <td>{acct.name}</td>
+                <td>
+                  <div>{acct.name}</div>
+                  {formatOwnerNames(acct.owner_names) && (
+                    <div className="muted" data-testid={`account-owners-${acct.account_id}`}>
+                      {formatOwnerNames(acct.owner_names)}
+                    </div>
+                  )}
+                </td>
                 <td>{acct.account_type}</td>
                 <td>{acct.subtype ?? "—"}</td>
                 <td>{acct.mask ? `••••${acct.mask}` : "—"}</td>

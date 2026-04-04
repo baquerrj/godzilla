@@ -41,7 +41,7 @@ class MigrationRunnerTests(unittest.TestCase):
         REQ: TECH-SEC-CRY-001, TECH-SYS-004
         """
         version = run_migrations(db_path=self.db_path, db_key=self.db_key)
-        self.assertEqual(version, 4)
+        self.assertEqual(version, 5)
 
         conn = sqlcipher.connect(self.db_path)
         conn.execute("PRAGMA key = 'test-key';")
@@ -61,6 +61,7 @@ class MigrationRunnerTests(unittest.TestCase):
             "balance_snapshot",
             "sync_state",
             "audit_log",
+            "scheduled_job_run",
         ):
             self.assertIn(expected, tables)
 
@@ -68,6 +69,12 @@ class MigrationRunnerTests(unittest.TestCase):
         self.assertIn("auto_lock_minutes", columns)
         self.assertIn("sync_schedule_enabled", columns)
         self.assertIn("sync_frequency_minutes", columns)
+        self.assertIn("backup_schedule_enabled", columns)
+        self.assertIn("backup_frequency_minutes", columns)
+        self.assertIn("backup_retention_count", columns)
+        self.assertIn("backup_directory", columns)
+        transaction_columns = {r[1] for r in conn.execute("PRAGMA table_info(transaction_record)")}
+        self.assertIn("provider_fingerprint", transaction_columns)
         plaid_item_columns = {
             r[1] for r in conn.execute("PRAGMA table_info(plaid_item)").fetchall()
         }

@@ -356,7 +356,70 @@ def _fallback_transaction_id(account_id: str, payload: Dict[str, Any]) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
-def _apply_transaction(  # noqa: PLR0912
+def _provider_fingerprint(payload: Dict[str, Any]) -> str:
+    """Build a stable fingerprint for provider-ID-less transaction payloads.
+
+    REQ: ACC-TXN-009, TECH-TXN-009-CONFLICT
+    """
+    key = {
+        "pending": bool(payload.get("pending")),
+        "merchant_name": payload.get("merchant_name"),
+        "original_description": payload.get("original_description"),
+        "authorized_date": payload.get("authorized_date"),
+        "payment_channel": payload.get("payment_channel"),
+    }
+    return hashlib.sha256(json.dumps(key, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _queue_dedup_identity_conflict(
+    conn: sqlcipher.Connection,
+    transaction_id: str,
+    *,
+    local_value: str,
+    provider_value: str,
+) -> None:
+    """Record a provider-ID-less dedup identity conflict for manual review.
+
+    REQ: ACC-TXN-009, TECH-TXN-009-CONFLICT, TECH-SEC-DATA-007
+    """
+    existing = conn.execute(
+        "SELECT conflict_id FROM conflict "
+        "WHERE entity_id = ? AND field_name = 'dedup_identity' AND status = 'open'",
+        (transaction_id,),
+    ).fetchone()
+    if existing:
+        return
+    created_meta = _timestamp_meta("provider_updated_at")
+    current_row = conn.execute(
+        "SELECT updated_at_utc, updated_at_tz, updated_at_offset_minutes "
+        "FROM transaction_record WHERE id = ?",
+        (transaction_id,),
+    ).fetchone()
+    if current_row is None:
+        return
+    conn.execute(
+        "INSERT INTO conflict ("
+        "conflict_id, entity_type, entity_id, field_name, local_value, provider_value, "
+        "local_updated_at_utc, local_updated_at_tz, local_updated_at_offset_minutes, "
+        "provider_updated_at_utc, provider_updated_at_tz, provider_updated_at_offset_minutes, "
+        "status"
+        ") VALUES (?, 'transaction', ?, 'dedup_identity', ?, ?, ?, ?, ?, ?, ?, ?, 'open')",
+        (
+            str(uuid4()),
+            transaction_id,
+            local_value,
+            provider_value,
+            current_row[0],
+            current_row[1],
+            current_row[2],
+            created_meta["provider_updated_at_utc"],
+            created_meta["provider_updated_at_tz"],
+            created_meta["provider_updated_at_offset_minutes"],
+        ),
+    )
+
+
+def _apply_transaction(  # noqa: PLR0912, PLR0915
     conn: sqlcipher.Connection,
     account_id: str,
     payload: Dict[str, Any],
@@ -504,18 +567,38 @@ def _apply_transaction(  # noqa: PLR0912
         return
 
     record_id = _fallback_transaction_id(account_id, payload)
+    provider_fingerprint = _provider_fingerprint(payload)
+    existing_row = conn.execute(
+        "SELECT provider_fingerprint FROM transaction_record WHERE id = ?",
+        (record_id,),
+    ).fetchone()
+    if existing_row is not None:
+        existing_fingerprint = str(existing_row[0] or "")
+        if existing_fingerprint and existing_fingerprint != provider_fingerprint:
+            _queue_dedup_identity_conflict(
+                conn,
+                record_id,
+                local_value=existing_fingerprint,
+                provider_value=provider_fingerprint,
+            )
+            if retention_enabled:
+                _insert_raw_payload(conn, record_id, payload)
+            return
     conn.execute(
         "INSERT INTO transaction_record ("
         "id, account_id, provider_transaction_id, date, amount, currency, status, "
         "merchant_name, display_name, category_id, is_transfer, is_excluded, notes, "
+        "provider_fingerprint, "
         "created_at_utc, created_at_tz, created_at_offset_minutes, "
         "updated_at_utc, updated_at_tz, updated_at_offset_minutes"
-        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(id) DO UPDATE SET "
         "account_id = excluded.account_id, date = excluded.date, amount = excluded.amount, "
         "currency = excluded.currency, status = excluded.status, "
         "merchant_name = excluded.merchant_name, "
-        "display_name = excluded.display_name, updated_at_utc = excluded.updated_at_utc, "
+        "display_name = excluded.display_name, "
+        "provider_fingerprint = excluded.provider_fingerprint, "
+        "updated_at_utc = excluded.updated_at_utc, "
         "updated_at_tz = excluded.updated_at_tz, "
         "updated_at_offset_minutes = excluded.updated_at_offset_minutes",
         (
@@ -532,6 +615,7 @@ def _apply_transaction(  # noqa: PLR0912
             0,
             0,
             None,
+            provider_fingerprint,
             meta_created["created_at_utc"],
             meta_created["created_at_tz"],
             meta_created["created_at_offset_minutes"],

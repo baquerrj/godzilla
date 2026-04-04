@@ -223,25 +223,28 @@
   requirement_type: acceptance
   parent_requirement_id: ACC-ACCT-004
   code_refs:
+  - godzilla_core/scheduler/runtime.py:LocalSchedulerRuntime
+  - godzilla_core/api/app.py:create_app
   - godzilla_core/api/app.py:SyncSettingsResponse
   - godzilla_core/api/app.py:_default_settings_payload
   - godzilla_core/api/app.py:_load_settings
+  - godzilla_core/api/app.py:_run_scheduled_sync_job
   - ui/src/components/SettingsPanel.tsx:SettingsPanel
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
-  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_func_acct_006_scheduled_refresh_trace_stub'
+  - godzilla_core/tests/test_scheduled_jobs.py:ScheduledJobTests.test_run_scheduled_sync_job_records_partial_status
+  - godzilla_core/tests/test_scheduler_runtime.py:LocalSchedulerRuntimeTests.test_sync_plan_state_recomputes_next_due_times
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: optional_deployment
-  verification_method: manual
-  verification_notes: Current implementation exposes scheduler-related sync settings and scheduler_supported=false state,
-    but not an active scheduler runtime.
-  gap_notes: Scheduler runtime is not enabled in the current deployment shape, so only configuration and manual methodology
-    are traceable today.
+  implementation_status: implemented
+  verification_method: integration
+  verification_notes: Scheduled sync now uses the in-process scheduler runtime, persists last-run summaries, and is covered by scheduler runtime, scheduled job, API, and settings UI tests.
+  gap_notes: null
 - requirement_id: ACC-ACCT-007
   title: Error handling and messaging
   requirement_type: acceptance
@@ -293,20 +296,21 @@
   code_refs:
   - godzilla_core/integrations/plaid_sync.py:_upsert_account
   - godzilla_core/api/app.py:get_accounts
+  - ui/src/components/AccountsTable.tsx:AccountsTable
+  - ui/src/components/accountOwnerNames.ts:formatOwnerNames
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
-  - 'xfail: godzilla_core/tests/test_requirement_traceability.py:test_func_acct_009_owner_display_trace_stub'
+  - 'ui/src/test/AccountsTable.test.tsx:renders account rows and owner names'
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: partial
+  implementation_status: implemented
   verification_method: component
-  verification_notes: Owner names are ingested and returned by the accounts API; a tracked xfail stub records the missing
-    Accounts UI rendering.
-  gap_notes: Account owner names are persisted and exposed by the API, but the Accounts UI does not currently render them.
+  verification_notes: Owner names are ingested, exposed by the accounts API, and rendered as secondary account metadata in the Accounts UI.
+  gap_notes: null
 - requirement_id: ACC-SYNC-001
   title: Incremental transaction sync
   requirement_type: acceptance
@@ -644,22 +648,22 @@
   parent_requirement_id: ACC-SYNC-002
   code_refs:
   - godzilla_core/integrations/plaid_sync.py:_fallback_transaction_id
+  - godzilla_core/integrations/plaid_sync.py:_provider_fingerprint
+  - godzilla_core/integrations/plaid_sync.py:_queue_dedup_identity_conflict
   - godzilla_core/integrations/plaid_sync.py:_apply_transaction
   test_refs:
   - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_fallback_transaction_id_is_deterministic
-  - 'xfail: godzilla_core/tests/test_requirement_traceability.py:test_func_txn_009_conflict_review_trace_stub'
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_fallback_collision_creates_conflict
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: partial
+  implementation_status: implemented
   verification_method: integration
-  verification_notes: Backend sync ingestion tests cover deterministic fallback ID behavior, while a tracked xfail stub
-    records the missing conflict-for-review evidence.
-  gap_notes: Deterministic fallback deduplication exists, but duplicates without provider IDs are not evidenced as being flagged
-    for review conflicts.
+  verification_notes: Sync ingestion tests now cover both deterministic fallback identity generation and dedup_identity conflict creation for provider-ID-less collisions.
+  gap_notes: null
 - requirement_id: ACC-CAT-001
   title: Category hierarchy
   requirement_type: acceptance
@@ -1185,20 +1189,23 @@
   code_refs:
   - godzilla_core/security/backup.py:create_backup_blob
   - godzilla_core/api/app.py:create_backup
+  - godzilla_core/api/app.py:_run_scheduled_backup_job
+  - godzilla_core/api/app.py:BackupSettingsResponse
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
   test_refs:
-  - godzilla_core/tests/test_requirement_traceability.py:test_func_bkp_005_backup_scheduling_trace_stub
+  - godzilla_core/tests/test_scheduled_jobs.py:ScheduledJobTests.test_run_scheduled_backup_job_writes_and_prunes_files
+  - godzilla_core/tests/test_api_layer.py:test_backup_passphrase_endpoints_round_trip
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: optional_deployment
-  verification_method: manual
-  verification_notes: Backup creation exists, but scheduled execution and retention-count orchestration are not implemented
-    in the current deployment.
-  gap_notes: Scheduled backup orchestration and retention-count enforcement are not implemented in the current deployment
-    shape.
+  implementation_status: implemented
+  verification_method: integration
+  verification_notes: Scheduled backup now runs in-process, writes encrypted .gzbk files, prunes old backups by configured count, and stores the unattended passphrase only in the secrets store.
+  gap_notes: null
 - requirement_id: ACC-BKP-006
   title: Database re-initialization
   requirement_type: acceptance
@@ -1443,18 +1450,22 @@
   - ui/src/components/BudgetPanel.tsx:BudgetPanel
   - ui/src/components/ReportsPanel.tsx:ReportsPanel
   - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  - godzilla_core/fixtures/benchmark_dataset.py:seed_reference_dataset
+  - ui/perf/requirements.perf.spec.ts
   test_refs:
-  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_001_primary_view_responsiveness_trace_stub'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-001 primary views render within target budget'
+  - godzilla_core/tests/test_benchmark_dataset.py:BenchmarkDatasetTests.test_seed_reference_dataset_creates_expected_counts
   doc_refs:
   - docs/vision.md
   - docs/design/architecture-overview.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: not_implemented
-  verification_method: manual
-  verification_notes: Verified initially through manual benchmarking of authenticated primary view loads on a local desktop runtime with a reference dataset of about 10 linked accounts and 15,000 transactions on a modern 4-core CPU, SSD, and 16 GB RAM.
-  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so primary view responsiveness remains a tracked manual verification gap.
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Verified through the seeded benchmark dataset and the opt-in Playwright perf harness that measures authenticated primary view transitions.
+  gap_notes: null
 - requirement_id: ACC-UX-002
   title: Filter and search responsiveness
   requirement_type: acceptance
@@ -1463,18 +1474,22 @@
   - ui/src/App.tsx:App
   - ui/src/components/TransactionFilters.tsx:TransactionFilters
   - ui/src/components/TransactionsTable.tsx:TransactionsTable
+  - godzilla_core/fixtures/benchmark_dataset.py:seed_reference_dataset
+  - ui/perf/requirements.perf.spec.ts
   test_refs:
-  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_002_filter_and_search_responsiveness_trace_stub'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-002 transaction filtering responds within target budget'
+  - godzilla_core/tests/test_benchmark_dataset.py:BenchmarkDatasetTests.test_seed_reference_dataset_creates_expected_counts
   doc_refs:
   - docs/vision.md
   - docs/design/architecture-overview.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: not_implemented
-  verification_method: manual
-  verification_notes: Verified initially through manual benchmarking of common transaction filter, search, and sort interactions on the reference MVP dataset in the local desktop runtime.
-  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so filter and search responsiveness remains a tracked manual verification gap.
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Verified through the seeded benchmark dataset and the Playwright perf harness covering transaction filter latency on representative data volume.
+  gap_notes: null
 - requirement_id: ACC-UX-003
   title: Dashboard and view-switch responsiveness
   requirement_type: acceptance
@@ -1484,18 +1499,22 @@
   - ui/src/components/ReportsPanel.tsx:ReportsPanel
   - ui/src/components/BudgetPanel.tsx:BudgetPanel
   - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
+  - godzilla_core/fixtures/benchmark_dataset.py:seed_reference_dataset
+  - ui/perf/requirements.perf.spec.ts
   test_refs:
-  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_003_dashboard_switch_responsiveness_trace_stub'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-003 report and dashboard switches stay responsive'
+  - godzilla_core/tests/test_benchmark_dataset.py:BenchmarkDatasetTests.test_seed_reference_dataset_creates_expected_counts
   doc_refs:
   - docs/vision.md
   - docs/design/architecture-overview.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: not_implemented
-  verification_method: manual
-  verification_notes: Verified initially through manual benchmarking of dashboard and report switches in the local desktop runtime, separating cached view switches from switches that require a fresh local query.
-  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so dashboard and view-switch responsiveness remains a tracked manual verification gap.
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Verified through the seeded benchmark dataset and the Playwright perf harness that measures cross-tab dashboard and report transitions.
+  gap_notes: null
 - requirement_id: ACC-UX-004
   title: Resizable layout integrity
   requirement_type: acceptance
@@ -1506,18 +1525,22 @@
   - ui/src/components/TransactionFilters.tsx:TransactionFilters
   - ui/src/components/TransactionsTable.tsx:TransactionsTable
   - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  - ui/perf/requirements.perf.spec.ts
   test_refs:
-  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_004_resizable_layout_integrity_trace_stub'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-004 layout integrity at 1024x700'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-004 layout integrity at 1280x800'
+  - 'ui/perf/requirements.perf.spec.ts:ACC-UX-004 layout integrity at 1440x900'
   doc_refs:
   - docs/vision.md
   - docs/design/architecture-overview.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/performance-benchmarking.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
   - docs/requirements/requirements.md
-  implementation_status: not_implemented
-  verification_method: manual
-  verification_notes: Verified initially through manual desktop resizing checks at and above 1024x700 across navigation, tables, filters, and dashboards in the local desktop runtime.
-  gap_notes: No automated desktop layout integrity checks exist yet for the supported minimum window size, so resize integrity remains a tracked manual verification gap.
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Verified through the Playwright layout harness across the supported desktop viewport sizes.
+  gap_notes: null
 - requirement_id: TECH-SEC-CRY-001
   title: Encryption at rest
   requirement_type: technical
@@ -1949,18 +1972,21 @@
   requirement_type: technical
   parent_requirement_id: ACC-ACCT-006
   code_refs:
+  - godzilla_core/scheduler/runtime.py:LocalSchedulerRuntime
+  - godzilla_core/api/app.py:_run_scheduled_sync_job
   - godzilla_core/api/app.py:SyncSettingsResponse
   - ui/src/components/SettingsPanel.tsx:SettingsPanel
   test_refs:
-  - godzilla_core/tests/test_requirement_traceability.py:test_func_acct_006_scheduled_refresh_trace_stub
+  - godzilla_core/tests/test_scheduled_jobs.py:ScheduledJobTests.test_run_scheduled_sync_job_records_partial_status
+  - godzilla_core/tests/test_scheduler_runtime.py:LocalSchedulerRuntimeTests.test_sync_plan_state_recomputes_next_due_times
   doc_refs:
   - docs/requirements/requirements.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
-  implementation_status: optional_deployment
-  verification_method: manual
-  verification_notes: Tracked by a skip stub because scheduler runtime is not enabled in the current deployment shape.
-  gap_notes: Scheduler execution and surfaced last-run results are deployment-dependent and not implemented in the current
-    repo runtime.
+  - docs/test-strategy/performance-benchmarking.md
+  implementation_status: implemented
+  verification_method: integration
+  verification_notes: Verified through scheduler runtime state tests and scheduled sync job aggregation tests that persist last-run summaries.
+  gap_notes: null
 - requirement_id: TECH-ACCT-009-INGEST
   title: Account owner ingestion from provider identity data
   requirement_type: technical
@@ -1997,15 +2023,16 @@
   parent_requirement_id: ACC-ACCT-009
   code_refs:
   - ui/src/components/AccountsTable.tsx:AccountsTable
+  - ui/src/components/accountOwnerNames.ts:formatOwnerNames
   test_refs:
-  - godzilla_core/tests/test_requirement_traceability.py:test_func_acct_009_owner_display_trace_stub
+  - 'ui/src/test/AccountsTable.test.tsx:renders account rows and owner names'
   doc_refs:
   - docs/requirements/requirements.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
-  implementation_status: partial
+  implementation_status: implemented
   verification_method: component
-  verification_notes: Tracked by an xfail stub because owner names are not yet rendered in the account UI.
-  gap_notes: Accounts UI rendering for owner names is not implemented.
+  verification_notes: Verified through the Accounts table component test that renders owner names as secondary account metadata.
+  gap_notes: null
 - requirement_id: TECH-TXN-009-FALLBACK
   title: Fallback transaction identity generation
   requirement_type: technical
@@ -2030,16 +2057,16 @@
   parent_requirement_id: ACC-TXN-009
   code_refs:
   - godzilla_core/integrations/plaid_sync.py:_apply_transaction
-  - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
+  - godzilla_core/integrations/plaid_sync.py:_queue_dedup_identity_conflict
   test_refs:
-  - godzilla_core/tests/test_requirement_traceability.py:test_func_txn_009_conflict_review_trace_stub
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_fallback_collision_creates_conflict
   doc_refs:
   - docs/requirements/requirements.md
   - docs/test-strategy/requirements-traceability-gap-analysis.md
-  implementation_status: partial
+  implementation_status: implemented
   verification_method: integration
-  verification_notes: Tracked by an xfail stub because fallback dedup conflict review is not evidenced in the current implementation.
-  gap_notes: Conflict queue behavior for provider-ID-less duplicate transactions is not implemented or not evidenced.
+  verification_notes: Verified through sync ingestion tests that queue dedup_identity conflicts instead of silently overwriting provider-ID-less collisions.
+  gap_notes: null
 - requirement_id: TECH-SEC-CRY-003-ENVELOPE
   title: Encrypted backup envelope generation
   requirement_type: technical

@@ -21,6 +21,7 @@ migrations = "godzilla_core.db.migrations:main"
 sync-plaid-item = "godzilla_core.scripts.sync_plaid_item:main"
 godzilla-api = "godzilla_core.scripts.run_api_server:main"
 visualize-requirements = "godzilla_core.scripts.visualize_requirements:main"
+seed-benchmark-dataset = "godzilla_core.scripts.seed_benchmark_dataset:main"
 
 [project.optional-dependencies]
 dev = [

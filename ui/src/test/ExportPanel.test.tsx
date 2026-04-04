@@ -51,7 +51,17 @@ describe("ExportPanel", () => {
       sync: {
         schedule_enabled: false,
         frequency_minutes: 360,
-        scheduler_supported: false,
+        scheduler_supported: true,
+        last_run: null,
+      },
+      backup: {
+        schedule_enabled: false,
+        frequency_minutes: 1440,
+        retention_count: 7,
+        directory: null,
+        scheduler_supported: true,
+        scheduled_passphrase_configured: false,
+        last_run: null,
       },
     });
     mockExportTransactions.mockResolvedValue({

@@ -122,6 +122,9 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
   - `cd ui && npm run format:check`
 - UI format write:
   - `cd ui && npm run format`
+- UI perf harness:
+  - `cd ui && npm run perf`
+  - install browser runtime once if needed: `cd ui && npx playwright install chromium`
 - Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
 - Tests: `nox -s tests` (or `python3 -m pytest`)
 - Build wheel: `nox -s build` (or `python3 -m build --wheel`)
@@ -132,6 +135,7 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
   - `migrations` (requires `GODZILLA_DB_PATH` and `GODZILLA_DB_KEY`)
   - `sync-plaid-item --item-id <item_id> --institution-id ins_109508`
   - `godzilla-api --host 127.0.0.1 --port 8787` (requires `GODZILLA_API_TOKEN`)
+  - `seed-benchmark-dataset --db-path <path> --db-key <key> --secrets-path <path> --secrets-key <key>`
 
 ## 8) Verification checklist
 - `rustc --version`

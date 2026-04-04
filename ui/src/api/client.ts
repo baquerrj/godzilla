@@ -46,6 +46,7 @@ import type {
   MonthlyOverview,
   NetWorthReport,
   AuthStatus,
+  BackupPassphraseStatus,
   PatchCategoryRequest,
   PatchTransactionRequest,
   PlaidLinkRequest,
@@ -613,6 +614,22 @@ export const GodzillaApi = {
     return request<SettingsResponse>("/settings", token, {
       method: "PUT",
       body: JSON.stringify(body),
+    });
+  },
+
+  setScheduledBackupPassphrase(
+    token: string,
+    passphrase: string,
+  ): Promise<BackupPassphraseStatus> {
+    return request<BackupPassphraseStatus>("/settings/backup-passphrase", token, {
+      method: "PUT",
+      body: JSON.stringify({ passphrase }),
+    });
+  },
+
+  clearScheduledBackupPassphrase(token: string): Promise<BackupPassphraseStatus> {
+    return request<BackupPassphraseStatus>("/settings/backup-passphrase", token, {
+      method: "DELETE",
     });
   },
 

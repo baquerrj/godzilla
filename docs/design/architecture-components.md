@@ -146,6 +146,8 @@ classDiagram
   class Transaction {
     +id (uuid)
     +account_id (uuid, fk Account.id)
+    +provider_transaction_id (string, nullable)
+    +provider_fingerprint (string, nullable)
     +date (date)
     +amount (decimal)
     +currency (string)
@@ -223,6 +225,15 @@ classDiagram
     +updated_at_tz (string)
     +updated_at_offset_minutes (int)
   }
+  class ScheduledJobRun {
+    +job_run_id (uuid)
+    +job_type (enum)
+    +status (enum)
+    +started_at_utc (timestamp)
+    +finished_at_utc (timestamp)
+    +summary_json (json)
+    +error_message (string, nullable)
+  }
 
   Institution "1" --> "many" PlaidItem
   PlaidItem "1" --> "many" Account
@@ -244,6 +255,12 @@ Timestamp metadata: any timestamp field is stored as a UTC value plus `*_tz` (IA
 - Split total equals original transaction amount.
 - Transfer/excluded flags are honored by budgets and reports.
 - Pending and posted states reconcile into a single posted transaction.
+- Provider-ID-less transactions use a deterministic fallback identity plus `provider_fingerprint`; mismatched fingerprints create a `dedup_identity` conflict instead of silently overwriting.
+
+### Scheduler invariants
+- Scheduled sync and scheduled backup use single-flight locking and do not overlap with themselves in one runtime process.
+- Scheduled backup is considered runnable only when the settings enable it, a destination directory exists, and the unattended backup passphrase is present in the encrypted secrets store.
+- `scheduled_job_run` is the source for surfaced last-run summaries in settings/UI.
 
 ## Key workflows
 
