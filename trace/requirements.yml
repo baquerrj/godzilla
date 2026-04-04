@@ -369,7 +369,7 @@
   - godzilla_core/integrations/plaid_sync.py:_apply_transaction
   - godzilla_core/api/app.py:patch_transaction
   test_refs:
-  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_insert_writes_provider_override
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_apply_transaction_writes_provider_override
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_category_and_notes
   doc_refs:
   - docs/design/architecture-overview.md
@@ -388,7 +388,7 @@
   - godzilla_core/integrations/plaid_sync.py:_preserved_value
   - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
   test_refs:
-  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_update_preserves_user_value_on_conflict
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_apply_transaction_update_preserves_user_override_on_conflict
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
@@ -409,7 +409,7 @@
   - ui/src/api/client.ts:GodzillaApi.getConflicts
   - ui/src/components/ConflictQueue.tsx:ConflictQueue
   test_refs:
-  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_creates_open_conflict_row
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_detect_conflict_creates_open_conflict_row
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_when_values_match
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_no_conflict_without_user_override
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_deduplicates_open_conflicts
@@ -481,7 +481,7 @@
   - ui/src/components/TransactionFilters.tsx:TransactionFilters
   - ui/src/components/TransactionsTable.tsx:TransactionsTable
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_get_transactions_date_filter
+  - godzilla_core/tests/test_api_layer.py:test_get_transactions_filter_by_date_range
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_merchant_filter
   - godzilla_core/tests/test_api_layer.py:test_get_transactions_amount_filter
   - ui/src/test/TransactionFilters.test.tsx:TransactionFilters
@@ -530,7 +530,7 @@
   - ui/src/api/client.ts:GodzillaApi.patchTransaction
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_category_and_notes
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_updates_category_and_notes
   - godzilla_core/tests/test_api_layer.py:test_patch_transaction_rejects_parent_category
   - ui/src/test/TransactionDetailPanel.test.tsx:saves category and notes via patchTransaction
   doc_refs:
@@ -551,7 +551,7 @@
   - ui/src/api/client.ts:GodzillaApi.patchTransaction
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_tags_add_and_remove
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_adds_and_removes_tags
   - ui/src/test/TransactionDetailPanel.test.tsx:saves category and notes via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
@@ -571,7 +571,7 @@
   - ui/src/api/client.ts:GodzillaApi.patchTransaction
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_marks_transfer_and_excluded
   - ui/src/test/TransactionDetailPanel.test.tsx:toggles transfer flag via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
@@ -591,7 +591,7 @@
   - ui/src/api/client.ts:GodzillaApi.patchTransaction
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_is_transfer_and_is_excluded
+  - godzilla_core/tests/test_api_layer.py:test_patch_transaction_marks_transfer_and_excluded
   - ui/src/test/TransactionDetailPanel.test.tsx:toggles exclude flag via patchTransaction
   doc_refs:
   - docs/design/architecture-overview.md
@@ -612,7 +612,7 @@
   - ui/src/api/client.ts:GodzillaApi.postSplits
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_post_splits_replaces_existing
+  - godzilla_core/tests/test_api_layer.py:test_post_transaction_splits_replaces_splits
   - godzilla_core/tests/test_api_layer.py:test_post_splits_rejects_wrong_sum
   - ui/src/test/TransactionDetailPanel.test.tsx:saves splits via postSplits
   doc_refs:
@@ -678,7 +678,7 @@
   - godzilla_core/api/app.py:patch_category
   - godzilla_core/api/app.py:_validate_category_assignment
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_create_category
+  - godzilla_core/tests/test_api_layer.py:test_create_category_and_patch
   - godzilla_core/tests/test_api_layer.py:test_patch_category_rename
   - godzilla_core/tests/test_api_layer.py:test_deactivate_category_blocked_when_assigned
   doc_refs:
@@ -697,7 +697,7 @@
   - godzilla_core/integrations/plaid_sync.py:_resolve_category_id
   - godzilla_core/integrations/plaid_sync.py:_apply_transaction
   test_refs:
-  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_resolves_detailed_key
+  - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_resolve_category_id_uses_detailed_key
   - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_falls_back_to_primary
   - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_unknown_returns_none
   - godzilla_core/tests/test_plaid_sync.py:CategoryMappingTests.test_empty_pfc_returns_none
@@ -851,7 +851,7 @@
   - ui/src/components/ReportsPanel.tsx:ReportsPanel
   - ui/src/App.tsx:handleReportDrillDown
   test_refs:
-  - ui/src/test/ReportsPanel.test.tsx:drills down from top category and overview cards
+  - 'ui/src/test/ReportsPanel.test.tsx:drills down from top category and overview cards  REQ: FUNC-REP-002'
   - ui/src/test/ReportsPanel.test.tsx:drills down from cash-flow and category trend points
   doc_refs:
   - docs/design/reports-dashboard.md
@@ -1588,7 +1588,7 @@
   test_refs:
   - godzilla_core/tests/test_api_layer.py:test_auth_required_for_endpoints
   - ui/src/test/App.test.tsx:shows error when token is empty
-  - ui/src/test/App.test.tsx:falls back to dev proxy token when tauri runtime is unavailable
+  - 'ui/src/test/App.test.tsx:falls back to dev proxy token when tauri runtime is unavailable  REQ: SEC-DATA-001'
   doc_refs:
   - docs/design/api-layer-ui-integration.md
   - docs/design/architecture-overview.md
@@ -1750,7 +1750,7 @@
   - .dockerignore
   - noxfile.py:security
   test_refs:
-  - godzilla_core/tests/test_tooling_config.py:test_ui_biome_tooling_is_configured
+  - godzilla_core/tests/test_tooling_config.py:ToolingConfigTests.test_ui_biome_tooling_is_configured
   - godzilla_core/tests/test_tooling_config.py:test_nox_runs_ui_lint_checks
   - godzilla_core/tests/test_tooling_config.py:test_nox_security_session_runs_vulnerability_scans
   - godzilla_core/tests/test_tooling_config.py:test_gui_overlay_for_tauri_x11
@@ -1818,7 +1818,7 @@
   - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
   - godzilla_core/integrations/plaid_sync.py:_apply_transaction
   test_refs:
-  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_writes_provider_override
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_apply_transaction_update_preserves_user_override_on_conflict
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_detect_conflict_creates_open_conflict_row
   - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_apply_transaction_update_preserves_user_override_on_conflict
   doc_refs:
