@@ -658,7 +658,7 @@
   - ui/src/components/TransactionDetailPanel.tsx:TransactionDetailPanel
   - ui/src/App.tsx:App
   test_refs:
-  - godzilla_core/tests/test_api_layer.py:test_categories_seeded_taxonomy
+  - godzilla_core/tests/test_api_layer.py:test_get_categories_returns_seeded_taxonomy
   - ui/src/test/TransactionFilters.test.tsx:shows only leaf active categories in dropdown
   doc_refs:
   - docs/design/architecture-overview.md
