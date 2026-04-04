@@ -1,7 +1,7 @@
 /**
  * Tests for DataManagementPanel component.
  *
- * REQ: FUNC-BKP-001, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006
+ * REQ: ACC-BKP-001, ACC-BKP-003, ACC-BKP-004, ACC-BKP-006
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,7 +61,7 @@ describe("DataManagementPanel", () => {
     });
   });
 
-  it("downloads encrypted backup  REQ: FUNC-BKP-001", async () => {
+  it("downloads encrypted backup  REQ: ACC-BKP-001", async () => {
     render(<DataManagementPanel token={TOKEN} onDataChanged={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId("backup-passphrase-input"), {
@@ -79,7 +79,7 @@ describe("DataManagementPanel", () => {
     });
   });
 
-  it("reports when backup save is canceled  REQ: FUNC-BKP-001", async () => {
+  it("reports when backup save is canceled  REQ: ACC-BKP-001", async () => {
     mockSaveBlob.mockResolvedValue(false);
     render(<DataManagementPanel token={TOKEN} onDataChanged={vi.fn()} />);
 
@@ -93,7 +93,7 @@ describe("DataManagementPanel", () => {
     });
   });
 
-  it("restores backup file and notifies parent  REQ: FUNC-BKP-003", async () => {
+  it("restores backup file and notifies parent  REQ: ACC-BKP-003", async () => {
     const onDataChanged = vi.fn();
     render(<DataManagementPanel token={TOKEN} onDataChanged={onDataChanged} />);
 
@@ -117,7 +117,7 @@ describe("DataManagementPanel", () => {
     });
   });
 
-  it("requires confirmation token before wipe  REQ: FUNC-BKP-004", async () => {
+  it("requires confirmation token before wipe  REQ: ACC-BKP-004", async () => {
     render(<DataManagementPanel token={TOKEN} onDataChanged={vi.fn()} />);
 
     const wipeButton = screen.getByTestId("wipe-submit-btn");
@@ -135,7 +135,7 @@ describe("DataManagementPanel", () => {
     });
   });
 
-  it("re-initializes database and notifies parent  REQ: FUNC-BKP-006", async () => {
+  it("re-initializes database and notifies parent  REQ: ACC-BKP-006", async () => {
     const onDataChanged = vi.fn();
     render(<DataManagementPanel token={TOKEN} onDataChanged={onDataChanged} />);
 

@@ -1,8 +1,8 @@
 /**
  * ReportsPanel: monthly overview, cash flow, category trends, and net worth.
  *
- * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
- * REQ: FUNC-REP-007, FUNC-REP-008
+ * REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+ * REQ: ACC-REP-007, ACC-REP-008
  */
 
 import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";

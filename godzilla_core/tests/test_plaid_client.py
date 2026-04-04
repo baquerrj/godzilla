@@ -1,6 +1,6 @@
 """Plaid client tests.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-008, SEC-CRY-002, SEC-NET-003
+REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-008, TECH-SEC-CRY-002, TECH-SEC-NET-003
 """
 
 import io
@@ -28,13 +28,13 @@ _URLOPEN = "godzilla_core.integrations.plaid_client.request.urlopen"
 class PlaidConfigTests(unittest.TestCase):
     """Tests for Plaid environment configuration loading.
 
-    REQ: FUNC-ACCT-001
+    REQ: ACC-ACCT-001
     """
 
     def test_from_env_requires_credentials(self) -> None:
         """Ensure missing credentials raise a configuration error.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         original_client_id = os.environ.pop("PLAID_CLIENT_ID", None)
         original_secret = os.environ.pop("PLAID_SECRET", None)
@@ -50,7 +50,7 @@ class PlaidConfigTests(unittest.TestCase):
     def test_from_env_defaults(self) -> None:
         """Verify sandbox defaults are applied when optional values are unset.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         original = {
             "PLAID_CLIENT_ID": os.environ.get("PLAID_CLIENT_ID"),
@@ -77,7 +77,7 @@ class PlaidConfigTests(unittest.TestCase):
     def test_from_env_invalid_env_raises(self) -> None:
         """PLAID_ENV set to an unsupported value raises PlaidConfigError.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         saved_env = os.environ.get("PLAID_ENV")
         os.environ["PLAID_CLIENT_ID"] = "cid"
@@ -95,7 +95,7 @@ class PlaidConfigTests(unittest.TestCase):
     def test_from_env_all_envs(self) -> None:
         """Verify all supported PLAID_ENV values resolve to correct base URLs.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         expected_urls = {
             "sandbox": "https://sandbox.plaid.com",
@@ -120,13 +120,13 @@ class PlaidConfigTests(unittest.TestCase):
 class PlaidClientPostTests(unittest.TestCase):
     """Tests for PlaidClient HTTP request behavior using mocked responses.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+    REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003
     """
 
     def _make_config(self) -> PlaidConfig:
         """Return a minimal sandbox PlaidConfig for testing.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         return PlaidConfig(
             client_id="cid",
@@ -139,7 +139,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def _mock_response(self, body: dict) -> MagicMock:
         """Build a mock HTTP response context manager.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps(body).encode("utf-8")
@@ -150,7 +150,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_success(self) -> None:
         """_post returns parsed JSON on a successful HTTP response.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"result": "ok"})
@@ -161,7 +161,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_http_error_raises_plaid_api_error(self) -> None:
         """_post raises PlaidApiError with status code on HTTP errors.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003
         """
         client = PlaidClient(self._make_config())
         http_err = urllib_error.HTTPError(
@@ -179,7 +179,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_url_error_raises_plaid_api_error(self) -> None:
         """_post raises PlaidApiError on network-level URLError.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         client = PlaidClient(self._make_config())
         url_err = urllib_error.URLError("connection refused")
@@ -190,7 +190,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_retries_429_and_honors_retry_after(self) -> None:
         """_post retries transient 429 and uses Retry-After delay.
 
-        REQ: SEC-NET-003
+        REQ: TECH-SEC-NET-003
         """
         client = PlaidClient(self._make_config())
         headers = Message()
@@ -216,7 +216,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_retries_url_error_with_backoff(self) -> None:
         """_post retries transient network errors with backoff.
 
-        REQ: SEC-NET-003
+        REQ: TECH-SEC-NET-003
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"result": "ok"})
@@ -234,7 +234,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_post_non_retriable_http_error_does_not_sleep(self) -> None:
         """_post fails fast on non-retriable 4xx errors.
 
-        REQ: SEC-NET-003
+        REQ: TECH-SEC-NET-003
         """
         client = PlaidClient(self._make_config())
         first_error = urllib_error.HTTPError(
@@ -255,7 +255,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_create_sandbox_public_token(self) -> None:
         """create_sandbox_public_token returns the public_token from the response.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"public_token": "pt-abc"})
@@ -266,7 +266,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_create_sandbox_public_token_missing_raises(self) -> None:
         """create_sandbox_public_token raises PlaidApiError if public_token absent.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({})
@@ -277,7 +277,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_exchange_public_token(self) -> None:
         """exchange_public_token returns access_token and item_id.
 
-        REQ: FUNC-ACCT-002
+        REQ: ACC-ACCT-002
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"access_token": "at-xyz", "item_id": "item-1"})
@@ -289,7 +289,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_exchange_public_token_missing_raises(self) -> None:
         """exchange_public_token raises PlaidApiError when response is incomplete.
 
-        REQ: FUNC-ACCT-002
+        REQ: ACC-ACCT-002
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"access_token": "at-xyz"})  # missing item_id
@@ -300,7 +300,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_transactions_sync_without_cursor(self) -> None:
         """transactions_sync omits cursor key from payload when not provided.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         client = PlaidClient(self._make_config())
         sync_body = {
@@ -326,7 +326,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_transactions_sync_with_cursor(self) -> None:
         """transactions_sync includes cursor in the payload when provided.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"added": [], "has_more": False, "next_cursor": "c2"})
@@ -344,7 +344,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_accounts_balance_get(self) -> None:
         """accounts_balance_get returns the accounts list from the response.
 
-        REQ: FUNC-ACCT-003
+        REQ: ACC-ACCT-003
         """
         client = PlaidClient(self._make_config())
         accounts_payload = {"accounts": [{"account_id": "acct-1", "balances": {"current": 100.0}}]}
@@ -356,7 +356,7 @@ class PlaidClientPostTests(unittest.TestCase):
     def test_remove_item_posts_to_item_remove(self) -> None:
         """remove_item sends request to /item/remove endpoint.
 
-        REQ: FUNC-ACCT-008
+        REQ: ACC-ACCT-008
         """
         client = PlaidClient(self._make_config())
         mock_resp = self._mock_response({"request_id": "req-1"})
@@ -368,14 +368,14 @@ class PlaidClientPostTests(unittest.TestCase):
 class PlaidSandboxFlowTests(unittest.TestCase):
     """Tests for sandbox linking and token persistence helpers.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+    REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002
     """
 
     @unittest.skip("SKIP(TASK-PLAID-SANDBOX): requires sandbox credentials/network")
     def test_link_sandbox_item(self) -> None:
         """Track skipped end-to-end sandbox link coverage.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002
+        REQ: ACC-ACCT-001, ACC-ACCT-002
         """
         config = PlaidConfig.from_env()
         client = PlaidClient(config)
@@ -388,7 +388,7 @@ class PlaidSandboxFlowTests(unittest.TestCase):
     def test_store_access_token_roundtrip(self) -> None:
         """Ensure access tokens are encrypted and retrievable by derived key.
 
-        REQ: FUNC-ACCT-002, SEC-CRY-002
+        REQ: ACC-ACCT-002, TECH-SEC-CRY-002
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             store = SecretStore(db_path=os.path.join(tmp_dir, "secrets.db"), db_key="test")
@@ -399,7 +399,7 @@ class PlaidSandboxFlowTests(unittest.TestCase):
     def test_link_sandbox_item_stores_token(self) -> None:
         """link_sandbox_item exchanges a public token and stores the access token.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+        REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002
         """
         config = PlaidConfig(
             client_id="cid",

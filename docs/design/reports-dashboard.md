@@ -1,6 +1,6 @@
 # Reports Dashboard — Design Document
 
-**Requirements:** FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-007, FUNC-REP-008
+**Requirements:** ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005, ACC-REP-007, ACC-REP-008
 
 ---
 
@@ -30,7 +30,7 @@ The implementation must:
 uses the latest included transaction month.
 4. `GET /reports/net-worth?start=YYYY-MM-DD&end=YYYY-MM-DD`
 
-All endpoints require `X-API-Key` (`SEC-ACC-004` boundary).
+All endpoints require `X-API-Key` (`TECH-SEC-ACC-004` boundary).
 
 ### Shared inclusion-rule helper
 
@@ -40,7 +40,7 @@ All endpoints require `X-API-Key` (`SEC-ACC-004` boundary).
 - excludes explicitly excluded transactions,
 - split-aware (parent ignored when split rows exist).
 
-This enforces `FUNC-REP-007` parity with `FUNC-BUD-004`.
+This enforces `ACC-REP-007` parity with `ACC-BUD-004`.
 
 ---
 
@@ -113,5 +113,5 @@ Drill-down mappings:
 ## Rollout notes
 
 - M4 is additive and backward-compatible with existing endpoints.
-- Existing balance snapshotting (`FUNC-REP-006`) remains unchanged and continues
+- Existing balance snapshotting (`ACC-REP-006`) remains unchanged and continues
   to power net-worth calculations.

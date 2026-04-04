@@ -1,7 +1,7 @@
 /**
  * Accounts table: lists all linked accounts with current balance.
  *
- * REQ: FUNC-ACCT-003
+ * REQ: ACC-ACCT-003
  */
 
 import { useEffect } from "react";
@@ -16,7 +16,7 @@ interface Props {
 export function AccountsTable({ token, refreshKey }: Props) {
   const [result, execute] = useApiCall<Account[]>();
 
-  // REQ: FUNC-ACCT-003 — fetch accounts on mount and refresh
+  // REQ: ACC-ACCT-003 — fetch accounts on mount and refresh
   useEffect(() => {
     execute(() => GodzillaApi.getAccounts(token));
     // eslint-disable-next-line react-hooks/exhaustive-deps

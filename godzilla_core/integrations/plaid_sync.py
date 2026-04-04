@@ -1,8 +1,10 @@
 """Plaid sync ingestion for transactions and balances.
 
-REQ: FUNC-ACCT-003, FUNC-ACCT-009, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003,
-REQ: FUNC-TXN-009, FUNC-REP-006, FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005,
-REQ: FUNC-SYNC-006, FUNC-ACCT-008, SEC-DATA-005, SEC-DATA-007
+REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-INGEST, TECH-ACCT-009-API,
+REQ: ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003,
+REQ: ACC-TXN-009, TECH-TXN-009-FALLBACK, TECH-TXN-009-CONFLICT, ACC-REP-006,
+REQ: ACC-CAT-003, ACC-SYNC-004, ACC-SYNC-005,
+REQ: ACC-SYNC-006, ACC-ACCT-008, TECH-SEC-DATA-005, TECH-SEC-DATA-007
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from godzilla_core.util.time import local_date, local_timestamp_metadata
 class SyncResult:
     """Summary of a completed sync run.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    REQ: ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003
     """
 
     item_id: str
@@ -40,7 +42,7 @@ class SyncResult:
 class SyncError(RuntimeError):
     """Raised when sync preconditions or processing fail.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
 
     pass
@@ -49,7 +51,7 @@ class SyncError(RuntimeError):
 def _escape_key(db_key: str) -> str:
     """Escape a SQLCipher key for use in PRAGMA statements.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     return db_key.replace("'", "''")
 
@@ -57,7 +59,7 @@ def _escape_key(db_key: str) -> str:
 def _expand_path(path_value: str) -> Path:
     """Expand environment variables and user-home references in a path.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     expanded = os.path.expandvars(path_value)
     return Path(expanded).expanduser()
@@ -66,7 +68,7 @@ def _expand_path(path_value: str) -> Path:
 def _connect(db_path: str, db_key: str) -> sqlcipher.Connection:
     """Create an encrypted SQLCipher connection for sync operations.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     path = _expand_path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -80,7 +82,7 @@ def _connect(db_path: str, db_key: str) -> sqlcipher.Connection:
 def _timestamp_meta(prefix: str) -> Dict[str, Any]:
     """Build timestamp metadata field names and values.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    REQ: ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003
     """
     utc, tz, offset = local_timestamp_metadata()
     return {
@@ -93,7 +95,7 @@ def _timestamp_meta(prefix: str) -> Dict[str, Any]:
 def _retention_enabled(conn: sqlcipher.Connection) -> bool:
     """Return whether raw provider payload retention is enabled.
 
-    REQ: FUNC-SYNC-003, SEC-DATA-005
+    REQ: ACC-SYNC-003, TECH-SEC-DATA-005
     """
     row = conn.execute(
         "SELECT retain_raw_payloads FROM retention_policy "
@@ -107,7 +109,7 @@ def _retention_enabled(conn: sqlcipher.Connection) -> bool:
 def _get_institution_id(conn: sqlcipher.Connection, plaid_institution_id: str) -> Optional[str]:
     """Lookup an internal institution ID by Plaid institution identifier.
 
-    REQ: FUNC-ACCT-003
+    REQ: ACC-ACCT-003
     """
     row = conn.execute(
         "SELECT id FROM institution WHERE plaid_institution_id = ?",
@@ -122,7 +124,7 @@ def _get_plaid_institution_id_for_item(
 ) -> Optional[str]:
     """Resolve Plaid institution ID for an existing linked Plaid item.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    REQ: ACC-ACCT-003, ACC-SYNC-001
     """
     row = conn.execute(
         "SELECT institution.plaid_institution_id "
@@ -137,7 +139,7 @@ def _get_plaid_institution_id_for_item(
 def _upsert_institution(conn: sqlcipher.Connection, plaid_institution_id: str) -> str:
     """Create or return an institution record for a Plaid institution ID.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    REQ: ACC-ACCT-003, ACC-SYNC-001
     """
     institution_id = _get_institution_id(conn, plaid_institution_id)
     if institution_id:
@@ -164,7 +166,7 @@ def _upsert_institution(conn: sqlcipher.Connection, plaid_institution_id: str) -
 def _get_item_id(conn: sqlcipher.Connection, provider_item_id: str) -> Optional[str]:
     """Lookup an internal item ID by provider item ID.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     row = conn.execute(
         "SELECT id FROM plaid_item WHERE provider_item_id = ?",
@@ -182,7 +184,7 @@ def _upsert_item(
 ) -> str:
     """Create or update a linked Plaid item record.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-ACCT-008
+    REQ: ACC-SYNC-001, ACC-SYNC-002, ACC-ACCT-008
     """
     item_id = _get_item_id(conn, provider_item_id)
     meta = _timestamp_meta("created_at")
@@ -225,7 +227,7 @@ def _upsert_item(
 def _item_is_unlinked(conn: sqlcipher.Connection, provider_item_id: str) -> bool:
     """Return whether a Plaid item is locally marked as unlinked.
 
-    REQ: FUNC-ACCT-008
+    REQ: ACC-ACCT-008
     """
     row = conn.execute(
         "SELECT is_unlinked FROM plaid_item WHERE provider_item_id = ?",
@@ -237,7 +239,7 @@ def _item_is_unlinked(conn: sqlcipher.Connection, provider_item_id: str) -> bool
 def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
     """Update a Plaid item's last sync timestamp metadata.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    REQ: ACC-SYNC-001, ACC-SYNC-002
     """
     meta = _timestamp_meta("last_sync_at")
     conn.execute(
@@ -256,7 +258,7 @@ def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
 def _upsert_account(conn: sqlcipher.Connection, item_id: str, payload: Dict[str, Any]) -> str:
     """Create or update an account record from provider payload.
 
-    REQ: FUNC-ACCT-003, FUNC-ACCT-009
+    REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-INGEST
     """
     provider_account_id = payload["account_id"]
     name = payload.get("official_name") or payload.get("name") or provider_account_id
@@ -325,7 +327,7 @@ def _insert_balance_snapshot(
 ) -> None:
     """Insert or update the daily balance snapshot for an account.
 
-    REQ: FUNC-REP-006
+    REQ: ACC-REP-006
     """
     if balance is None:
         return
@@ -341,7 +343,7 @@ def _insert_balance_snapshot(
 def _fallback_transaction_id(account_id: str, payload: Dict[str, Any]) -> str:
     """Generate a deterministic fallback transaction ID.
 
-    REQ: FUNC-SYNC-002, FUNC-TXN-009
+    REQ: ACC-SYNC-002, ACC-TXN-009, TECH-TXN-009-FALLBACK
     """
     key = "|".join(
         [
@@ -368,8 +370,9 @@ def _apply_transaction(  # noqa: PLR0912
     On UPDATE: runs conflict detection for category_id, display_name, and
     merchant_name against any existing user overrides before applying provider values.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-CAT-003, FUNC-SYNC-004,
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-TXN-009, SEC-DATA-005, SEC-DATA-007
+    REQ: ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-CAT-003, ACC-SYNC-004,
+    REQ: ACC-SYNC-005, ACC-SYNC-006, ACC-TXN-009, TECH-TXN-009-FALLBACK,
+    REQ: TECH-TXN-009-CONFLICT, TECH-SEC-DATA-005, TECH-SEC-DATA-007
     """
     provider_transaction_id = payload.get("transaction_id")
     pending_transaction_id = payload.get("pending_transaction_id")
@@ -550,7 +553,7 @@ def _insert_raw_payload(
 ) -> None:
     """Persist a raw provider payload linked to a transaction.
 
-    REQ: FUNC-SYNC-003
+    REQ: ACC-SYNC-003
     """
     meta = _timestamp_meta("created_at")
     conn.execute(
@@ -577,7 +580,7 @@ def _resolve_category_id(
     Tries the detailed key first, then falls back to the primary key.
     Returns None when neither key is found in the local category table.
 
-    REQ: FUNC-CAT-003
+    REQ: ACC-CAT-003
 
     Args:
         conn: Open database connection.
@@ -614,7 +617,7 @@ def _upsert_provider_override(
 
     Only writes if no user override already exists for this field.
 
-    REQ: FUNC-SYNC-004
+    REQ: ACC-SYNC-004
 
     Args:
         conn: Open database connection.
@@ -660,7 +663,7 @@ def _preserved_value(
     Used during sync UPDATE to prevent overwriting user-set field values when a
     user override is in place.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
+    REQ: ACC-SYNC-005, ACC-SYNC-006, TECH-TXN-009-CONFLICT, TECH-SEC-DATA-007
 
     Args:
         conn: Open database connection.
@@ -694,7 +697,7 @@ def _detect_and_queue_conflict(
     The field in ``transaction_record`` is NOT updated; the user's value is preserved.
     An 'open' conflict row is upserted into the ``conflict`` table.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
+    REQ: ACC-SYNC-005, ACC-SYNC-006, TECH-SEC-DATA-007
 
     Args:
         conn: Open database connection.
@@ -754,7 +757,7 @@ def _detect_and_queue_conflict(
 def _apply_removed(conn: sqlcipher.Connection, removed: Iterable[Dict[str, Any]]) -> int:
     """Delete removed transactions from the local store.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     removed_count = 0
     for payload in removed:
@@ -772,7 +775,7 @@ def _apply_removed(conn: sqlcipher.Connection, removed: Iterable[Dict[str, Any]]
 def _update_sync_state(conn: sqlcipher.Connection, item_id: str, cursor: str, status: str) -> None:
     """Persist sync cursor and status for a linked item.
 
-    REQ: FUNC-SYNC-001, FUNC-SYNC-002
+    REQ: ACC-SYNC-001, ACC-SYNC-002
     """
     meta = _timestamp_meta("last_sync_at")
     row = conn.execute(
@@ -816,7 +819,7 @@ def _update_sync_state(conn: sqlcipher.Connection, item_id: str, cursor: str, st
 def _get_sync_cursor(conn: sqlcipher.Connection, item_id: str) -> Optional[str]:
     """Load the saved Plaid cursor for a linked item.
 
-    REQ: FUNC-SYNC-001
+    REQ: ACC-SYNC-001
     """
     row = conn.execute(
         "SELECT plaid_cursor FROM sync_state WHERE item_id = ?",
@@ -833,8 +836,8 @@ def sync_item_transactions_and_balances(  # noqa: PLR0912, PLR0915
 ) -> SyncResult:
     """Sync transactions and balances for a Plaid item.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006,
-    REQ: FUNC-ACCT-008
+    REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006,
+    REQ: ACC-ACCT-008
     """
     config = PlaidConfig.from_env()
     client = PlaidClient(config)
@@ -931,7 +934,7 @@ def _find_account_id(
 ) -> Optional[str]:
     """Resolve internal account ID from a provider account ID.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001
+    REQ: ACC-ACCT-003, ACC-SYNC-001
     """
     if not provider_account_id:
         return None

@@ -1,6 +1,6 @@
 """Run the local FastAPI sidecar for UI integration.
 
-REQ: SEC-NET-001, SEC-NET-002
+REQ: TECH-SEC-NET-001, TECH-SEC-NET-002
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 def main() -> int:
     """Run the API server on a loopback address only.
 
-    REQ: SEC-NET-001, SEC-NET-002
+    REQ: TECH-SEC-NET-001, TECH-SEC-NET-002
     """
     parser = argparse.ArgumentParser(description="Run the Godzilla API sidecar")
     parser.add_argument("--host", default="127.0.0.1", help="Loopback host address")

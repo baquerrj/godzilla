@@ -1,6 +1,6 @@
 # API Layer for UI Integration (MVP)
 
-Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005, FUNC-ACCT-007, FUNC-SYNC-001, FUNC-TXN-001, FUNC-REP-006, FUNC-AUD-002, SEC-ACC-004, SEC-DATA-002, SEC-DATA-003, SEC-NET-002
+Requirements: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004, ACC-ACCT-005, ACC-ACCT-007, ACC-SYNC-001, ACC-TXN-001, ACC-REP-006, ACC-AUD-002, TECH-SEC-ACC-004, TECH-SEC-DATA-002, TECH-SEC-DATA-003, TECH-SEC-NET-002
 
 ## Problem statement
 The MVP needs a local API layer that the UI can call for Plaid link/sync actions and read models for accounts, transactions, balances, and sync state.
@@ -59,10 +59,10 @@ Auth and config:
 - Plaid flows continue to use existing Plaid env variables and secrets DB config.
 
 ## Security considerations
-- Authorization boundary enforced at API layer with a required shared token header (SEC-ACC-004).
-- API server script rejects non-loopback bind hosts (SEC-NET-002).
-- Sensitive fields are redacted before structured error logging via `security/redaction.py` (FUNC-AUD-002, SEC-DATA-002).
-- Request payload validation is enforced with Pydantic models and field constraints (SEC-DATA-003).
+- Authorization boundary enforced at API layer with a required shared token header (TECH-SEC-ACC-004).
+- API server script rejects non-loopback bind hosts (TECH-SEC-NET-002).
+- Sensitive fields are redacted before structured error logging via `security/redaction.py` (ACC-AUD-002, TECH-SEC-DATA-002).
+- Request payload validation is enforced with Pydantic models and field constraints (TECH-SEC-DATA-003).
 
 ## Tradeoffs and alternatives considered
 - Reused integration and sync modules directly to avoid duplicate business logic and reduce drift.

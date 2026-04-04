@@ -1,6 +1,6 @@
 """Helpers to redact sensitive values from logs.
 
-REQ: FUNC-AUD-002, SEC-DATA-002
+REQ: ACC-AUD-002, TECH-SEC-DATA-002
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ _SENSITIVE_VALUE_PATTERNS = (
 def _is_sensitive_key(key: str) -> bool:
     """Return whether a dictionary key should be treated as sensitive.
 
-    REQ: FUNC-AUD-002, SEC-DATA-002
+    REQ: ACC-AUD-002, TECH-SEC-DATA-002
 
     Args:
         key: Candidate key name.
@@ -43,7 +43,7 @@ def _is_sensitive_key(key: str) -> bool:
 def redact_sensitive(payload: Any) -> Any:
     """Return a copy of payload with known sensitive fields redacted.
 
-    REQ: FUNC-AUD-002, SEC-DATA-002
+    REQ: ACC-AUD-002, TECH-SEC-DATA-002
     """
     if isinstance(payload, dict):
         redacted: dict[str, Any] = {}

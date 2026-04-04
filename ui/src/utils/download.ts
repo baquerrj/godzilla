@@ -1,7 +1,7 @@
 /**
  * Download and save helpers for generated/exported blobs.
  *
- * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-AUD-004, FUNC-BKP-001
+ * REQ: ACC-EXP-001, ACC-EXP-002, ACC-AUD-004, ACC-BKP-001
  */
 
 function hasTauriRuntime(): boolean {
@@ -24,7 +24,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 export async function saveBlob(blob: Blob, filename: string): Promise<boolean> {
-  // REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-AUD-004, FUNC-BKP-001
+  // REQ: ACC-EXP-001, ACC-EXP-002, ACC-AUD-004, ACC-BKP-001
   // Desktop runtime uses an explicit native save destination.
   if (hasTauriRuntime()) {
     const [{ save }, { writeFile }] = await Promise.all([

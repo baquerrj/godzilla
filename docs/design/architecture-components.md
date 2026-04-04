@@ -1,6 +1,6 @@
 # Architecture Components (MVP)
 
-Requirements: SYS-001, SYS-002, SYS-003, FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005, FUNC-ACCT-006, FUNC-ACCT-007, FUNC-ACCT-008, FUNC-ACCT-009, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008, FUNC-TXN-009, FUNC-CAT-001, FUNC-CAT-002, FUNC-CAT-003, FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-005, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, FUNC-AUD-004, SEC-CRY-001, SEC-CRY-002, SEC-CRY-003, SEC-CRY-004, SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-NET-001, SEC-NET-002, SEC-NET-003, SEC-DATA-001, SEC-DATA-002, SEC-DATA-003, SEC-DATA-004, SEC-DATA-005, SEC-DATA-006, SEC-DATA-007
+Requirements: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003, ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004, ACC-ACCT-005, ACC-ACCT-006, ACC-ACCT-007, ACC-ACCT-008, ACC-ACCT-009, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-SYNC-004, ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007, ACC-TXN-001, ACC-TXN-002, ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006, ACC-TXN-007, ACC-TXN-008, ACC-TXN-009, ACC-CAT-001, ACC-CAT-002, ACC-CAT-003, ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004, ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005, ACC-REP-006, ACC-REP-007, ACC-REP-008, ACC-EXP-001, ACC-EXP-002, ACC-EXP-003, ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-005, ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005, ACC-AUD-001, ACC-AUD-002, ACC-AUD-003, ACC-AUD-004, TECH-SEC-CRY-001, TECH-SEC-CRY-002, TECH-SEC-CRY-003, TECH-SEC-CRY-004, TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-NET-001, TECH-SEC-NET-002, TECH-SEC-NET-003, TECH-SEC-DATA-001, TECH-SEC-DATA-002, TECH-SEC-DATA-003, TECH-SEC-DATA-004, TECH-SEC-DATA-005, TECH-SEC-DATA-006, TECH-SEC-DATA-007
 
 This document supplements `architecture-overview.md`, which is the canonical MVP architecture source.
 
@@ -12,18 +12,18 @@ This document supplements `architecture-overview.md`, which is the canonical MVP
 ## Component map
 | Component | Responsibilities | Inputs | Outputs | Primary requirements |
 | --- | --- | --- | --- | --- |
-| Desktop UI (React) | Views, forms, conflict queue, navigation | User actions | Commands, queries | SYS-001, FUNC-TXN-001, FUNC-BUD-001, FUNC-REP-001, FUNC-SYNC-007, SEC-ACC-001 |
-| Tauri Host (Rust) | UI bridge, HTTPS client with cert pinning, sidecar lifecycle | UI commands | HTTPS calls, results | SEC-NET-001, SEC-NET-002 |
-| Python Core (FastAPI) | Application API, orchestration | HTTPS requests | Domain outputs | SYS-001, FUNC-BUD-004, FUNC-SYNC-004, SEC-DATA-007 |
-| Sync Engine | Incremental sync, idempotency, pending->posted, cursor | Sync trigger, Plaid deltas | Upserts, conflicts | FUNC-SYNC-001..007 |
-| Conflict Service | Conflict detection, queue, resolution | Local edits, provider updates | Conflict records, resolutions | FUNC-SYNC-006, FUNC-SYNC-007 |
-| Data Store | Repositories, transactions, settings, retention | Reads/writes | Durable data | SEC-CRY-001, FUNC-SET-002 |
-| Domain Services | Transactions, categories, budgets, reports | App core inputs | Computed outputs | FUNC-TXN-001..009, FUNC-CAT-001..003, FUNC-BUD-001..004, FUNC-REP-001..008 |
-| Export Service | CSV/JSON export with privacy controls | Filters, export options | Files | FUNC-EXP-001..003 |
-| Backup/Restore | Encrypted backup, restore, wipe | Passphrase, target file | Encrypted files, restored state | FUNC-BKP-001..005, SEC-CRY-003 |
-| Security Services | PIN gate, secrets, crypto, redaction | Auth events, secrets requests | Access decisions, encrypted blobs | SEC-ACC-001..003, SEC-CRY-001..002, FUNC-AUD-002 |
-| Audit Logger | Structured audit events + redaction + retention | Event data | Log entries | FUNC-AUD-001..004 |
-| Scheduler (optional) | Scheduled sync/backup | Schedule config | Triggered jobs | FUNC-ACCT-006, FUNC-BKP-005, FUNC-SET-004 |
+| Desktop UI (React) | Views, forms, conflict queue, navigation | User actions | Commands, queries | ACC-SYS-001, ACC-TXN-001, ACC-BUD-001, ACC-REP-001, ACC-SYNC-007, TECH-SEC-ACC-001 |
+| Tauri Host (Rust) | UI bridge, HTTPS client with cert pinning, sidecar lifecycle | UI commands | HTTPS calls, results | TECH-SEC-NET-001, TECH-SEC-NET-002 |
+| Python Core (FastAPI) | Application API, orchestration | HTTPS requests | Domain outputs | ACC-SYS-001, ACC-BUD-004, ACC-SYNC-004, TECH-SEC-DATA-007 |
+| Sync Engine | Incremental sync, idempotency, pending->posted, cursor | Sync trigger, Plaid deltas | Upserts, conflicts | ACC-SYNC-001..007 |
+| Conflict Service | Conflict detection, queue, resolution | Local edits, provider updates | Conflict records, resolutions | ACC-SYNC-006, ACC-SYNC-007 |
+| Data Store | Repositories, transactions, settings, retention | Reads/writes | Durable data | TECH-SEC-CRY-001, ACC-SET-002 |
+| Domain Services | Transactions, categories, budgets, reports | App core inputs | Computed outputs | ACC-TXN-001..009, ACC-CAT-001..003, ACC-BUD-001..004, ACC-REP-001..008 |
+| Export Service | CSV/JSON export with privacy controls | Filters, export options | Files | ACC-EXP-001..003 |
+| Backup/Restore | Encrypted backup, restore, wipe | Passphrase, target file | Encrypted files, restored state | ACC-BKP-001..005, TECH-SEC-CRY-003 |
+| Security Services | PIN gate, secrets, crypto, redaction | Auth events, secrets requests | Access decisions, encrypted blobs | TECH-SEC-ACC-001..003, TECH-SEC-CRY-001..002, ACC-AUD-002 |
+| Audit Logger | Structured audit events + redaction + retention | Event data | Log entries | ACC-AUD-001..004 |
+| Scheduler (optional) | Scheduled sync/backup | Schedule config | Triggered jobs | ACC-ACCT-006, ACC-BKP-005, ACC-SET-004 |
 
 ## Interfaces and contracts (language-agnostic)
 

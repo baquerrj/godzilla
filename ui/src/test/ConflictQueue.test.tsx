@@ -1,7 +1,7 @@
 /**
  * Tests for ConflictQueue component.
  *
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007
+ * REQ: ACC-SYNC-006, ACC-SYNC-007
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -53,7 +53,7 @@ const makeConflict = (id: string): Conflict => ({
 describe("ConflictQueue", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders nothing when no open conflicts  REQ: FUNC-SYNC-006", async () => {
+  it("renders nothing when no open conflicts  REQ: ACC-SYNC-006", async () => {
     mockGetConflicts.mockResolvedValue([]);
     const { container } = render(<ConflictQueue token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -62,7 +62,7 @@ describe("ConflictQueue", () => {
     });
   });
 
-  it("shows conflict rows with local and provider values  REQ: FUNC-SYNC-006", async () => {
+  it("shows conflict rows with local and provider values  REQ: ACC-SYNC-006", async () => {
     mockGetConflicts.mockResolvedValue([makeConflict("conf-1")]);
     render(<ConflictQueue token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -72,7 +72,7 @@ describe("ConflictQueue", () => {
     });
   });
 
-  it("resolves conflict with local choice  REQ: FUNC-SYNC-007", async () => {
+  it("resolves conflict with local choice  REQ: ACC-SYNC-007", async () => {
     const conflict = makeConflict("conf-2");
     mockGetConflicts.mockResolvedValue([conflict]);
     mockResolveConflict.mockResolvedValue({ ...conflict, status: "resolved", resolution_choice: "local" });
@@ -88,7 +88,7 @@ describe("ConflictQueue", () => {
     });
   });
 
-  it("shows error on fetch failure  REQ: FUNC-SYNC-006", async () => {
+  it("shows error on fetch failure  REQ: ACC-SYNC-006", async () => {
     mockGetConflicts.mockRejectedValue(new Error("DB error"));
     render(<ConflictQueue token={TOKEN} refreshKey={0} />);
     await waitFor(() => {

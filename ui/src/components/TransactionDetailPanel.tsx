@@ -4,8 +4,8 @@
  * Shows all fields, tags, splits, and raw provider payloads.
  * Allows patching category/notes/flags and replacing transaction splits.
  *
- * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
- * REQ: FUNC-TXN-007, FUNC-TXN-008
+ * REQ: ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006,
+ * REQ: ACC-TXN-007, ACC-TXN-008
  */
 
 import { useEffect, useState } from "react";

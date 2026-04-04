@@ -1,5 +1,5 @@
 # M6 Security Review Pass
-Requirements: FUNC-ACCT-008, FUNC-SET-003, SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001, SEC-NET-002, SEC-NET-003, SEC-DATA-004, SEC-CRY-004
+Requirements: ACC-ACCT-008, ACC-SET-003, TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-NET-001, TECH-SEC-NET-002, TECH-SEC-NET-003, TECH-SEC-DATA-004, TECH-SEC-CRY-004
 
 ## Problem Statement
 M6 introduces runtime security controls that were previously planned but not enforced:

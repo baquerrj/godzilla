@@ -2,8 +2,8 @@
  * Sync state panel: per-item sync status, "Connect Sandbox Account",
  * and "Run Sync" actions.
  *
- * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-ACCT-008, FUNC-SYNC-001
+ * REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-004, ACC-ACCT-005,
+ * REQ: ACC-ACCT-008, ACC-SYNC-001
  */
 
 import { useEffect } from "react";
@@ -29,13 +29,13 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
   const [syncResult, executeSync] = useApiCall<PlaidSyncResult>();
   const [unlinkResult, executeUnlink] = useApiCall<UnlinkItemResult>();
 
-  // REQ: FUNC-ACCT-004 — load sync state on mount and on every refresh
+  // REQ: ACC-ACCT-004 — load sync state on mount and on every refresh
   useEffect(() => {
     fetchState(() => GodzillaApi.getSyncState(token));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, refreshKey]);
 
-  // REQ: FUNC-ACCT-001, FUNC-ACCT-002 — connect a sandbox Plaid item
+  // REQ: ACC-ACCT-001, ACC-ACCT-002 — connect a sandbox Plaid item
   const handleConnect = () => {
     executeLink(async () => {
       const result = await GodzillaApi.plaidLink(token, {});
@@ -44,7 +44,7 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
     });
   };
 
-  // REQ: FUNC-ACCT-005, FUNC-SYNC-001 — trigger incremental sync
+  // REQ: ACC-ACCT-005, ACC-SYNC-001 — trigger incremental sync
   const handleSync = (itemId: string) => {
     executeSync(async () => {
       const result = await GodzillaApi.plaidSync(token, { item_id: itemId });
@@ -53,7 +53,7 @@ export function SyncStatePanel({ token, refreshKey, onRefresh }: Props) {
     });
   };
 
-  // REQ: FUNC-ACCT-008 — unlink institution with keep/purge modes.
+  // REQ: ACC-ACCT-008 — unlink institution with keep/purge modes.
   const handleUnlink = (itemId: string, mode: "keep" | "purge") => {
     const warning = mode === "purge"
       ? "Unlink and purge will delete linked local records. Continue?"

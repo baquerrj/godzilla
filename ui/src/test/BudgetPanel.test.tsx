@@ -1,7 +1,7 @@
 /**
  * Tests for BudgetPanel component.
  *
- * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+ * REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -64,7 +64,7 @@ const makeLine = (overrides: Partial<BudgetLine> = {}): BudgetLine => ({
 describe("BudgetPanel", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders empty state when no budgets  REQ: FUNC-BUD-001", async () => {
+  it("renders empty state when no budgets  REQ: ACC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     render(
       <BudgetPanel
@@ -79,7 +79,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("renders rows with planned/actual/remaining amounts  REQ: FUNC-BUD-002", async () => {
+  it("renders rows with planned/actual/remaining amounts  REQ: ACC-BUD-002", async () => {
     mockGetBudgets.mockResolvedValue([makeLine()]);
     render(
       <BudgetPanel
@@ -100,7 +100,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("highlights overspent rows  REQ: FUNC-BUD-003", async () => {
+  it("highlights overspent rows  REQ: ACC-BUD-003", async () => {
     const overspent = makeLine({ is_overspent: true, planned: 20, actual: 45, remaining: -25 });
     mockGetBudgets.mockResolvedValue([overspent]);
     render(
@@ -117,7 +117,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("calls onDrillDown with correct categoryId and month  REQ: FUNC-BUD-003", async () => {
+  it("calls onDrillDown with correct categoryId and month  REQ: ACC-BUD-003", async () => {
     const onDrillDown = vi.fn();
     mockGetBudgets.mockResolvedValue([makeLine()]);
     render(
@@ -133,7 +133,7 @@ describe("BudgetPanel", () => {
     expect(onDrillDown).toHaveBeenCalledWith("food_coffee", expect.any(String));
   });
 
-  it("uses a constrained month selector and refetches for selected month  REQ: FUNC-BUD-001", async () => {
+  it("uses a constrained month selector and refetches for selected month  REQ: ACC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     render(
       <BudgetPanel
@@ -154,7 +154,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("creates budget via form submit and clears inputs  REQ: FUNC-BUD-001", async () => {
+  it("creates budget via form submit and clears inputs  REQ: ACC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     const newLine = makeLine({ budget_id: "bud-new", category_id: "food_coffee", planned: 75 });
     mockCreateBudget.mockResolvedValue(newLine);
@@ -185,7 +185,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("shows error message on 409 duplicate budget  REQ: FUNC-BUD-001", async () => {
+  it("shows error message on 409 duplicate budget  REQ: ACC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([]);
     const { ApiError } = await import("../api/client");
     mockCreateBudget.mockRejectedValue(
@@ -215,7 +215,7 @@ describe("BudgetPanel", () => {
     });
   });
 
-  it("deletes budget when delete button clicked  REQ: FUNC-BUD-001", async () => {
+  it("deletes budget when delete button clicked  REQ: ACC-BUD-001", async () => {
     mockGetBudgets.mockResolvedValue([makeLine()]);
     mockDeleteBudget.mockResolvedValue(undefined);
 

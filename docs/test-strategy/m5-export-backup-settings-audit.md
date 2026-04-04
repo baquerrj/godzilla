@@ -1,6 +1,6 @@
 # M5 Test Strategy — Export, Backup/Restore, Settings, Audit
 
-Requirements covered: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004, FUNC-REP-006
+Requirements covered: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003, ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-006, ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005, ACC-AUD-001, ACC-AUD-003, ACC-AUD-004, ACC-REP-006
 
 ## Automated tests
 
@@ -45,23 +45,23 @@ Frontend (`ui/src/test/*.test.tsx`):
 
 | Requirement | Verification |
 | --- | --- |
-| FUNC-EXP-001 | Filter-aware transaction CSV export with split expansion and editable fields |
-| FUNC-EXP-002 | Categories/budgets export in CSV and JSON formats |
-| FUNC-EXP-003 | Raw payload export defaults + explicit override behavior |
-| FUNC-BKP-001 | Encrypted backup blob generation and attachment response |
-| FUNC-BKP-002 | Tampered backup integrity failure path |
-| FUNC-BKP-003 | Restore workflow recovers DB and secrets |
-| FUNC-BKP-004 | Confirmed wipe removes DB/secrets and sidecars |
-| FUNC-BKP-006 | Reinitialize endpoint recreates schema after wipe and UI can trigger it |
-| FUNC-SET-001 | Settings bootstrap + timezone/currency update validation |
-| FUNC-SET-002 | Retention config persistence and pruning side effects |
-| FUNC-SET-003 | Auto-lock persistence and validation bounds |
-| FUNC-SET-004 | Sync settings persistence and validation bounds |
-| FUNC-SET-005 | Export-default settings roundtrip + UI defaulting |
-| FUNC-AUD-001 | Major workflow events persisted as redacted audit entries |
-| FUNC-AUD-003 | Audit retention pruning on settings update and write path |
-| FUNC-AUD-004 | JSON/CSV audit retrieval and UI export control |
-| FUNC-REP-006 | `/balances` payload includes `account_name` and UI renders it |
+| ACC-EXP-001 | Filter-aware transaction CSV export with split expansion and editable fields |
+| ACC-EXP-002 | Categories/budgets export in CSV and JSON formats |
+| ACC-EXP-003 | Raw payload export defaults + explicit override behavior |
+| ACC-BKP-001 | Encrypted backup blob generation and attachment response |
+| ACC-BKP-002 | Tampered backup integrity failure path |
+| ACC-BKP-003 | Restore workflow recovers DB and secrets |
+| ACC-BKP-004 | Confirmed wipe removes DB/secrets and sidecars |
+| ACC-BKP-006 | Reinitialize endpoint recreates schema after wipe and UI can trigger it |
+| ACC-SET-001 | Settings bootstrap + timezone/currency update validation |
+| ACC-SET-002 | Retention config persistence and pruning side effects |
+| ACC-SET-003 | Auto-lock persistence and validation bounds |
+| ACC-SET-004 | Sync settings persistence and validation bounds |
+| ACC-SET-005 | Export-default settings roundtrip + UI defaulting |
+| ACC-AUD-001 | Major workflow events persisted as redacted audit entries |
+| ACC-AUD-003 | Audit retention pruning on settings update and write path |
+| ACC-AUD-004 | JSON/CSV audit retrieval and UI export control |
+| ACC-REP-006 | `/balances` payload includes `account_name` and UI renders it |
 
 ## Command runbook
 

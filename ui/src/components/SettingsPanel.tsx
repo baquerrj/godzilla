@@ -1,8 +1,8 @@
 /**
  * SettingsPanel: view/update persisted application settings.
  *
- * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
- * REQ: FUNC-ACCT-006
+ * REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+ * REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
  */
 
 import { type FormEvent, useEffect, useState } from "react";

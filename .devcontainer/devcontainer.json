@@ -1,7 +1,7 @@
 {
   "name": "godzilla-dev",
   "godzillaRequirementTags": [
-    "REQ: SEC-DATA-004"
+    "REQ: TECH-SEC-DATA-004"
   ],
   "dockerComposeFile": [
     "../docker-compose.dev.yml"

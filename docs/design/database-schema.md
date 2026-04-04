@@ -1,6 +1,6 @@
 # Database Schema (MVP)
 
-Requirements: SYS-001, SYS-002, SYS-003, FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005, FUNC-ACCT-008, FUNC-ACCT-009, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008, FUNC-TXN-009, FUNC-CAT-001, FUNC-CAT-002, FUNC-CAT-003, FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, FUNC-REP-005, FUNC-REP-006, FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-005, FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, SEC-CRY-001, SEC-CRY-003, SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-DATA-005, SEC-DATA-006, SEC-DATA-007
+Requirements: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003, ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004, ACC-ACCT-005, ACC-ACCT-008, ACC-ACCT-009, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-SYNC-004, ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007, ACC-TXN-001, ACC-TXN-002, ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006, ACC-TXN-007, ACC-TXN-008, ACC-TXN-009, ACC-CAT-001, ACC-CAT-002, ACC-CAT-003, ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004, ACC-REP-005, ACC-REP-006, ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-005, ACC-AUD-001, ACC-AUD-002, ACC-AUD-003, TECH-SEC-CRY-001, TECH-SEC-CRY-003, TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-DATA-005, TECH-SEC-DATA-006, TECH-SEC-DATA-007
 
 This document supplements `architecture-overview.md`, which is the canonical MVP architecture source.
 
@@ -253,10 +253,10 @@ Per-item cursor and last-run state.
 - Unique index on `sync_state.item_id`.
 
 ## Security considerations
-- Database file is encrypted with SQLCipher (SEC-CRY-001).
-- Raw provider payloads are optional and prunable based on retention policy (FUNC-SET-002, SEC-DATA-005).
-- Audit log payloads must be redacted before write (FUNC-AUD-002).
-- PIN secrets stored as salted hash; raw PIN is never persisted (SEC-ACC-001, SEC-ACC-003).
+- Database file is encrypted with SQLCipher (TECH-SEC-CRY-001).
+- Raw provider payloads are optional and prunable based on retention policy (ACC-SET-002, TECH-SEC-DATA-005).
+- Audit log payloads must be redacted before write (ACC-AUD-002).
+- PIN secrets stored as salted hash; raw PIN is never persisted (TECH-SEC-ACC-001, TECH-SEC-ACC-003).
 
 ## Migration strategy
 - Use versioned SQL migrations (e.g., `migrations/0001_init.sql`).

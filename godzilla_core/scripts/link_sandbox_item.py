@@ -1,6 +1,6 @@
 """CLI helper to create a Plaid sandbox item and store its access token.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002, SEC-DATA-001
+REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002, TECH-SEC-DATA-001
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from godzilla_core.security.secrets import store_from_env  # noqa: E402
 def _parse_products(value: str | None) -> list[str] | None:
     """Parse a comma-separated products argument.
 
-    REQ: FUNC-ACCT-001
+    REQ: ACC-ACCT-001
 
     Args:
         value: Raw comma-separated product list.
@@ -41,7 +41,7 @@ def _parse_products(value: str | None) -> list[str] | None:
 def main() -> int:
     """Run sandbox link flow and persist the resulting access token.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002, SEC-DATA-001
+    REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002, TECH-SEC-DATA-001
     """
     parser = argparse.ArgumentParser(
         description="Create a Plaid sandbox item and store its access token",

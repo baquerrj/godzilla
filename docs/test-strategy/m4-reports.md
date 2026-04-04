@@ -1,6 +1,6 @@
 # M4 Test Plan — Reports, Dashboards, and Net Worth
 
-**Requirements covered:** FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-007, FUNC-REP-008
+**Requirements covered:** ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005, ACC-REP-007, ACC-REP-008
 
 ---
 
@@ -25,13 +25,13 @@
 
 | Requirement | Verification |
 | --- | --- |
-| FUNC-REP-001 | Monthly overview endpoint + UI cards/top categories rendering |
-| FUNC-REP-002 | Report metric click paths update transaction filters |
-| FUNC-REP-003 | Cash-flow month aggregation and savings rate checks |
-| FUNC-REP-004 | Category trend series generation for selected categories |
-| FUNC-REP-005 | Net worth = assets - liabilities over snapshots |
-| FUNC-REP-007 | Reports reconcile with budget inclusion-rule totals |
-| FUNC-REP-008 | Month/range validation and UI date navigation refresh behavior |
+| ACC-REP-001 | Monthly overview endpoint + UI cards/top categories rendering |
+| ACC-REP-002 | Report metric click paths update transaction filters |
+| ACC-REP-003 | Cash-flow month aggregation and savings rate checks |
+| ACC-REP-004 | Category trend series generation for selected categories |
+| ACC-REP-005 | Net worth = assets - liabilities over snapshots |
+| ACC-REP-007 | Reports reconcile with budget inclusion-rule totals |
+| ACC-REP-008 | Month/range validation and UI date navigation refresh behavior |
 
 ---
 

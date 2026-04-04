@@ -1,7 +1,7 @@
 """Plaid sandbox client and token exchange helpers.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-008, SEC-CRY-002, SEC-DATA-001,
-REQ: SEC-NET-003
+REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-008, TECH-SEC-CRY-002, TECH-SEC-DATA-001,
+REQ: TECH-SEC-NET-003
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ _RETRIABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 class PlaidConfigError(RuntimeError):
     """Raised when required Plaid environment configuration is missing.
 
-    REQ: FUNC-ACCT-001
+    REQ: ACC-ACCT-001
     """
 
     pass
@@ -45,13 +45,13 @@ class PlaidConfigError(RuntimeError):
 class PlaidApiError(RuntimeError):
     """Raised when a Plaid API request fails.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+    REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003
     """
 
     def __init__(self, message: str, status_code: Optional[int] = None) -> None:
         """Initialize an API error with optional HTTP status code.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003
+        REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003
         """
         super().__init__(message)
         self.status_code = status_code
@@ -61,7 +61,7 @@ class PlaidApiError(RuntimeError):
 class PlaidConfig:
     """Runtime Plaid configuration derived from environment variables.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-DATA-001
+    REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-DATA-001
     """
 
     client_id: str
@@ -74,7 +74,7 @@ class PlaidConfig:
     def from_env(cls) -> "PlaidConfig":
         """Load Plaid configuration from process environment.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         client_id = os.environ.get("PLAID_CLIENT_ID")
         secret = os.environ.get("PLAID_SECRET")
@@ -100,15 +100,15 @@ class PlaidConfig:
 class PlaidClient:
     """HTTP client wrapper for the Plaid API.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
-    REQ: SEC-NET-003
+    REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003, ACC-ACCT-008,
+    REQ: TECH-SEC-NET-003
     """
 
     def __init__(self, config: PlaidConfig, timeout_seconds: int = 15) -> None:
         """Create a Plaid client with static config and request timeout.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
-        REQ: SEC-NET-003
+        REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003, ACC-ACCT-008,
+        REQ: TECH-SEC-NET-003
         """
         self._config = config
         self._timeout_seconds = timeout_seconds
@@ -116,7 +116,7 @@ class PlaidClient:
     def _backoff_delay(self, attempt_index: int) -> float:
         """Compute capped exponential backoff delay with jitter.
 
-        REQ: SEC-NET-003
+        REQ: TECH-SEC-NET-003
         """
         base_delay = min(_BACKOFF_BASE_SECONDS * (2**attempt_index), _BACKOFF_MAX_SECONDS)
         jitter = random.uniform(0.0, _BACKOFF_JITTER_SECONDS)  # noqa: S311
@@ -127,7 +127,7 @@ class PlaidClient:
 
         Supports integer seconds and RFC 2822 datetime values.
 
-        REQ: SEC-NET-003
+        REQ: TECH-SEC-NET-003
         """
         if not retry_after:
             return None
@@ -148,8 +148,8 @@ class PlaidClient:
     def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Send an authenticated POST request to a Plaid endpoint.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-SYNC-001, FUNC-ACCT-003, FUNC-ACCT-008,
-        REQ: SEC-NET-003
+        REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-SYNC-001, ACC-ACCT-003, ACC-ACCT-008,
+        REQ: TECH-SEC-NET-003
 
         Args:
             path: Plaid API endpoint path.
@@ -202,7 +202,7 @@ class PlaidClient:
     ) -> str:
         """Create a sandbox public token.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         payload = {
             "institution_id": institution_id,
@@ -217,7 +217,7 @@ class PlaidClient:
     def exchange_public_token(self, public_token: str) -> Dict[str, str]:
         """Exchange a public token for an access token.
 
-        REQ: FUNC-ACCT-002
+        REQ: ACC-ACCT-002
         """
         payload = {"public_token": public_token}
         response = self._post("/item/public_token/exchange", payload)
@@ -235,7 +235,7 @@ class PlaidClient:
     ) -> Dict[str, Any]:
         """Fetch incremental transaction updates.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         payload: Dict[str, Any] = {"access_token": access_token, "count": count}
         if cursor:
@@ -245,7 +245,7 @@ class PlaidClient:
     def accounts_balance_get(self, access_token: str) -> Dict[str, Any]:
         """Fetch account balances.
 
-        REQ: FUNC-ACCT-003
+        REQ: ACC-ACCT-003
         """
         payload = {"access_token": access_token}
         return self._post("/accounts/balance/get", payload)
@@ -253,7 +253,7 @@ class PlaidClient:
     def remove_item(self, access_token: str) -> Dict[str, Any]:
         """Revoke an item's access token via Plaid item/remove.
 
-        REQ: FUNC-ACCT-008
+        REQ: ACC-ACCT-008
         """
         payload = {"access_token": access_token}
         return self._post("/item/remove", payload)
@@ -262,7 +262,7 @@ class PlaidClient:
 def store_access_token(secret_store: SecretStore, item_id: str, access_token: str) -> str:
     """Store an access token in the secrets store and return the key.
 
-    REQ: FUNC-ACCT-002, SEC-CRY-002
+    REQ: ACC-ACCT-002, TECH-SEC-CRY-002
     """
     key = f"plaid_access_token:{item_id}"
     secret_store.set_secret(key, access_token)
@@ -277,7 +277,7 @@ def link_sandbox_item(
 ) -> Dict[str, str]:
     """Create a sandbox item and store its access token.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    REQ: ACC-ACCT-001, ACC-ACCT-002
     """
     institution_id = institution_id or client._config.sandbox_institution_id
     products = list(products) if products else _DEFAULT_PRODUCTS

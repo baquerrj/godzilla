@@ -1,7 +1,7 @@
 /**
  * Tests for ExportPanel component.
  *
- * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-AUD-004, FUNC-SET-005
+ * REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003, ACC-AUD-004, ACC-SET-005
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,7 +76,7 @@ describe("ExportPanel", () => {
     });
   });
 
-  it("uses settings default and exports filtered transactions  REQ: FUNC-EXP-001, FUNC-EXP-003", async () => {
+  it("uses settings default and exports filtered transactions  REQ: ACC-EXP-001, ACC-EXP-003", async () => {
     render(
       <ExportPanel
         token={TOKEN}
@@ -102,7 +102,7 @@ describe("ExportPanel", () => {
     });
   });
 
-  it("reports when transactions export save is canceled  REQ: FUNC-EXP-001", async () => {
+  it("reports when transactions export save is canceled  REQ: ACC-EXP-001", async () => {
     mockSaveBlob.mockResolvedValue(false);
     render(<ExportPanel token={TOKEN} refreshKey={0} filters={{}} />);
 
@@ -117,7 +117,7 @@ describe("ExportPanel", () => {
     });
   });
 
-  it("exports categories/budgets json  REQ: FUNC-EXP-002", async () => {
+  it("exports categories/budgets json  REQ: ACC-EXP-002", async () => {
     render(<ExportPanel token={TOKEN} refreshKey={0} filters={{}} />);
 
     await waitFor(() => {
@@ -139,7 +139,7 @@ describe("ExportPanel", () => {
     });
   });
 
-  it("exports audit csv with filters  REQ: FUNC-AUD-004", async () => {
+  it("exports audit csv with filters  REQ: ACC-AUD-004", async () => {
     render(<ExportPanel token={TOKEN} refreshKey={0} filters={{}} />);
 
     await waitFor(() => {

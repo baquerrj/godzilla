@@ -1,6 +1,6 @@
 """CLI script tests for link_sandbox_item and sync_plaid_item.
 
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-SYNC-001, SEC-CRY-002
+REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-SYNC-001, TECH-SEC-CRY-002
 """
 
 import json
@@ -21,34 +21,34 @@ from godzilla_core.scripts.sync_plaid_item import main as sync_main
 class ParseProductsTests(unittest.TestCase):
     """Tests for the _parse_products helper in link_sandbox_item.
 
-    REQ: FUNC-ACCT-001
+    REQ: ACC-ACCT-001
     """
 
     def test_none_returns_none(self) -> None:
         """_parse_products(None) returns None.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         self.assertIsNone(_parse_products(None))
 
     def test_empty_string_returns_none(self) -> None:
         """_parse_products('') returns None.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         self.assertIsNone(_parse_products(""))
 
     def test_single_product(self) -> None:
         """_parse_products returns a single-element list for one product.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         self.assertEqual(_parse_products("transactions"), ["transactions"])
 
     def test_multiple_products(self) -> None:
         """_parse_products splits on commas and strips whitespace.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         result = _parse_products("transactions, identity , balance")
         self.assertEqual(result, ["transactions", "identity", "balance"])
@@ -56,7 +56,7 @@ class ParseProductsTests(unittest.TestCase):
     def test_strips_blank_entries(self) -> None:
         """_parse_products filters out blank entries from the list.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         result = _parse_products("transactions,,identity")
         self.assertEqual(result, ["transactions", "identity"])
@@ -65,13 +65,13 @@ class ParseProductsTests(unittest.TestCase):
 class LinkSandboxItemMainTests(unittest.TestCase):
     """Tests for the link_sandbox_item CLI entry point.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+    REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002
     """
 
     def test_main_prints_json_result(self) -> None:
         """main() prints a JSON object containing item_id and secret_key.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, SEC-CRY-002
+        REQ: ACC-ACCT-001, ACC-ACCT-002, TECH-SEC-CRY-002
         """
         mock_config = MagicMock()
         mock_config.env = "sandbox"
@@ -120,7 +120,7 @@ class LinkSandboxItemMainTests(unittest.TestCase):
     def test_main_propagates_plaid_config_error(self) -> None:
         """main() surfaces PlaidConfigError when credentials are missing.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         with (
             patch(
@@ -136,13 +136,13 @@ class LinkSandboxItemMainTests(unittest.TestCase):
 class SyncPlaidItemMainTests(unittest.TestCase):
     """Tests for the sync_plaid_item CLI entry point.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+    REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006
     """
 
     def test_main_prints_json_result(self) -> None:
         """main() prints a JSON sync summary for the given item.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-REP-006
+        REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-REP-006
         """
         mock_result = SyncResult(
             item_id="item-1",
@@ -176,7 +176,7 @@ class SyncPlaidItemMainTests(unittest.TestCase):
     def test_main_requires_item_id(self) -> None:
         """main() exits with an error when --item-id is not provided.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         with patch.object(sys, "argv", ["sync-plaid-item"]):
             with self.assertRaises(SystemExit) as ctx:

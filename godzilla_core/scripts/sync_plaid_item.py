@@ -1,6 +1,6 @@
 """CLI helper to sync a Plaid item into the encrypted DB.
 
-REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from godzilla_core.integrations.plaid_sync import (  # noqa: E402
 def main() -> int:
     """Run sync for one Plaid item and print a JSON summary.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+    REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006
     """
     parser = argparse.ArgumentParser(
         description="Sync transactions and balances for a Plaid item",

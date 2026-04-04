@@ -1,8 +1,8 @@
 /**
  * Tests for ReportsPanel component.
  *
- * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
- * REQ: FUNC-REP-007, FUNC-REP-008
+ * REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+ * REQ: ACC-REP-007, ACC-REP-008
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -106,7 +106,7 @@ describe("ReportsPanel", () => {
     });
   });
 
-  it("renders report sections and data  REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005", async () => {
+  it("renders report sections and data  REQ: ACC-REP-001, ACC-REP-003, ACC-REP-004, ACC-REP-005", async () => {
     render(
       <ReportsPanel
         token={TOKEN}
@@ -130,7 +130,7 @@ describe("ReportsPanel", () => {
     });
   });
 
-  it("requests all report endpoints on load  REQ: FUNC-REP-008", async () => {
+  it("requests all report endpoints on load  REQ: ACC-REP-008", async () => {
     render(
       <ReportsPanel
         token={TOKEN}
@@ -147,7 +147,7 @@ describe("ReportsPanel", () => {
     expect(mockGetCategoryTrends).not.toHaveBeenCalled();
   });
 
-  it("requests category trends after categories are selected  REQ: FUNC-REP-004", async () => {
+  it("requests category trends after categories are selected  REQ: ACC-REP-004", async () => {
     render(
       <ReportsPanel
         token={TOKEN}
@@ -176,7 +176,7 @@ describe("ReportsPanel", () => {
     });
   });
 
-  it("renders trend categories in alphabetical order  REQ: FUNC-REP-004", async () => {
+  it("renders trend categories in alphabetical order  REQ: ACC-REP-004", async () => {
     const unsortedCategories: Category[] = [
       { category_id: "zeta", name: "zeta", parent_id: null, active: true },
       { category_id: "alpha", name: "Alpha", parent_id: null, active: true },
@@ -199,7 +199,7 @@ describe("ReportsPanel", () => {
     expect(labels).toEqual(["Alpha", "beta", "zeta"]);
   });
 
-  it("updates range-driven report calls when month changes  REQ: FUNC-REP-008", async () => {
+  it("updates range-driven report calls when month changes  REQ: ACC-REP-008", async () => {
     render(
       <ReportsPanel
         token={TOKEN}
@@ -229,7 +229,7 @@ describe("ReportsPanel", () => {
     });
   });
 
-  it("drills down from top category and overview cards  REQ: FUNC-REP-002", async () => {
+  it("drills down from top category and overview cards  REQ: ACC-REP-002", async () => {
     const onDrillDown = vi.fn();
     render(
       <ReportsPanel
@@ -269,7 +269,7 @@ describe("ReportsPanel", () => {
     });
   });
 
-  it("drills down from cash-flow and category trend points  REQ: FUNC-REP-002", async () => {
+  it("drills down from cash-flow and category trend points  REQ: ACC-REP-002", async () => {
     const onDrillDown = vi.fn();
     render(
       <ReportsPanel

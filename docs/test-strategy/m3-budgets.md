@@ -1,6 +1,6 @@
 # M3 Test Plan — Budgets, Monthly View, Overspend Drill-down
 
-**Requirements covered:** FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+**Requirements covered:** ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
 
 **Automated tests:**
 - Backend: `godzilla_core/tests/test_api_layer.py` (15 budget tests)
@@ -18,10 +18,10 @@ the overspend. This plan verifies all four requirements at the API layer and the
 
 | Req | Title | Covered in sections |
 |---|---|---|
-| FUNC-BUD-001 | Monthly budgets (CRUD, scoping) | 2, 3 |
-| FUNC-BUD-002 | Budget performance (planned/actual/remaining) | 4 |
-| FUNC-BUD-003 | Overspend highlighting and drill-down | 5 |
-| FUNC-BUD-004 | Inclusion rules (transfers, excluded, pending, splits) | 6 |
+| ACC-BUD-001 | Monthly budgets (CRUD, scoping) | 2, 3 |
+| ACC-BUD-002 | Budget performance (planned/actual/remaining) | 4 |
+| ACC-BUD-003 | Overspend highlighting and drill-down | 5 |
+| ACC-BUD-004 | Inclusion rules (transfers, excluded, pending, splits) | 6 |
 
 ---
 
@@ -93,7 +93,7 @@ export PARENT_CAT="food-parent-id"
 
 ---
 
-## 2. FUNC-BUD-001 — Monthly Budget CRUD
+## 2. ACC-BUD-001 — Monthly Budget CRUD
 
 These steps verify that budget lines can be created, listed, and deleted; that they are
 scoped to the correct month; and that invalid inputs are rejected.
@@ -231,7 +231,7 @@ curl -s -o /dev/null -w "%{http_code}" "$BASE/budgets?month=2026-03"
 
 ---
 
-## 3. FUNC-BUD-001 — UI Budget CRUD
+## 3. ACC-BUD-001 — UI Budget CRUD
 
 Start the Tauri dev app or use the Vite browser proxy (`npm run dev` in `ui/`).
 
@@ -283,7 +283,7 @@ set" message reappears.
 
 ---
 
-## 4. FUNC-BUD-002 — Planned / Actual / Remaining Computation
+## 4. ACC-BUD-002 — Planned / Actual / Remaining Computation
 
 This section verifies the arithmetic and that the API computes actuals from real
 transactions in the database.
@@ -349,7 +349,7 @@ The remaining cell is styled in red (class `budget-row-overspent`).
 
 ---
 
-## 5. FUNC-BUD-003 — Overspend Highlighting and Drill-down
+## 5. ACC-BUD-003 — Overspend Highlighting and Drill-down
 
 ### 5.1 Overspent row is visually distinct
 
@@ -405,7 +405,7 @@ there is no overspend.
 
 ---
 
-## 6. FUNC-BUD-004 — Inclusion Rules
+## 6. ACC-BUD-004 — Inclusion Rules
 
 Each sub-step tests one inclusion rule in isolation. The automated backend tests cover
 the same cases via `_seed_budget_data`; these steps verify the full data path with real
@@ -613,10 +613,10 @@ PASSED test_delete_budget_not_found_returns_404
 Verify the traceability index is current:
 
 ```bash
-grep -A 20 "requirement_id: FUNC-BUD-001" trace/requirements.yml
-grep -A 10 "requirement_id: FUNC-BUD-002" trace/requirements.yml
-grep -A 10 "requirement_id: FUNC-BUD-003" trace/requirements.yml
-grep -A 10 "requirement_id: FUNC-BUD-004" trace/requirements.yml
+grep -A 20 "requirement_id: ACC-BUD-001" trace/requirements.yml
+grep -A 10 "requirement_id: ACC-BUD-002" trace/requirements.yml
+grep -A 10 "requirement_id: ACC-BUD-003" trace/requirements.yml
+grep -A 10 "requirement_id: ACC-BUD-004" trace/requirements.yml
 ```
 
 **Expected:** Each entry has non-empty `code_refs` and `test_refs` lists covering the
@@ -632,6 +632,6 @@ The following are deferred to later milestones and are not tested here:
 |---|---|
 | Budget carry-over or rolling budgets | Post-MVP |
 | Category-level totals (parent category aggregation) | M4 reports |
-| Reporting consistency across dashboard widgets | M4 (FUNC-REP-007) |
-| CSV export of budget data | M5 (FUNC-EXP-002) |
+| Reporting consistency across dashboard widgets | M4 (ACC-REP-007) |
+| CSV export of budget data | M5 (ACC-EXP-002) |
 | Budget inclusion rules on report endpoints | M4 (shares `_BUDGET_ACTUALS_CTE`) |

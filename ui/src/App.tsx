@@ -4,20 +4,20 @@
  * Reads the API token from the Tauri runtime, gates the UI on its
  * presence, and orchestrates data refresh across all panels.
  *
- * REQ: SYS-001, SYS-002, SYS-003,
- * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
- * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
- * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
- * REQ: FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-SYNC-006,
- * REQ: FUNC-SYNC-007,
- * REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
- * REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
- * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
- * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
- * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
- * REQ: FUNC-AUD-004,
- * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-DATA-001,
- * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+ * REQ: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003,
+ * REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004,
+ * REQ: ACC-ACCT-005, ACC-SYNC-001, ACC-TXN-001, ACC-TXN-002,
+ * REQ: ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006,
+ * REQ: ACC-TXN-007, ACC-TXN-008, ACC-CAT-001, ACC-SYNC-006,
+ * REQ: ACC-SYNC-007,
+ * REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+ * REQ: ACC-REP-006, ACC-REP-007, ACC-REP-008,
+ * REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003,
+ * REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-006,
+ * REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+ * REQ: ACC-AUD-004,
+ * REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-DATA-001,
+ * REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -65,7 +65,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<AppTab>("overview");
   const [mountedTabs, setMountedTabs] = useState<MountedTabs>(INITIAL_MOUNTED_TABS);
 
-  // REQ: SEC-ACC-004, SEC-DATA-001 — obtain token from Tauri at runtime, and
+  // REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001 — obtain token from Tauri at runtime, and
   // fall back to a dev-only proxy token when running in a plain browser.
   useEffect(() => {
     const hasTauriRuntime =
@@ -137,7 +137,7 @@ export function App() {
   };
   const panelStyle = (tab: AppTab) => (activeTab === tab ? undefined : { display: "none" as const });
 
-  // REQ: FUNC-BUD-003 — drill-down from overspent budget row into transactions
+  // REQ: ACC-BUD-003 — drill-down from overspent budget row into transactions
   const handleBudgetDrillDown = (categoryId: string, month: string) => {
     const [year, monthNum] = month.split("-").map(Number);
     const lastDay = new Date(year, monthNum, 0).getDate();
@@ -150,7 +150,7 @@ export function App() {
     switchTab("transactions");
   };
 
-  // REQ: FUNC-REP-002 — drill-down from report metrics to transaction filters.
+  // REQ: ACC-REP-002 — drill-down from report metrics to transaction filters.
   const handleReportDrillDown = (input: ReportDrillDown) => {
     setFilterValues({
       ...EMPTY_FILTERS,

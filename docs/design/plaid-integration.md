@@ -1,6 +1,6 @@
 # Plaid Sandbox Integration (MVP)
 
-Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-005, FUNC-ACCT-007, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006, SEC-DATA-001, SEC-CRY-002, SEC-NET-001, SEC-NET-003
+Requirements: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-005, ACC-ACCT-007, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006, TECH-SEC-DATA-001, TECH-SEC-CRY-002, TECH-SEC-NET-001, TECH-SEC-NET-003
 
 ## Problem statement
 The MVP must connect to Plaid sandbox to create a Link session, exchange the public token for an access token, and store that access token securely. Transactions and balances are retrieved via Plaid endpoints using the stored token.
@@ -66,9 +66,9 @@ python3 godzilla_core/scripts/sync_plaid_item.py \
 - `link_sandbox_item()` convenience method storing tokens in `SecretStore`.
 
 ## Security considerations
-- Access tokens are stored only in SQLCipher secrets DB (SEC-CRY-002).
-- Tokens are never stored in the main DB or logs (SEC-DATA-001).
-- All Plaid calls use HTTPS and follow backoff guidance (SEC-NET-001, SEC-NET-003).
+- Access tokens are stored only in SQLCipher secrets DB (TECH-SEC-CRY-002).
+- Tokens are never stored in the main DB or logs (TECH-SEC-DATA-001).
+- All Plaid calls use HTTPS and follow backoff guidance (TECH-SEC-NET-001, TECH-SEC-NET-003).
 
 ## Tradeoffs and alternatives
 - Using Plaid SDK vs raw HTTP: raw HTTP avoids extra dependencies but requires explicit error handling.

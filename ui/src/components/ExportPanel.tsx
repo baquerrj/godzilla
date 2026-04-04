@@ -1,7 +1,7 @@
 /**
  * ExportPanel: transaction/categories/audit exports with download actions.
  *
- * REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003, FUNC-AUD-004, FUNC-SET-005
+ * REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003, ACC-AUD-004, ACC-SET-005
  */
 
 import { useEffect, useState } from "react";

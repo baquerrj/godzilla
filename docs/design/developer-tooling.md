@@ -1,6 +1,6 @@
 # Developer Tooling Design (MVP)
 
-Requirements: SEC-DATA-004
+Requirements: TECH-SEC-DATA-004
 
 ## Problem statement
 The project needs a reproducible containerized development environment so every contributor can run the same pinned toolchain (Python, Node, Rust, lint/test/build tooling) and attach VS Code to the running environment without host-specific setup drift.

@@ -44,25 +44,25 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M2 — Transaction list/detail + categorization + search/filters
 
-- [x] **6. Transaction search & filter API** (`FUNC-TXN-002`)
+- [x] **6. Transaction search & filter API** (`ACC-TXN-002`)
   Extend `GET /transactions` with date range, account, category, merchant text,
   and amount range filters.
 
-- [x] **7. Transaction detail endpoint** (`FUNC-TXN-003`)
+- [x] **7. Transaction detail endpoint** (`ACC-TXN-003`)
   `GET /transactions/{id}` with full detail including read-only raw provider metadata.
 
-- [x] **8. Category management endpoints** (`FUNC-CAT-001`, `FUNC-CAT-002`)
+- [x] **8. Category management endpoints** (`ACC-CAT-001`, `ACC-CAT-002`)
   `GET/POST /categories`, `PATCH /categories/{id}` (rename/deactivate). Enforce
   leaf-only assignment and block deactivated categories.
 
-- [x] **9. Transaction mutation endpoints** (`FUNC-TXN-004`–`FUNC-TXN-008`)
+- [x] **9. Transaction mutation endpoints** (`ACC-TXN-004`–`ACC-TXN-008`)
   `PATCH /transactions/{id}` (category, notes, tags, is_transfer, is_excluded),
   `POST /transactions/{id}/splits`. Write to `transaction_override` for provenance.
 
-- [x] **10. Provider category mapping on sync** (`FUNC-CAT-003`)
+- [x] **10. Provider category mapping on sync** (`ACC-CAT-003`)
   Map Plaid category signals to local hierarchy as a suggested default during ingestion.
 
-- [x] **11. Conflict detection + resolution endpoints** (`FUNC-SYNC-005`–`FUNC-SYNC-007`)
+- [x] **11. Conflict detection + resolution endpoints** (`ACC-SYNC-005`–`ACC-SYNC-007`)
   Detect field-level conflicts during sync, write to `conflict` table.
   `GET /conflicts`, `POST /conflicts/{id}/resolve`.
 
@@ -74,7 +74,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M3 — Budgets + monthly view + overspend drill-down
 
-- [x] **13. Budget endpoints** (`FUNC-BUD-001`–`FUNC-BUD-004`)
+- [x] **13. Budget endpoints** (`ACC-BUD-001`–`ACC-BUD-004`)
   - [x] 13a. Pydantic models: `CreateBudgetRequest`, `BudgetLineResponse`
   - [x] 13b. `_BUDGET_ACTUALS_CTE` module-level SQL constant
   - [x] 13c. `GET /budgets?month=YYYY-MM` in `_register_read_routes`
@@ -95,39 +95,39 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M4 — Dashboards/reports + net worth snapshots
 
-- [x] **15. Dashboard/report endpoints** (`FUNC-REP-001`–`FUNC-REP-008`)
+- [x] **15. Dashboard/report endpoints** (`ACC-REP-001`–`ACC-REP-008`)
   - [x] 15a. Add shared report SQL helpers that reuse M3 inclusion rules
     (posted-only, exclude transfer/excluded, split-aware) for all
-    transaction-derived report metrics (`FUNC-REP-007`).
+    transaction-derived report metrics (`ACC-REP-007`).
   - [x] 15b. Add Pydantic request/response models for monthly overview, cash
     flow, category trends, and net worth.
   - [x] 15c. Implement `GET /reports/monthly-overview?month=YYYY-MM`
-    (`FUNC-REP-001`, `FUNC-REP-008`).
+    (`ACC-REP-001`, `ACC-REP-008`).
   - [x] 15d. Implement `GET /reports/cash-flow?start=YYYY-MM-DD&end=YYYY-MM-DD`
-    (`FUNC-REP-003`, `FUNC-REP-008`).
+    (`ACC-REP-003`, `ACC-REP-008`).
   - [x] 15e. Implement
     `GET /reports/category-trends?categories=<csv>&months=<int>`
-    (`FUNC-REP-004`, `FUNC-REP-008`).
+    (`ACC-REP-004`, `ACC-REP-008`).
   - [x] 15f. Implement `GET /reports/net-worth?start=YYYY-MM-DD&end=YYYY-MM-DD`
-    with assets/liabilities/net (`FUNC-REP-005`).
+    with assets/liabilities/net (`ACC-REP-005`).
   - [x] 15g. Add backend tests for math correctness, inclusion consistency,
     auth, and validation.
   - [x] 15h. Update traceability/docs: `trace/requirements.yml`,
     `docs/design/reports-dashboard.md`, `docs/test-strategy/m4-reports.md`.
 
-- [x] **16. M4 UI** (`FUNC-REP-001`–`FUNC-REP-008`)
+- [x] **16. M4 UI** (`ACC-REP-001`–`ACC-REP-008`)
   - [x] 16a. Add TypeScript report types and API client methods.
   - [x] 16b. Add `ReportsPanel` with unified month + custom range controls
-    driving all report widgets (`FUNC-REP-008`).
+    driving all report widgets (`ACC-REP-008`).
   - [x] 16c. Add monthly overview cards + top-category table with drill-down
-    (`FUNC-REP-001`, `FUNC-REP-002`).
+    (`ACC-REP-001`, `ACC-REP-002`).
   - [x] 16d. Add cash-flow chart + category-trends chart with drill-down from
-    selected points/categories (`FUNC-REP-002`, `FUNC-REP-003`,
-    `FUNC-REP-004`).
+    selected points/categories (`ACC-REP-002`, `ACC-REP-003`,
+    `ACC-REP-004`).
   - [x] 16e. Add net-worth chart (assets, liabilities, net) for selected range
-    (`FUNC-REP-005`).
+    (`ACC-REP-005`).
   - [x] 16f. Add inclusion-rule labeling on transaction-derived metrics
-    (`FUNC-REP-007`).
+    (`ACC-REP-007`).
   - [x] 16g. Integrate drill-down into existing `App.tsx` transaction filter
     state.
   - [x] 16h. Add frontend tests for rendering, navigation, and drill-down.
@@ -177,20 +177,20 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     dates/category/amount-direction.
   - [x] 13. Verify traceability completion:
     `trace/requirements.yml` has populated `code_refs` + `test_refs` for
-    `FUNC-REP-001..008`.
+    `ACC-REP-001..008`.
   - [x] 14. Mark M4 tasks complete and commit with Conventional Commit.
 
 ---
 
 ## M5 — Export + encrypted backup/restore + settings + audit logging hardening
 
-- [x] **17. Export endpoints** (`FUNC-EXP-001`–`FUNC-EXP-003`)
+- [x] **17. Export endpoints** (`ACC-EXP-001`–`ACC-EXP-003`)
   - [x] 17a. Shared export helpers (CSV attachment, transaction filter reuse from `/transactions`).
   - [x] 17b. `GET /export/transactions` (filter-aware CSV, split-row expansion, tags/overrides/flags).
   - [x] 17c. `GET /export/categories-budgets` (`format=csv|json`, optional `month=YYYY-MM`).
   - [x] 17d. Backend tests for filter behavior, CSV/JSON shape, split behavior, defaults, auth/validation.
 
-- [x] **18. Encrypted backup/restore + wipe** (`FUNC-BKP-001`–`FUNC-BKP-004`)
+- [x] **18. Encrypted backup/restore + wipe** (`ACC-BKP-001`–`ACC-BKP-004`)
   - [x] 18a. Added `godzilla_core/security/backup.py` with Scrypt + AESGCM envelope.
   - [x] 18b. Added `cryptography>=43` dependency.
   - [x] 18c. `POST /backup` (encrypted downloadable blob).
@@ -198,14 +198,14 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 18e. `POST /wipe` (DB + sidecars + secrets best-effort wipe).
   - [x] 18f. Backend tests for encrypted output, tamper failure, restore correctness, wipe behavior.
 
-- [x] **19. Settings endpoints** (`FUNC-SET-001`–`FUNC-SET-005`)
+- [x] **19. Settings endpoints** (`ACC-SET-001`–`ACC-SET-005`)
   - [x] 19a. Added migration `0003_m5_settings_extensions.sql`.
   - [x] 19b. Added consolidated settings models and defaults bootstrap.
   - [x] 19c. `GET /settings` and partial `PUT /settings`.
   - [x] 19d. Retention pruning on update (`provider_raw`, `audit_log`).
   - [x] 19e. Backend tests for defaults, updates, validation, and pruning side effects.
 
-- [x] **20. Audit log enforcement** (`FUNC-AUD-001`, `FUNC-AUD-003`, `FUNC-AUD-004`)
+- [x] **20. Audit log enforcement** (`ACC-AUD-001`, `ACC-AUD-003`, `ACC-AUD-004`)
   - [x] 20a. Persist redacted events in `audit_log` while retaining structured logger output.
   - [x] 20b. Added major workflow events: link/sync/backup/restore/wipe/settings.
   - [x] 20c. Retention pruning enforced both on settings update and on audit write path.
@@ -220,7 +220,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 21e. Integrated all panels in `App.tsx` refresh flow.
   - [x] 21f. Added frontend tests for render, request wiring, and file-operation flows.
 
-- [x] **22. Post-wipe database re-initialization** (`FUNC-BKP-006`)
+- [x] **22. Post-wipe database re-initialization** (`ACC-BKP-006`)
   - [x] 22a. Added authenticated `POST /reinitialize` endpoint to re-run migrations on current DB path.
   - [x] 22b. Added Data Management UI action to trigger re-initialization after wipe.
   - [x] 22c. Added backend + frontend tests for wipe -> re-initialize -> recoverable clean state flow.
@@ -329,7 +329,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## M6 — Security review pass
 
-- [x] **23. HTTPS / TLS for local sidecar** (`SEC-NET-001`, `SEC-NET-002`)
+- [x] **23. HTTPS / TLS for local sidecar** (`TECH-SEC-NET-001`, `TECH-SEC-NET-002`)
   - [x] 23a. Extend API server runner to accept TLS cert/key from CLI and env (`GODZILLA_TLS_CERT`, `GODZILLA_TLS_KEY`) and run uvicorn in TLS mode when both are provided.
   - [x] 23b. Enforce loopback bind only (`127.0.0.1`, `localhost`, `::1`) and reject non-loopback hosts.
   - [x] 23c. Add `/auth/status` TLS diagnostics with `tls.enabled` + `tls.cert_fingerprint_sha256` (fingerprint only, no private material).
@@ -338,7 +338,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 23f. Update Tauri CSP/connect-src and frontend transport wiring for runtime HTTPS + pinning behavior.
   - [x] 23g. Add backend/frontend/Tauri tests for TLS success path and pin mismatch failure path.
 
-- [x] **24. PIN access gate + session timeout** (`SEC-ACC-001`–`SEC-ACC-003`)
+- [x] **24. PIN access gate + session timeout** (`TECH-SEC-ACC-001`–`TECH-SEC-ACC-003`)
   - [x] 24a. Add auth models/endpoints: `GET /auth/status`, `POST /auth/setup-pin`, `POST /auth/unlock`.
   - [x] 24b. Persist PIN verification material only in secure secrets storage.
   - [x] 24c. Enforce unlock-session header (`X-App-Unlock-Token`) for sensitive API routes.
@@ -347,13 +347,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 24f. Add dev-only bypass switch (`GODZILLA_DEV_BYPASS_PIN=1`) for local development/testing.
   - [x] 24g. Clear sensitive UI state on lock or timeout event.
 
-- [x] **25. Rate limiting + retry backoff for Plaid calls** (`SEC-NET-003`)
+- [x] **25. Rate limiting + retry backoff for Plaid calls** (`TECH-SEC-NET-003`)
   - [x] 25a. Implement retry in `PlaidClient._post` for transient failures (`429`, transient `5xx`, network errors).
   - [x] 25b. Use bounded exponential backoff + jitter and honor `Retry-After` when present.
   - [x] 25c. Keep non-retriable `4xx` fail-fast behavior.
   - [x] 25d. Add deterministic tests with mocked sleep/jitter and status-code scenarios.
 
-- [x] **26. Unlink institution** (`FUNC-ACCT-008`)
+- [x] **26. Unlink institution** (`ACC-ACCT-008`)
   - [x] 26a. Add Plaid client method for `/item/remove`.
   - [x] 26b. Add `DELETE /plaid/items/{item_id}?mode=keep|purge` with auth + validation.
   - [x] 26c. `mode=keep`: remove/revoke token, clear raw payload cache for item, preserve ledger history.
@@ -362,7 +362,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
   - [x] 26f. Add UI unlink controls in sync panel with explicit mode and destructive confirmation for purge.
   - [x] 26g. Add audit events and tests for unlink start/success/failure in both modes.
 
-- [x] **27. Dependency vulnerability scanning** (`SEC-DATA-004`)
+- [x] **27. Dependency vulnerability scanning** (`TECH-SEC-DATA-004`)
   - [x] 27a. Add dedicated `nox -s security` session.
   - [x] 27b. Run `pip-audit` and `npm audit` (high severity threshold).
   - [x] 27c. Add tooling tests to ensure security session wiring remains intact.
@@ -376,7 +376,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 - [x] **29. Traceability maintenance**
   - [x] 29a. Update `trace/requirements.yml` `code_refs`/`test_refs`/`doc_refs` for all M6 IDs.
-  - [x] 29b. Ensure coverage for `FUNC-ACCT-008`, `SEC-ACC-001..003`, `SEC-NET-001..003`, `SEC-DATA-004`.
+  - [x] 29b. Ensure coverage for `ACC-ACCT-008`, `TECH-SEC-ACC-001..003`, `TECH-SEC-NET-001..003`, `TECH-SEC-DATA-004`.
 
 - [x] **30. Design doc updates**
   - [x] 30a. Add `docs/design/m6-security-review-pass.md`.
@@ -527,5 +527,5 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
     ```
   - [x] 17. Verify traceability coverage for all M6 IDs:
     ```bash
-    rg -n "FUNC-ACCT-008|SEC-ACC-001|SEC-ACC-002|SEC-ACC-003|SEC-NET-001|SEC-NET-002|SEC-NET-003|SEC-DATA-004" trace/requirements.yml
+    rg -n "ACC-ACCT-008|TECH-SEC-ACC-001|TECH-SEC-ACC-002|TECH-SEC-ACC-003|TECH-SEC-NET-001|TECH-SEC-NET-002|TECH-SEC-NET-003|TECH-SEC-DATA-004" trace/requirements.yml
     ```

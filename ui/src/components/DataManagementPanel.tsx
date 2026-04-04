@@ -1,7 +1,7 @@
 /**
  * DataManagementPanel: encrypted backup download, restore upload, and wipe.
  *
- * REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006
+ * REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-006
  */
 
 import { type FormEvent, useState } from "react";

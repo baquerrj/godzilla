@@ -1,8 +1,10 @@
 """Plaid sync ingestion tests.
 
-REQ: FUNC-ACCT-003, FUNC-ACCT-009, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002,
-REQ: FUNC-SYNC-003, FUNC-TXN-009, FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005,
-REQ: FUNC-SYNC-006, FUNC-ACCT-008, SEC-DATA-005, SEC-DATA-007
+REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-INGEST, ACC-REP-006,
+REQ: ACC-SYNC-001, ACC-SYNC-002,
+REQ: ACC-SYNC-003, ACC-TXN-009, TECH-TXN-009-FALLBACK, TECH-TXN-009-CONFLICT,
+REQ: ACC-CAT-003, ACC-SYNC-004, ACC-SYNC-005,
+REQ: ACC-SYNC-006, ACC-ACCT-008, TECH-SEC-DATA-005, TECH-SEC-DATA-007
 """
 
 import json
@@ -41,13 +43,13 @@ from godzilla_core.util.time import local_date
 class PlaidSyncIngestionTests(unittest.TestCase):
     """Component tests for Plaid sync ingestion behavior.
 
-    REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003
+    REQ: ACC-ACCT-003, ACC-REP-006, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003
     """
 
     def setUp(self) -> None:
         """Create an encrypted test database seeded with one linked account.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "test.db")
@@ -112,7 +114,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def tearDown(self) -> None:
         """Release database resources allocated by each test.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         self.conn.close()
         self.tmp_dir.cleanup()
@@ -122,7 +124,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_pending_to_posted_updates_record(self) -> None:
         """Verify pending transactions are reconciled to posted transactions.
 
-        REQ: FUNC-SYNC-002
+        REQ: ACC-SYNC-002
         """
         pending_txn = {
             "transaction_id": "pending-1",
@@ -158,7 +160,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_idempotent_ingestion_does_not_duplicate(self) -> None:
         """Verify repeated sync payloads update existing rows instead of duplicating.
 
-        REQ: FUNC-SYNC-002
+        REQ: ACC-SYNC-002
         """
         txn = {
             "transaction_id": "tx-1",
@@ -186,7 +188,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_balance_snapshot_upserts_per_day(self) -> None:
         """Verify balance snapshots upsert by account and local date.
 
-        REQ: FUNC-REP-006
+        REQ: ACC-REP-006
         """
         _insert_balance_snapshot(self.conn, self.account_id, 100.0)
         _insert_balance_snapshot(self.conn, self.account_id, 150.0)
@@ -202,7 +204,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_account_metadata_upsert(self) -> None:
         """Verify account metadata is inserted with provider details.
 
-        REQ: FUNC-ACCT-003, FUNC-ACCT-009
+        REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-INGEST
         """
         payload = {
             "account_id": "acct-2",
@@ -232,7 +234,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_cursor_persistence_roundtrip(self) -> None:
         """Verify sync cursor persistence for incremental sync resumes.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         _update_sync_state(self.conn, "item-1", "cursor-1", "success")
         cursor = _get_sync_cursor(self.conn, "item-1")
@@ -243,7 +245,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_fallback_transaction_id_is_deterministic(self) -> None:
         """_fallback_transaction_id produces the same ID for identical inputs.
 
-        REQ: FUNC-SYNC-002, FUNC-TXN-009
+        REQ: ACC-SYNC-002, ACC-TXN-009, TECH-TXN-009-FALLBACK
         """
         payload = {"date": "2026-01-02", "amount": 15.0, "name": "Grocery", "merchant_name": None}
         id1 = _fallback_transaction_id("acc-1", payload)
@@ -253,7 +255,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_fallback_transaction_id_differs_by_account(self) -> None:
         """_fallback_transaction_id produces different IDs for different accounts.
 
-        REQ: FUNC-SYNC-002, FUNC-TXN-009
+        REQ: ACC-SYNC-002, ACC-TXN-009, TECH-TXN-009-FALLBACK
         """
         payload = {"date": "2026-01-02", "amount": 15.0, "name": "Grocery"}
         id1 = _fallback_transaction_id("acc-1", payload)
@@ -263,7 +265,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_removed_deletes_transaction(self) -> None:
         """_apply_removed deletes the matching transaction_record rows.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         txn = {
             "transaction_id": "tx-del",
@@ -286,7 +288,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_removed_skips_missing_id(self) -> None:
         """_apply_removed with no transaction_id in payload is a no-op.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         removed = _apply_removed(self.conn, [{}])
         self.assertEqual(removed, 0)
@@ -294,7 +296,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_insert_balance_snapshot_skips_none(self) -> None:
         """_insert_balance_snapshot does not write a row when balance is None.
 
-        REQ: FUNC-REP-006
+        REQ: ACC-REP-006
         """
         _insert_balance_snapshot(self.conn, self.account_id, None)
         count = self.conn.execute("SELECT COUNT(*) FROM balance_snapshot").fetchone()[0]
@@ -303,7 +305,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_upsert_institution_creates_and_is_idempotent(self) -> None:
         """_upsert_institution returns the same ID on repeated calls.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         id1 = _upsert_institution(self.conn, "ins_new")
         id2 = _upsert_institution(self.conn, "ins_new")
@@ -313,7 +315,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_upsert_item_creates_then_updates(self) -> None:
         """_upsert_item returns the same internal ID on update calls.
 
-        REQ: FUNC-SYNC-001, FUNC-SYNC-002
+        REQ: ACC-SYNC-001, ACC-SYNC-002
         """
         item_id = _upsert_item(self.conn, "inst-1", "provider-item-new", "tok-ref", "linked")
         item_id_again = _upsert_item(
@@ -329,14 +331,14 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_retention_enabled_defaults_true_when_no_policy(self) -> None:
         """_retention_enabled returns True when no retention_policy row exists.
 
-        REQ: FUNC-SYNC-003
+        REQ: ACC-SYNC-003
         """
         self.assertTrue(_retention_enabled(self.conn))
 
     def test_retention_enabled_reads_policy(self) -> None:
         """_retention_enabled reflects the retain_raw_payloads column value.
 
-        REQ: FUNC-SYNC-003, SEC-DATA-005
+        REQ: ACC-SYNC-003, TECH-SEC-DATA-005
         """
         self.conn.execute(
             "INSERT INTO retention_policy ("
@@ -362,7 +364,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_retention_enabled_prefers_most_recent_policy_row(self) -> None:
         """_retention_enabled uses the most recently updated policy row.
 
-        REQ: FUNC-SYNC-003
+        REQ: ACC-SYNC-003
         """
         self.conn.execute(
             "INSERT INTO retention_policy ("
@@ -406,7 +408,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_stores_raw_payload_when_enabled(self) -> None:
         """_apply_transaction persists provider_raw when retention is enabled.
 
-        REQ: FUNC-SYNC-003
+        REQ: ACC-SYNC-003
         """
         txn = {
             "transaction_id": "tx-retain",
@@ -424,7 +426,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_no_raw_payload_when_disabled(self) -> None:
         """_apply_transaction skips provider_raw when retention is disabled.
 
-        REQ: FUNC-SYNC-003, SEC-DATA-005
+        REQ: ACC-SYNC-003, TECH-SEC-DATA-005
         """
         txn = {
             "transaction_id": "tx-no-retain",
@@ -442,7 +444,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_fallback_id_no_provider_id(self) -> None:
         """_apply_transaction uses fallback heuristic ID when no provider ID present.
 
-        REQ: FUNC-SYNC-002, FUNC-TXN-009
+        REQ: ACC-SYNC-002, ACC-TXN-009, TECH-TXN-009-FALLBACK
         """
         txn = {
             "date": "2026-01-07",
@@ -459,7 +461,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_get_plaid_institution_id_for_item(self) -> None:
         """_get_plaid_institution_id_for_item resolves the institution ID for a known item.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         result = _get_plaid_institution_id_for_item(self.conn, "item-1")
         self.assertEqual(result, "inst-1")
@@ -467,7 +469,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_get_plaid_institution_id_for_item_missing(self) -> None:
         """_get_plaid_institution_id_for_item returns None for an unknown item.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         result = _get_plaid_institution_id_for_item(self.conn, "no-such-item")
         self.assertIsNone(result)
@@ -475,7 +477,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_sync_cursor_update_is_idempotent(self) -> None:
         """Calling _update_sync_state twice updates the cursor in place.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         _update_sync_state(self.conn, "item-1", "cursor-a", "success")
         _update_sync_state(self.conn, "item-1", "cursor-b", "success")
@@ -489,7 +491,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_upsert_account_updates_existing(self) -> None:
         """_upsert_account updates metadata when the same provider_account_id is seen again.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         payload = {
             "account_id": "acct-1",
@@ -514,7 +516,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_pending_to_posted_stores_raw_when_retention_enabled(self) -> None:
         """pending→posted reconciliation writes a provider_raw row when retention is on.
 
-        REQ: FUNC-SYNC-002, FUNC-SYNC-003
+        REQ: ACC-SYNC-002, ACC-SYNC-003
         """
         pending_txn = {
             "transaction_id": "pending-2",
@@ -544,7 +546,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_update_existing_transaction_stores_raw_when_retention_enabled(self) -> None:
         """Updating an existing transaction writes a provider_raw row when retention is on.
 
-        REQ: FUNC-SYNC-002, FUNC-SYNC-003
+        REQ: ACC-SYNC-002, ACC-SYNC-003
         """
         txn = {
             "transaction_id": "tx-update-retain",
@@ -568,7 +570,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_fallback_stores_raw_when_retention_enabled(self) -> None:
         """Fallback-ID insert writes a provider_raw row when retention is enabled.
 
-        REQ: FUNC-SYNC-002, FUNC-SYNC-003
+        REQ: ACC-SYNC-002, ACC-SYNC-003
         """
         txn = {
             "date": "2026-01-11",
@@ -584,7 +586,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_find_account_id_returns_none_for_falsy_provider_id(self) -> None:
         """_find_account_id returns None when provider_account_id is None or empty.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         self.assertIsNone(_find_account_id(self.conn, None))
         self.assertIsNone(_find_account_id(self.conn, ""))
@@ -593,13 +595,13 @@ class PlaidSyncIngestionTests(unittest.TestCase):
 class SyncItemFullFlowTests(unittest.TestCase):
     """Integration tests for sync_item_transactions_and_balances with mocked Plaid.
 
-    REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006
+    REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-SYNC-003, ACC-REP-006
     """
 
     def setUp(self) -> None:
         """Create encrypted DBs and set up env vars for a full-flow mock.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "test.db")
@@ -626,7 +628,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def tearDown(self) -> None:
         """Restore env vars and clean up temp files.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         for k, v in self._saved_env.items():
             if v is None:
@@ -638,7 +640,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_persists_account_transaction_and_balance(self) -> None:
         """sync_item_transactions_and_balances persists accounts, txns, and balances.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-REP-006
+        REQ: ACC-ACCT-003, ACC-SYNC-001, ACC-SYNC-002, ACC-REP-006
         """
         mock_balance_response = {
             "accounts": [
@@ -706,7 +708,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_raises_on_missing_access_token(self) -> None:
         """sync_item_transactions_and_balances raises SyncError for unknown item.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         with self.assertRaises(SyncError):
             sync_item_transactions_and_balances(
@@ -717,7 +719,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_raises_for_unlinked_item(self) -> None:
         """sync_item_transactions_and_balances rejects items marked unlinked.
 
-        REQ: FUNC-ACCT-008
+        REQ: ACC-ACCT-008
         """
         conn = sqlcipher.connect(self.db_path)
         conn.execute(f"PRAGMA key = '{self.db_key}';")
@@ -764,7 +766,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_raises_when_db_path_missing(self) -> None:
         """sync_item_transactions_and_balances raises SyncError when db_path is unavailable.
 
-        REQ: FUNC-SYNC-001
+        REQ: ACC-SYNC-001
         """
         saved_path = os.environ.pop("GODZILLA_DB_PATH")
         saved_key = os.environ.pop("GODZILLA_DB_KEY")
@@ -783,7 +785,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_uses_sandbox_institution_fallback_when_item_not_in_db(self) -> None:
         """sync uses sandbox_institution_id when plaid_institution_id is omitted and not in DB.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         mock_balance_response = {"accounts": []}
         mock_sync_response = {
@@ -812,7 +814,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_raises_when_institution_missing_outside_sandbox(self) -> None:
         """sync_item_transactions_and_balances raises SyncError in non-sandbox without institution.
 
-        REQ: FUNC-ACCT-003, FUNC-SYNC-001
+        REQ: ACC-ACCT-003, ACC-SYNC-001
         """
         non_sandbox_config = PlaidConfig(
             client_id="cid",
@@ -834,7 +836,7 @@ class SyncItemFullFlowTests(unittest.TestCase):
     def test_sync_processes_modified_transactions(self) -> None:
         """sync_item_transactions_and_balances applies modified transaction payloads.
 
-        REQ: FUNC-SYNC-001, FUNC-SYNC-002
+        REQ: ACC-SYNC-001, ACC-SYNC-002
         """
         mock_balance_response = {
             "accounts": [
@@ -923,13 +925,13 @@ class SyncItemFullFlowTests(unittest.TestCase):
 class CategoryMappingTests(unittest.TestCase):
     """Tests for Plaid personal_finance_category mapping on sync.
 
-    REQ: FUNC-CAT-003, FUNC-SYNC-004
+    REQ: ACC-CAT-003, ACC-SYNC-004
     """
 
     def setUp(self) -> None:
         """Create test database with seeded categories.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "test.db")
@@ -962,7 +964,7 @@ class CategoryMappingTests(unittest.TestCase):
     def tearDown(self) -> None:
         """Close connection and cleanup.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         self.conn.close()
         self.tmp_dir.cleanup()
@@ -970,7 +972,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_resolve_category_id_uses_detailed_key(self) -> None:
         """_resolve_category_id returns the detailed Plaid category ID when available.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         pfc = {"primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_COFFEE"}
         result = _resolve_category_id(self.conn, pfc)
@@ -979,7 +981,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_resolve_category_id_falls_back_to_primary(self) -> None:
         """_resolve_category_id falls back to primary when detailed key is not in DB.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         pfc = {"primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_UNKNOWN_SUBCAT"}
         result = _resolve_category_id(self.conn, pfc)
@@ -988,7 +990,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_resolve_category_id_returns_none_for_unknown(self) -> None:
         """_resolve_category_id returns None when neither key maps to a category.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         pfc = {"primary": "UNKNOWN_PRIMARY", "detailed": "UNKNOWN_DETAILED"}
         result = _resolve_category_id(self.conn, pfc)
@@ -997,7 +999,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_resolve_category_id_handles_empty_pfc(self) -> None:
         """_resolve_category_id returns None for empty or None payload.
 
-        REQ: FUNC-CAT-003
+        REQ: ACC-CAT-003
         """
         self.assertIsNone(_resolve_category_id(self.conn, {}))
         self.assertIsNone(_resolve_category_id(self.conn, None))
@@ -1005,7 +1007,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_apply_transaction_sets_category_from_pfc(self) -> None:
         """INSERT path maps personal_finance_category to category_id on the record.
 
-        REQ: FUNC-CAT-003, FUNC-SYNC-004
+        REQ: ACC-CAT-003, ACC-SYNC-004
         """
         payload = {
             "transaction_id": "txn-pfc-1",
@@ -1033,7 +1035,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_apply_transaction_writes_provider_override(self) -> None:
         """INSERT path writes a provider-sourced override for category_id.
 
-        REQ: FUNC-SYNC-004, SEC-DATA-007
+        REQ: ACC-SYNC-004, TECH-SEC-DATA-007
         """
         payload = {
             "transaction_id": "txn-ov-1",
@@ -1066,13 +1068,13 @@ class CategoryMappingTests(unittest.TestCase):
 class ConflictDetectionTests(unittest.TestCase):
     """Tests for conflict detection during sync update path.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
+    REQ: ACC-SYNC-005, ACC-SYNC-006, TECH-SEC-DATA-007
     """
 
     def setUp(self) -> None:
         """Create test database with a pre-existing transaction and user override.
 
-        REQ: FUNC-SYNC-005
+        REQ: ACC-SYNC-005
         """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "test.db")
@@ -1122,7 +1124,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def tearDown(self) -> None:
         """Close connection and cleanup.
 
-        REQ: FUNC-SYNC-005
+        REQ: ACC-SYNC-005
         """
         self.conn.close()
         self.tmp_dir.cleanup()
@@ -1130,7 +1132,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_detect_conflict_creates_open_conflict_row(self) -> None:
         """Conflict is written when provider value differs from user override.
 
-        REQ: FUNC-SYNC-005, FUNC-SYNC-006
+        REQ: ACC-SYNC-005, ACC-SYNC-006
         """
         _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Provider Changed Name")
         self.conn.commit()
@@ -1148,7 +1150,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_detect_conflict_no_conflict_when_values_match(self) -> None:
         """No conflict is written when provider value matches user override value.
 
-        REQ: FUNC-SYNC-005
+        REQ: ACC-SYNC-005
         """
         _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "User Name")
         self.conn.commit()
@@ -1159,7 +1161,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_detect_conflict_no_conflict_without_user_override(self) -> None:
         """No conflict is written when no user override exists for the field.
 
-        REQ: FUNC-SYNC-005
+        REQ: ACC-SYNC-005
         """
         _detect_and_queue_conflict(self.conn, "txn-c1", "merchant_name", "New Merchant")
         self.conn.commit()
@@ -1170,7 +1172,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_detect_conflict_deduplicates_open_conflicts(self) -> None:
         """Second call with same entity+field does not create a duplicate open conflict.
 
-        REQ: FUNC-SYNC-006
+        REQ: ACC-SYNC-006
         """
         _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Name A")
         _detect_and_queue_conflict(self.conn, "txn-c1", "display_name", "Name B")
@@ -1184,7 +1186,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_apply_transaction_update_preserves_user_override_on_conflict(self) -> None:
         """On UPDATE, a conflicted field is not overwritten in transaction_record.
 
-        REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
+        REQ: ACC-SYNC-005, ACC-SYNC-006, TECH-TXN-009-CONFLICT, TECH-SEC-DATA-007
         """
         payload = {
             "transaction_id": "provider-c1",

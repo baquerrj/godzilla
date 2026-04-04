@@ -1,7 +1,7 @@
 /**
  * Balance snapshots table: most recent 100 snapshots across all accounts.
  *
- * REQ: FUNC-REP-006
+ * REQ: ACC-REP-006
  */
 
 import { useEffect } from "react";
@@ -16,7 +16,7 @@ interface Props {
 export function BalancesTable({ token, refreshKey }: Props) {
   const [result, execute] = useApiCall<BalanceSnapshot[]>();
 
-  // REQ: FUNC-REP-006 — fetch balance snapshots on mount and refresh
+  // REQ: ACC-REP-006 — fetch balance snapshots on mount and refresh
   useEffect(() => {
     execute(() => GodzillaApi.getBalances(token, { limit: 100 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps

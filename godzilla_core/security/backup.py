@@ -1,6 +1,7 @@
 """Encrypted backup helpers for database and secrets snapshots.
 
-REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-005, SEC-CRY-003
+REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-005, TECH-SEC-CRY-003,
+REQ: TECH-SEC-CRY-003-ENVELOPE, TECH-SEC-CRY-003-INTEGRITY, TECH-SEC-CRY-003-RESTORE
 """
 
 from __future__ import annotations
@@ -32,21 +33,21 @@ _AAD = b"godzilla-backup-v1"
 class BackupError(RuntimeError):
     """Base backup/restore error type.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003
+    REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003
     """
 
 
 class BackupIntegrityError(BackupError):
     """Raised when encrypted backup authentication fails.
 
-    REQ: FUNC-BKP-002
+    REQ: ACC-BKP-002
     """
 
 
 class BackupFormatError(BackupError):
     """Raised when backup envelope or payload fields are invalid.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-003
+    REQ: ACC-BKP-001, ACC-BKP-003
     """
 
 
@@ -54,7 +55,7 @@ class BackupFormatError(BackupError):
 class DecryptedBackup:
     """Decoded and verified backup payload.
 
-    REQ: FUNC-BKP-003
+    REQ: ACC-BKP-003
     """
 
     db_bytes: bytes
@@ -69,7 +70,7 @@ class DecryptedBackup:
 def _b64_encode(value: bytes) -> str:
     """Encode bytes as URL-safe base64 text.
 
-    REQ: FUNC-BKP-001
+    REQ: ACC-BKP-001
     """
     return base64.urlsafe_b64encode(value).decode("ascii")
 
@@ -77,7 +78,7 @@ def _b64_encode(value: bytes) -> str:
 def _b64_decode(value: str) -> bytes:
     """Decode URL-safe base64 text to bytes.
 
-    REQ: FUNC-BKP-003
+    REQ: ACC-BKP-003
     """
     try:
         return base64.urlsafe_b64decode(value.encode("ascii"))
@@ -88,7 +89,7 @@ def _b64_decode(value: str) -> bytes:
 def _derive_key(passphrase: str, *, salt: bytes, n: int, r: int, p: int) -> bytes:
     """Derive an encryption key from passphrase using Scrypt.
 
-    REQ: FUNC-BKP-001, SEC-CRY-003
+    REQ: ACC-BKP-001, TECH-SEC-CRY-003, TECH-SEC-CRY-003-ENVELOPE
     """
     if not passphrase:
         raise BackupFormatError("passphrase is required")
@@ -106,7 +107,8 @@ def create_backup_blob(
 ) -> bytes:
     """Create an encrypted, authenticated backup envelope.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-005, SEC-CRY-003
+    REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-005, TECH-SEC-CRY-003,
+    REQ: TECH-SEC-CRY-003-ENVELOPE
     """
     if not db_bytes:
         raise BackupFormatError("Database backup payload is empty")
@@ -160,7 +162,8 @@ def decrypt_backup_blob(  # noqa: PLR0912, PLR0915
 ) -> DecryptedBackup:
     """Decrypt and validate an encrypted backup envelope.
 
-    REQ: FUNC-BKP-002, FUNC-BKP-003, SEC-CRY-003
+    REQ: ACC-BKP-002, ACC-BKP-003, TECH-SEC-CRY-003, TECH-SEC-CRY-003-INTEGRITY,
+    REQ: TECH-SEC-CRY-003-RESTORE
     """
     try:
         envelope = json.loads(blob.decode("utf-8"))

@@ -12,7 +12,9 @@ inside MVP definition scope and maintain strict requirement traceability.
 - This file defines policy. `CLAUDE.md` provides project context and operational examples.
 
 ## 2) Requirement IDs and decomposition
-- Use stable requirement IDs from `docs/requirements/requirements.md` (for example `SYS-003`, `FUNC-ACCT-002`, `SEC-CRY-001`).
+- Use stable requirement IDs from `docs/requirements/requirements.md`.
+- Acceptance requirements use `ACC-*` IDs and describe user-visible or business-facing behavior.
+- Technical requirements use `TECH-*` IDs and describe derived implementation-facing behavior that supports an acceptance requirement.
 - Preserve parent-child requirement relationships when adding derived requirements.
 - Keep requirements small. One requirement should express one "shall" behavior.
 
@@ -31,26 +33,34 @@ Maintain bidirectional links:
   3. Inline comment next to narrow-scope logic
 
 ### 3.2 Requirement tags in tests
-- Every requirement must be traced to a unit test that verifies it in the requirements table in `docs/requirements/requirements.md` **and** in `trace/requirements.yml`
-  - If a requirement cannot be verified via unit test, identify the test methodology to verify the requirement (e.g. component, system, manual, etc.)
+- Every acceptance requirement must have an explicit verification strategy in the requirements table and in `trace/requirements.yml`.
+- Every technical requirement must be traced to an automated test where feasible. If a technical requirement is not currently testable, add a tracked `SKIP`/`XFAIL` test stub with rationale and linked issue/task.
+- Primary verification levels use the layered taxonomy:
+  - `acceptance`: user-visible or business-level behavior
+  - `unit`: isolated logic/module behavior
+  - `integration`: backend multi-module or real local resource interaction without an API/UI boundary
+  - `component`: API route or UI component behavior through a public boundary
+  - `system`: end-to-end workflow spanning multiple subsystems
+  - `manual`, `static_analysis`, `security_review`: non-runtime or non-fully-automated verification methods
 - Use the same `REQ:` tag format in tests.
 - If a requirement is not currently testable, add a tracked `SKIP`/`XFAIL` test stub with rationale and linked issue/task.
 
 ### 3.3 Machine-readable trace index
 - Keep `trace/requirements.yml` up to date for every requirement-impacting change.
 - Each entry should include:
-  - `requirement_id`, `title`
+  - `requirement_id`, `title`, `requirement_type`
   - `parent_requirement_id` (optional)
   - `code_refs` (path + symbol/anchor)
   - `test_refs` (path + test name)
   - `doc_refs` (design docs explaining implementation)
+  - `implementation_status`, `verification_method`, `verification_notes`, `gap_notes`
 - New requirement-related code without trace entries is not acceptable.
 
 ## 4) Design documentation
 For non-trivial changes (new modules/workflows/security controls/storage model):
 - Update or create docs under `docs/design/`.
 - Use Markdown and Mermaid diagrams.
-- Include requirement links (for example `Requirements: SYS-003, SEC-CRY-001`).
+- Include requirement links (for example `Requirements: ACC-SYS-003, TECH-SEC-CRY-001`).
 
 Recommended doc sections:
 - Problem statement (linked requirement IDs)
@@ -93,6 +103,7 @@ Python check commands:
 - `nox -s lint` (or `python3 -m ruff check godzilla_core`)
 - `nox -s tests` (or `python3 -m pytest`)
 - `nox -s build` (or `python3 -m build --wheel`)
+- `python3 godzilla_core/scripts/validate_requirement_traceability.py`
 
 Node/UI check commands:
 - `nox -s lint` runs Python linting plus `cd ui && npm run lint` (Biome lint).
@@ -118,6 +129,5 @@ Ensure these paths exist and stay current:
 - `docs/requirements`
 - `docs/setup`
 - `docs/test-strategy`
-- `docs/plan.d`
+- `docs/plan.md`
 - `docs/vision.md`
-

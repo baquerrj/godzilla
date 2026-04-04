@@ -1,8 +1,8 @@
 /**
  * Tests for TransactionDetailPanel component.
  *
- * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
- * REQ: FUNC-TXN-007, FUNC-TXN-008
+ * REQ: ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006,
+ * REQ: ACC-TXN-007, ACC-TXN-008
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -70,7 +70,7 @@ const makeTxnDetail = (overrides: Partial<TransactionDetail> = {}): TransactionD
 describe("TransactionDetailPanel", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders nothing when transactionId is null  REQ: FUNC-TXN-003", () => {
+  it("renders nothing when transactionId is null  REQ: ACC-TXN-003", () => {
     const { container } = render(
       <TransactionDetailPanel
         token={TOKEN}
@@ -83,7 +83,7 @@ describe("TransactionDetailPanel", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("fetches and displays transaction detail  REQ: FUNC-TXN-003", async () => {
+  it("fetches and displays transaction detail  REQ: ACC-TXN-003", async () => {
     mockGetTransaction.mockResolvedValue(makeTxnDetail());
     render(
       <TransactionDetailPanel
@@ -102,7 +102,7 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
-  it("calls onClose when close button is clicked  REQ: FUNC-TXN-003", async () => {
+  it("calls onClose when close button is clicked  REQ: ACC-TXN-003", async () => {
     mockGetTransaction.mockResolvedValue(makeTxnDetail());
     const onClose = vi.fn();
     render(
@@ -119,7 +119,7 @@ describe("TransactionDetailPanel", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("saves category and notes via patchTransaction  REQ: FUNC-TXN-004, FUNC-TXN-005", async () => {
+  it("saves category and notes via patchTransaction  REQ: ACC-TXN-004, ACC-TXN-005", async () => {
     const detail = makeTxnDetail({ notes: "", category_id: null });
     mockGetTransaction.mockResolvedValue(detail);
     mockPatchTransaction.mockResolvedValue({ ...detail, notes: "test note" });
@@ -151,7 +151,7 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
-  it("toggles transfer flag via patchTransaction  REQ: FUNC-TXN-006", async () => {
+  it("toggles transfer flag via patchTransaction  REQ: ACC-TXN-006", async () => {
     const detail = makeTxnDetail({ is_transfer: false });
     mockGetTransaction.mockResolvedValue(detail);
     mockPatchTransaction.mockResolvedValue({ ...detail, is_transfer: true });
@@ -178,7 +178,7 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
-  it("toggles exclude flag via patchTransaction  REQ: FUNC-TXN-007", async () => {
+  it("toggles exclude flag via patchTransaction  REQ: ACC-TXN-007", async () => {
     const detail = makeTxnDetail({ is_excluded: false });
     mockGetTransaction.mockResolvedValue(detail);
     mockPatchTransaction.mockResolvedValue({ ...detail, is_excluded: true });
@@ -205,7 +205,7 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
-  it("saves splits via postSplits  REQ: FUNC-TXN-008", async () => {
+  it("saves splits via postSplits  REQ: ACC-TXN-008", async () => {
     const detail = makeTxnDetail({
       amount: 42.0,
       splits: [{ split_id: "s1", amount: 42.0, category_id: null, notes: null }],
@@ -235,7 +235,7 @@ describe("TransactionDetailPanel", () => {
     });
   });
 
-  it("shows error on fetch failure  REQ: FUNC-TXN-003", async () => {
+  it("shows error on fetch failure  REQ: ACC-TXN-003", async () => {
     mockGetTransaction.mockRejectedValue(new Error("not found"));
     render(
       <TransactionDetailPanel

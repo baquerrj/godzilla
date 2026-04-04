@@ -1,6 +1,6 @@
 # Docker Development Environment (Linux MVP)
 
-Requirements: SEC-DATA-004
+Requirements: TECH-SEC-DATA-004
 
 ## What the image includes
 `Dockerfile.dev` provides the development toolchain:

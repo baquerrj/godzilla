@@ -1,6 +1,6 @@
 /// Godzilla Tauri application runtime.
 ///
-/// REQ: SEC-ACC-004, SEC-DATA-001, SEC-NET-001, SEC-NET-002
+/// REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001, TECH-SEC-NET-001, TECH-SEC-NET-002
 
 use std::collections::HashMap;
 use std::fs;
@@ -73,7 +73,7 @@ fn resolved_pinned_fingerprint(pinned_env: Option<&str>, actual: &str) -> String
 }
 
 fn verify_pinned_certificate() -> Result<Vec<u8>, String> {
-    // REQ: SEC-NET-001 — enforce explicit certificate pinning in Tauri runtime transport.
+    // REQ: TECH-SEC-NET-001 — enforce explicit certificate pinning in Tauri runtime transport.
     let cert_path = std::env::var("GODZILLA_TLS_CERT")
         .map_err(|_| "GODZILLA_TLS_CERT is not configured".to_string())?;
     let cert_pem = fs::read(&cert_path)
@@ -92,7 +92,7 @@ fn verify_pinned_certificate() -> Result<Vec<u8>, String> {
 /// Proxy an API request through the Tauri backend so runtime HTTPS can use
 /// explicit local certificate trust + pin verification.
 ///
-/// REQ: SEC-NET-001, SEC-NET-002
+/// REQ: TECH-SEC-NET-001, TECH-SEC-NET-002
 #[tauri::command]
 fn api_request(request: ApiProxyRequest) -> Result<ApiProxyResponse, String> {
     let cert_pem = verify_pinned_certificate()?;
@@ -171,7 +171,7 @@ fn api_request(request: ApiProxyRequest) -> Result<ApiProxyResponse, String> {
 /// React frontend can authenticate requests without embedding it in
 /// any build artifact or client-side bundle.
 ///
-/// REQ: SEC-ACC-004, SEC-DATA-001
+/// REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001
 #[tauri::command]
 fn get_api_token() -> String {
     std::env::var("GODZILLA_API_TOKEN").unwrap_or_default()
@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[test]
-    // REQ: SEC-NET-001
+    // REQ: TECH-SEC-NET-001
     fn resolved_pinned_fingerprint_uses_cert_hash_when_env_is_missing() {
         assert_eq!(
             resolved_pinned_fingerprint(None, "ABC123"),
@@ -236,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    // REQ: SEC-NET-001
+    // REQ: TECH-SEC-NET-001
     fn resolved_pinned_fingerprint_normalizes_env_value() {
         assert_eq!(
             resolved_pinned_fingerprint(Some("ab:cd ef"), "ABC123"),

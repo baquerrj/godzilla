@@ -1,8 +1,8 @@
 /**
  * Tests for SyncStatePanel: connect, sync actions, state display.
  *
- * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-ACCT-008, FUNC-SYNC-001
+ * REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-004, ACC-ACCT-005,
+ * REQ: ACC-ACCT-008, ACC-SYNC-001
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -42,7 +42,7 @@ describe("SyncStatePanel", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
-  it("shows empty state when no items  REQ: FUNC-ACCT-004", async () => {
+  it("shows empty state when no items  REQ: ACC-ACCT-004", async () => {
     mockGetSyncState.mockResolvedValue([]);
     render(<SyncStatePanel {...defaultProps} />);
     await waitFor(() => {
@@ -50,7 +50,7 @@ describe("SyncStatePanel", () => {
     });
   });
 
-  it("displays sync state rows  REQ: FUNC-ACCT-004", async () => {
+  it("displays sync state rows  REQ: ACC-ACCT-004", async () => {
     mockGetSyncState.mockResolvedValue([
       {
         item_id: "item-abc-123",
@@ -70,7 +70,7 @@ describe("SyncStatePanel", () => {
     });
   });
 
-  it("calls plaidLink and onRefresh on connect  REQ: FUNC-ACCT-001, FUNC-ACCT-002", async () => {
+  it("calls plaidLink and onRefresh on connect  REQ: ACC-ACCT-001, ACC-ACCT-002", async () => {
     mockGetSyncState.mockResolvedValue([]);
     mockPlaidLink.mockResolvedValue({
       item_id: "new-item",
@@ -89,7 +89,7 @@ describe("SyncStatePanel", () => {
     });
   });
 
-  it("shows link error on failure  REQ: FUNC-ACCT-001", async () => {
+  it("shows link error on failure  REQ: ACC-ACCT-001", async () => {
     mockGetSyncState.mockResolvedValue([]);
     mockPlaidLink.mockRejectedValue(new Error("Plaid unavailable"));
     render(<SyncStatePanel {...defaultProps} />);
@@ -101,7 +101,7 @@ describe("SyncStatePanel", () => {
     });
   });
 
-  it("calls plaidSync and onRefresh on run sync  REQ: FUNC-ACCT-005, FUNC-SYNC-001", async () => {
+  it("calls plaidSync and onRefresh on run sync  REQ: ACC-ACCT-005, ACC-SYNC-001", async () => {
     const item = {
       item_id: "item-xyz",
       institution_id: "ins_2",
@@ -136,7 +136,7 @@ describe("SyncStatePanel", () => {
     });
   });
 
-  it("calls unlink endpoint and refreshes on keep mode  REQ: FUNC-ACCT-008", async () => {
+  it("calls unlink endpoint and refreshes on keep mode  REQ: ACC-ACCT-008", async () => {
     const item = {
       item_id: "item-xyz",
       institution_id: "ins_2",

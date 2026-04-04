@@ -1,7 +1,7 @@
 /**
  * Transactions table: paginated list with sort, filter, and detail on click.
  *
- * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003
+ * REQ: ACC-TXN-001, ACC-TXN-002, ACC-TXN-003
  */
 
 import { useEffect, useState } from "react";
@@ -38,7 +38,7 @@ export function TransactionsTable({
     setOffset(0);
   }, [appliedFilters]);
 
-  // REQ: FUNC-TXN-001, FUNC-TXN-002 — paginated, sorted, filtered transaction fetch
+  // REQ: ACC-TXN-001, ACC-TXN-002 — paginated, sorted, filtered transaction fetch
   useEffect(() => {
     execute(() =>
       GodzillaApi.getTransactions(token, {

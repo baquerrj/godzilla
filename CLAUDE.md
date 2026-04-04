@@ -41,6 +41,9 @@ python3 -m pytest godzilla_core/tests/test_api_layer.py::test_get_accounts_retur
 # Build wheel
 nox -s build
 
+# Validate requirement traceability
+python3 godzilla_core/scripts/validate_requirement_traceability.py
+
 # Run database migrations
 GODZILLA_DB_PATH=<path> GODZILLA_DB_KEY=<key> migrations
 
@@ -103,7 +106,11 @@ docs/design/    Markdown design docs with Mermaid diagrams
 Follow the traceability policy in `AGENTS.md`:
 - Add `REQ:` tags in production modules/functions/classes and tests.
 - Update `trace/requirements.yml` when requirements are impacted.
+- Run `python3 godzilla_core/scripts/validate_requirement_traceability.py` after requirement or traceability changes.
 - Use requirement IDs from `docs/requirements/requirements.md`.
+- Treat `ACC-*` IDs as acceptance requirements and `TECH-*` IDs as derived technical requirements.
+- Use the layered verification taxonomy from `AGENTS.md`: `unit`, `integration`, `component`, `system`, `manual`, `static_analysis`, and `security_review`.
+- Do not force acceptance requirements down to unit-only verification. Technical requirements should normally carry the lower-level automated evidence.
 
 ## Code Quality
 

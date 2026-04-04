@@ -1,6 +1,6 @@
 """Secrets store tests.
 
-REQ: SEC-CRY-002, SYS-004
+REQ: TECH-SEC-CRY-002, TECH-SYS-004
 """
 
 import os
@@ -15,13 +15,13 @@ from godzilla_core.security.secrets import SecretStore, SecretStoreError, store_
 class SecretStoreTests(unittest.TestCase):
     """Component tests for encrypted secret storage operations.
 
-    REQ: SEC-CRY-002, SYS-004
+    REQ: TECH-SEC-CRY-002, TECH-SYS-004
     """
 
     def setUp(self) -> None:
         """Create a temp directory with a fresh secrets DB.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp_dir.name, "secrets.db")
@@ -30,14 +30,14 @@ class SecretStoreTests(unittest.TestCase):
     def tearDown(self) -> None:
         """Remove temp directory.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         self.tmp_dir.cleanup()
 
     def test_set_get_delete_roundtrip(self) -> None:
         """Verify secret lifecycle operations and timezone metadata persistence.
 
-        REQ: SEC-CRY-002, SYS-004
+        REQ: TECH-SEC-CRY-002, TECH-SYS-004
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
 
@@ -68,7 +68,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_get_nonexistent_key_returns_none(self) -> None:
         """get_secret for a missing key returns None without error.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         self.assertIsNone(store.get_secret("no_such_key"))
@@ -76,7 +76,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_overwrite_secret(self) -> None:
         """set_secret on an existing key updates the stored value.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         store.set_secret("mykey", "first")
@@ -86,7 +86,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_set_empty_key_raises(self) -> None:
         """set_secret with an empty key raises ValueError.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         with self.assertRaises(ValueError):
@@ -95,7 +95,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_get_empty_key_raises(self) -> None:
         """get_secret with an empty key raises ValueError.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         with self.assertRaises(ValueError):
@@ -104,7 +104,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_delete_empty_key_raises(self) -> None:
         """delete_secret with an empty key raises ValueError.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         with self.assertRaises(ValueError):
@@ -113,7 +113,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_empty_db_path_raises(self) -> None:
         """Constructing SecretStore with an empty db_path raises ValueError.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         with self.assertRaises(ValueError):
             SecretStore(db_path="", db_key="key")
@@ -121,7 +121,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_empty_db_key_raises(self) -> None:
         """Constructing SecretStore with an empty db_key raises ValueError.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         with self.assertRaises(ValueError):
             SecretStore(db_path=self.db_path, db_key="")
@@ -129,7 +129,7 @@ class SecretStoreTests(unittest.TestCase):
     def test_delete_nonexistent_key_is_silent(self) -> None:
         """delete_secret for a key that does not exist completes without error.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         store = SecretStore(db_path=self.db_path, db_key=self.db_key)
         store.delete_secret("never_set")  # should not raise
@@ -138,13 +138,13 @@ class SecretStoreTests(unittest.TestCase):
 class StoreFromEnvTests(unittest.TestCase):
     """Tests for environment-based SecretStore construction.
 
-    REQ: SEC-CRY-002
+    REQ: TECH-SEC-CRY-002
     """
 
     def test_store_from_env_missing_vars_raises(self) -> None:
         """store_from_env raises SecretStoreError when env vars are absent.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         saved_path = os.environ.pop("GODZILLA_SECRETS_PATH", None)
         saved_key = os.environ.pop("GODZILLA_SECRETS_KEY", None)
@@ -160,7 +160,7 @@ class StoreFromEnvTests(unittest.TestCase):
     def test_store_from_env_creates_store(self) -> None:
         """store_from_env returns a functional SecretStore from env vars.
 
-        REQ: SEC-CRY-002
+        REQ: TECH-SEC-CRY-002
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "secrets.db")

@@ -1,8 +1,8 @@
 /**
  * Tests for SettingsPanel component.
  *
- * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
- * REQ: FUNC-ACCT-006
+ * REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+ * REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,7 +56,7 @@ describe("SettingsPanel", () => {
     });
   });
 
-  it("loads settings values on mount  REQ: FUNC-SET-001, FUNC-ACCT-006", async () => {
+  it("loads settings values on mount  REQ: ACC-SET-001, ACC-ACCT-006, TECH-ACCT-006-CONFIG", async () => {
     render(<SettingsPanel token={TOKEN} refreshKey={0} onSaved={vi.fn()} />);
 
     await waitFor(() => {
@@ -67,7 +67,7 @@ describe("SettingsPanel", () => {
     });
   });
 
-  it("saves updated settings and notifies parent  REQ: FUNC-SET-002, FUNC-SET-005", async () => {
+  it("saves updated settings and notifies parent  REQ: ACC-SET-002, ACC-SET-005", async () => {
     const onSaved = vi.fn();
     render(<SettingsPanel token={TOKEN} refreshKey={0} onSaved={onSaved} />);
 
@@ -118,7 +118,7 @@ describe("SettingsPanel", () => {
     });
   });
 
-  it("shows local validation error for invalid number fields  REQ: FUNC-SET-003, FUNC-SET-004", async () => {
+  it("shows local validation error for invalid number fields  REQ: ACC-SET-003, ACC-SET-004", async () => {
     render(<SettingsPanel token={TOKEN} refreshKey={0} onSaved={vi.fn()} />);
 
     await waitFor(() => {

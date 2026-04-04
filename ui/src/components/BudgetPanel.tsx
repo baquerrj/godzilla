@@ -1,7 +1,7 @@
 /**
  * BudgetPanel: monthly budget view with planned/actual/remaining and drill-down.
  *
- * REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+ * REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
  */
 
 import { useEffect, useMemo, useState } from "react";

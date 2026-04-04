@@ -1,6 +1,6 @@
 # Budgets — Design Document
 
-**Requirements:** FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+**Requirements:** ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
 
 ---
 
@@ -73,11 +73,11 @@ WITH line_items AS (
   SELECT tr.category_id, tr.amount AS subtotal
   FROM transaction_record tr
   WHERE tr.date LIKE ? || '-%'           -- month filter (YYYY-MM-*)
-    AND tr.is_transfer = 0              -- REQ: FUNC-BUD-004 exclude transfers
-    AND tr.is_excluded = 0             -- REQ: FUNC-BUD-004 exclude explicitly excluded
-    AND tr.status = 'posted'           -- REQ: FUNC-BUD-004 exclude pending
+    AND tr.is_transfer = 0              -- REQ: ACC-BUD-004 exclude transfers
+    AND tr.is_excluded = 0             -- REQ: ACC-BUD-004 exclude explicitly excluded
+    AND tr.status = 'posted'           -- REQ: ACC-BUD-004 exclude pending
     AND tr.category_id IS NOT NULL
-    AND NOT EXISTS (                   -- REQ: FUNC-BUD-004 split-aware: skip parent
+    AND NOT EXISTS (                   -- REQ: ACC-BUD-004 split-aware: skip parent
         SELECT 1 FROM transaction_split WHERE transaction_id = tr.id
     )
   UNION ALL

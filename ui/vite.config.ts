@@ -1,7 +1,7 @@
 /**
  * Vite development proxy configuration.
  *
- * REQ: SEC-ACC-004, SEC-DATA-001
+ * REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001
  */
 
 /// <reference types="vitest" />
@@ -12,7 +12,7 @@ import react from "@vitejs/plugin-react";
 const host = process.env.TAURI_DEV_HOST;
 // Bind all interfaces by default for container/remote dev; Tauri can still override.
 const devHost = host || "0.0.0.0";
-// REQ: SEC-ACC-004, SEC-DATA-001
+// REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001
 const apiToken = process.env.GODZILLA_API_TOKEN ?? "";
 
 // Godzilla Python API sidecar runs on loopback port 8787.
@@ -58,7 +58,7 @@ export default defineConfig(async () => ({
         rewrite: (path) => path.replace(/^\/api/, ""),
         configure: (proxy) => {
           proxy.on("proxyReq", (proxyReq) => {
-            // REQ: SEC-ACC-004, SEC-DATA-001
+            // REQ: TECH-SEC-ACC-004, TECH-SEC-DATA-001
             // Inject auth server-side so secrets are not embedded in browser bundles.
             if (apiToken) {
               proxyReq.setHeader("X-API-Key", apiToken);

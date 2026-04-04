@@ -1,7 +1,7 @@
 /**
  * API transport behavior tests for browser and Tauri runtimes.
  *
- * REQ: SEC-NET-001, SEC-NET-002
+ * REQ: TECH-SEC-NET-001, TECH-SEC-NET-002
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +28,7 @@ describe("api/client transport", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses fetch transport when tauri runtime is unavailable  REQ: SEC-NET-002", async () => {
+  it("uses fetch transport when tauri runtime is unavailable  REQ: TECH-SEC-NET-002", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response("[]", {
         status: 200,
@@ -43,7 +43,7 @@ describe("api/client transport", () => {
     expect(mockInvoke).not.toHaveBeenCalled();
   });
 
-  it("uses tauri proxy transport when tauri runtime is available  REQ: SEC-NET-001", async () => {
+  it("uses tauri proxy transport when tauri runtime is available  REQ: TECH-SEC-NET-001", async () => {
     tauriWindow.__TAURI_INTERNALS__ = {};
     mockInvoke.mockResolvedValue({
       status: 200,
@@ -65,7 +65,7 @@ describe("api/client transport", () => {
     );
   });
 
-  it("surfaces pin mismatch from tauri proxy request failures  REQ: SEC-NET-001", async () => {
+  it("surfaces pin mismatch from tauri proxy request failures  REQ: TECH-SEC-NET-001", async () => {
     tauriWindow.__TAURI_INTERNALS__ = {};
     mockInvoke.mockRejectedValue(new Error("TLS certificate pin mismatch"));
 
@@ -76,7 +76,7 @@ describe("api/client transport", () => {
     );
   });
 
-  it("dispatches lock event on tauri proxy 423 responses  REQ: SEC-ACC-002", async () => {
+  it("dispatches lock event on tauri proxy 423 responses  REQ: TECH-SEC-ACC-002", async () => {
     tauriWindow.__TAURI_INTERNALS__ = {};
     GodzillaApi.setUnlockToken("unlock-token");
     mockInvoke.mockResolvedValue({
@@ -102,7 +102,7 @@ describe("api/client transport", () => {
     expect(didLock).toBe(true);
   });
 
-  it("preserves multipart headers for tauri restore uploads  REQ: SEC-NET-001, FUNC-BKP-003", async () => {
+  it("preserves multipart headers for tauri restore uploads  REQ: TECH-SEC-NET-001, ACC-BKP-003", async () => {
     tauriWindow.__TAURI_INTERNALS__ = {};
     vi.stubGlobal(
       "Request",
@@ -146,7 +146,7 @@ describe("api/client transport", () => {
     );
   });
 
-  it("formats validation error arrays into readable messages  REQ: SEC-NET-002", async () => {
+  it("formats validation error arrays into readable messages  REQ: TECH-SEC-NET-002", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(
         JSON.stringify({

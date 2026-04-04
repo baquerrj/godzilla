@@ -1,7 +1,7 @@
 /**
  * Tests for AccountsTable component.
  *
- * REQ: FUNC-ACCT-003
+ * REQ: ACC-ACCT-003
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -32,7 +32,7 @@ const TOKEN = "tok";
 describe("AccountsTable", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows empty state when no accounts  REQ: FUNC-ACCT-003", async () => {
+  it("shows empty state when no accounts  REQ: ACC-ACCT-003", async () => {
     mockGetAccounts.mockResolvedValue([]);
     render(<AccountsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -40,7 +40,7 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("renders account rows  REQ: FUNC-ACCT-003", async () => {
+  it("renders account rows  REQ: ACC-ACCT-003", async () => {
     mockGetAccounts.mockResolvedValue([
       {
         account_id: "acc1",
@@ -65,7 +65,7 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("shows error on fetch failure  REQ: FUNC-ACCT-003", async () => {
+  it("shows error on fetch failure  REQ: ACC-ACCT-003", async () => {
     mockGetAccounts.mockRejectedValue(new Error("Network error"));
     render(<AccountsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -75,7 +75,7 @@ describe("AccountsTable", () => {
     });
   });
 
-  it("re-fetches when refreshKey changes  REQ: FUNC-ACCT-003", async () => {
+  it("re-fetches when refreshKey changes  REQ: ACC-ACCT-003", async () => {
     mockGetAccounts.mockResolvedValue([]);
     const { rerender } = render(
       <AccountsTable token={TOKEN} refreshKey={0} />,

@@ -1,7 +1,7 @@
 /**
  * Tests for AuthGatePanel setup/unlock workflow.
  *
- * REQ: SEC-ACC-001, SEC-ACC-003
+ * REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-003
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +33,7 @@ describe("AuthGatePanel", () => {
     vi.clearAllMocks();
   });
 
-  it("shows setup flow and saves new pin  REQ: SEC-ACC-003", async () => {
+  it("shows setup flow and saves new pin  REQ: TECH-SEC-ACC-003", async () => {
     mockGetAuthStatus
       .mockResolvedValueOnce({
         pin_configured: false,
@@ -71,7 +71,7 @@ describe("AuthGatePanel", () => {
     });
   });
 
-  it("unlocks when valid pin is submitted  REQ: SEC-ACC-001", async () => {
+  it("unlocks when valid pin is submitted  REQ: TECH-SEC-ACC-001", async () => {
     mockGetAuthStatus.mockResolvedValue({
       pin_configured: true,
       setup_required: false,
@@ -101,7 +101,7 @@ describe("AuthGatePanel", () => {
     });
   });
 
-  it("auto-authenticates when already unlocked  REQ: SEC-ACC-001", async () => {
+  it("auto-authenticates when already unlocked  REQ: TECH-SEC-ACC-001", async () => {
     mockGetAuthStatus.mockResolvedValue({
       pin_configured: false,
       setup_required: false,

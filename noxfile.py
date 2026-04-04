@@ -1,6 +1,6 @@
 """Nox sessions for quality checks and packaging.
 
-REQ: SEC-DATA-004
+REQ: TECH-SEC-DATA-004
 """
 
 import nox
@@ -12,7 +12,7 @@ nox.options.reuse_existing_virtualenvs = True
 def lint(session: nox.Session) -> None:
     """Run lint checks for source formatting and static style.
 
-    REQ: SEC-DATA-004
+    REQ: TECH-SEC-DATA-004
     """
     session.install("black>=24.0.0", "ruff>=0.6.0")
     session.run("ruff", "check", "godzilla_core")
@@ -25,7 +25,7 @@ def lint(session: nox.Session) -> None:
 def format(session: nox.Session) -> None:
     """Auto-format source files with Black.
 
-    REQ: SEC-DATA-004
+    REQ: TECH-SEC-DATA-004
     """
     session.install("black>=24.0.0")
     session.run("black", "godzilla_core", "noxfile.py")
@@ -37,7 +37,7 @@ def format(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     """Run the automated test suite.
 
-    REQ: SEC-DATA-004
+    REQ: TECH-SEC-DATA-004
     """
     session.install(".[dev]")
     session.run("pytest")
@@ -47,7 +47,7 @@ def tests(session: nox.Session) -> None:
 def build(session: nox.Session) -> None:
     """Build a wheel distribution for the project.
 
-    REQ: SEC-DATA-004
+    REQ: TECH-SEC-DATA-004
     """
     session.install("build")
     session.run("python", "-m", "build", "--wheel")
@@ -57,7 +57,7 @@ def build(session: nox.Session) -> None:
 def security(session: nox.Session) -> None:
     """Run dependency vulnerability checks for backend and UI.
 
-    REQ: SEC-DATA-004
+    REQ: TECH-SEC-DATA-004
     """
     session.install("pip-audit")
     session.run("pip-audit")

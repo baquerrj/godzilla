@@ -1,7 +1,7 @@
 /**
  * Tests for BalancesTable component.
  *
- * REQ: FUNC-REP-006
+ * REQ: ACC-REP-006
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -32,7 +32,7 @@ const TOKEN = "tok";
 describe("BalancesTable", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows empty state when no snapshots  REQ: FUNC-REP-006", async () => {
+  it("shows empty state when no snapshots  REQ: ACC-REP-006", async () => {
     mockGetBalances.mockResolvedValue([]);
     render(<BalancesTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -40,7 +40,7 @@ describe("BalancesTable", () => {
     });
   });
 
-  it("renders balance rows  REQ: FUNC-REP-006", async () => {
+  it("renders balance rows  REQ: ACC-REP-006", async () => {
     mockGetBalances.mockResolvedValue([
       {
         snapshot_id: "snap1",
@@ -61,7 +61,7 @@ describe("BalancesTable", () => {
     });
   });
 
-  it("shows error on fetch failure  REQ: FUNC-REP-006", async () => {
+  it("shows error on fetch failure  REQ: ACC-REP-006", async () => {
     mockGetBalances.mockRejectedValue(new Error("timeout"));
     render(<BalancesTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -69,7 +69,7 @@ describe("BalancesTable", () => {
     });
   });
 
-  it("requests limit=100  REQ: FUNC-REP-006", async () => {
+  it("requests limit=100  REQ: ACC-REP-006", async () => {
     mockGetBalances.mockResolvedValue([]);
     render(<BalancesTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {

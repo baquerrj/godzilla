@@ -1,10 +1,10 @@
 # UI Frontend Scaffold and API Client
 
-Requirements: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
-FUNC-ACCT-005, FUNC-SYNC-001, FUNC-SYNC-006, FUNC-SYNC-007, FUNC-TXN-001,
-FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,
-FUNC-TXN-007, FUNC-TXN-008, FUNC-CAT-001, FUNC-REP-006, SEC-NET-001,
-SEC-NET-002, SEC-ACC-004
+Requirements: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004,
+ACC-ACCT-005, ACC-SYNC-001, ACC-SYNC-006, ACC-SYNC-007, ACC-TXN-001,
+ACC-TXN-002, ACC-TXN-003, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006,
+ACC-TXN-007, ACC-TXN-008, ACC-CAT-001, ACC-REP-006, TECH-SEC-NET-001,
+TECH-SEC-NET-002, TECH-SEC-ACC-004
 
 ## Problem statement
 
@@ -81,7 +81,7 @@ control.
 
 Full integration — configuring uvicorn to serve HTTPS with this cert and
 instructing the Tauri WebView to trust it — is deferred to **M6 task 22**
-(SEC-NET-001, SEC-NET-002).
+(TECH-SEC-NET-001, TECH-SEC-NET-002).
 
 ## API client module
 
@@ -91,12 +91,12 @@ Interfaces mirror the six backend Pydantic response models:
 
 | TypeScript interface | Backend model | Requirement |
 |---|---|---|
-| `Account` | `AccountResponse` | FUNC-ACCT-003 |
-| `Transaction` | `TransactionResponse` | FUNC-TXN-001 |
-| `BalanceSnapshot` | `BalanceResponse` | FUNC-REP-006 |
-| `SyncState` | `SyncStateResponse` | FUNC-ACCT-004 |
-| `PlaidLinkResult` | `PlaidLinkResponse` | FUNC-ACCT-001, FUNC-ACCT-002 |
-| `PlaidSyncResult` | `PlaidSyncResponse` | FUNC-ACCT-005, FUNC-SYNC-001 |
+| `Account` | `AccountResponse` | ACC-ACCT-003 |
+| `Transaction` | `TransactionResponse` | ACC-TXN-001 |
+| `BalanceSnapshot` | `BalanceResponse` | ACC-REP-006 |
+| `SyncState` | `SyncStateResponse` | ACC-ACCT-004 |
+| `PlaidLinkResult` | `PlaidLinkResponse` | ACC-ACCT-001, ACC-ACCT-002 |
+| `PlaidSyncResult` | `PlaidSyncResponse` | ACC-ACCT-005, ACC-SYNC-001 |
 
 `ApiResult<T>` is a discriminated union used by every view component:
 
@@ -142,7 +142,7 @@ const [result, execute] = useApiCall<Account[]>();
 - The API token is never hard-coded; it is injected at runtime via a Tauri
   `invoke` command (wired up in M1 task 5 / MVP UI).
 - The CSP blocks inline scripts and limits `connect-src` to the loopback
-  sidecar, satisfying SEC-ACC-004 at the WebView boundary.
+  sidecar, satisfying TECH-SEC-ACC-004 at the WebView boundary.
 - Cert files are excluded from git to prevent accidental commit of key
   material.
 

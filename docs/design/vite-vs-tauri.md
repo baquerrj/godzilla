@@ -1,6 +1,6 @@
 # Vite vs Tauri: Roles and Responsibilities (MVP)
 
-Requirements: SYS-001, SEC-ACC-004, SEC-NET-001, SEC-NET-002, SEC-DATA-004
+Requirements: ACC-SYS-001, TECH-SEC-ACC-004, TECH-SEC-NET-001, TECH-SEC-NET-002, TECH-SEC-DATA-004
 
 ## Problem statement
 This project uses both Vite and Tauri in the UI stack. Team members need a

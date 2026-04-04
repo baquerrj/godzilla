@@ -1,6 +1,6 @@
 # Conflict Resolution Design (MVP)
 
-Requirements: FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007, SEC-DATA-007, SYS-003
+Requirements: ACC-SYNC-004, ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007, TECH-SEC-DATA-007, ACC-SYS-003
 
 ## Problem statement
 Offline edits must be preserved across syncs while still ingesting new provider data. When an incoming change conflicts with a user edit, the system must surface the conflict and let the user decide which value to keep, without silently overwriting local edits.
@@ -57,10 +57,10 @@ Notes:
 - Resolution applies selected value and updates provenance to reflect the choice.
 
 ## Security considerations
-- Conflicts are stored in the encrypted database (SEC-CRY-001).
-- Conflict data never includes secrets, tokens, or raw payloads beyond policy (SEC-DATA-007).
-- Access is gated behind the PIN lock (SEC-ACC-001).
-- Audit logs record conflict creation and resolution with redaction (FUNC-AUD-001, FUNC-AUD-002).
+- Conflicts are stored in the encrypted database (TECH-SEC-CRY-001).
+- Conflict data never includes secrets, tokens, or raw payloads beyond policy (TECH-SEC-DATA-007).
+- Access is gated behind the PIN lock (TECH-SEC-ACC-001).
+- Audit logs record conflict creation and resolution with redaction (ACC-AUD-001, ACC-AUD-002).
 
 ## Tradeoffs and alternatives
 - Alternative: last-write-wins. Rejected because it can silently lose offline edits.

@@ -1,6 +1,6 @@
 """Migration runner for the encrypted SQLite database.
 
-REQ: SEC-CRY-001, SYS-004
+REQ: TECH-SEC-CRY-001, TECH-SYS-004
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from godzilla_core.util.time import local_timestamp_metadata
 class MigrationError(RuntimeError):
     """Raised when migration discovery or application fails.
 
-    REQ: SEC-CRY-001
+    REQ: TECH-SEC-CRY-001
     """
 
     pass
@@ -28,7 +28,7 @@ class MigrationError(RuntimeError):
 class Migration:
     """Represents a versioned SQL migration file.
 
-    REQ: SEC-CRY-001
+    REQ: TECH-SEC-CRY-001
     """
 
     version: int
@@ -38,7 +38,7 @@ class Migration:
 def _repo_root() -> Path:
     """Resolve the repository root directory.
 
-    REQ: SYS-004
+    REQ: TECH-SYS-004
 
     Returns:
         Absolute path to the repository root.
@@ -53,7 +53,7 @@ def _repo_root() -> Path:
 def _default_migrations_dir() -> Path:
     """Return the default SQL migration directory.
 
-    REQ: SEC-CRY-001
+    REQ: TECH-SEC-CRY-001
 
     Returns:
         Path to the migrations folder under the repository root.
@@ -64,7 +64,7 @@ def _default_migrations_dir() -> Path:
 def _load_migrations(migrations_dir: Path) -> list[Migration]:
     """Load and validate versioned migration files from disk.
 
-    REQ: SEC-CRY-001
+    REQ: TECH-SEC-CRY-001
 
     Args:
         migrations_dir: Directory containing versioned `.sql` migration files.
@@ -89,7 +89,7 @@ def _load_migrations(migrations_dir: Path) -> list[Migration]:
 def _current_version(conn: sqlcipher.Connection) -> int:
     """Read the latest applied schema version from the database.
 
-    REQ: SEC-CRY-001
+    REQ: TECH-SEC-CRY-001
 
     Args:
         conn: Open SQLCipher connection.
@@ -113,7 +113,7 @@ def run_migrations(
 ) -> int:
     """Apply pending SQL migrations and return the current schema version.
 
-    REQ: SEC-CRY-001, SYS-004
+    REQ: TECH-SEC-CRY-001, TECH-SYS-004
     """
     if not db_path:
         raise ValueError("db_path is required")
@@ -160,7 +160,7 @@ def run_migrations(
 def main() -> int:
     """Run migrations from environment configuration.
 
-    REQ: SEC-CRY-001, SYS-004
+    REQ: TECH-SEC-CRY-001, TECH-SYS-004
     """
     db_path = os.environ.get("GODZILLA_DB_PATH")
     db_key = os.environ.get("GODZILLA_DB_KEY")

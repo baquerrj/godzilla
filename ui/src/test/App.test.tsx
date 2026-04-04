@@ -1,11 +1,11 @@
 /**
  * Tests for the root App component: token gate and layout rendering.
  *
- * REQ: SEC-ACC-004, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
- * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-SYNC-007,
- * REQ: FUNC-REP-001, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005, FUNC-REP-006,
- * REQ: FUNC-EXP-001, FUNC-BKP-001, FUNC-SET-001,
- * REQ: SEC-ACC-001, SEC-DATA-001
+ * REQ: TECH-SEC-ACC-004, ACC-ACCT-003, ACC-ACCT-004, ACC-ACCT-005,
+ * REQ: ACC-TXN-001, ACC-TXN-002, ACC-TXN-003, ACC-SYNC-007,
+ * REQ: ACC-REP-001, ACC-REP-003, ACC-REP-004, ACC-REP-005, ACC-REP-006,
+ * REQ: ACC-EXP-001, ACC-BKP-001, ACC-SET-001,
+ * REQ: TECH-SEC-ACC-001, TECH-SEC-DATA-001
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -139,7 +139,7 @@ describe("App", () => {
     resolveToken("");
   });
 
-  it("shows error when token is empty  REQ: SEC-ACC-004", async () => {
+  it("shows error when token is empty  REQ: TECH-SEC-ACC-004", async () => {
     mockInvoke.mockResolvedValue("");
     render(<App />);
     await waitFor(() => {
@@ -147,7 +147,7 @@ describe("App", () => {
     });
   });
 
-  it("renders overview tab by default when token is present  REQ: SEC-ACC-004", async () => {
+  it("renders overview tab by default when token is present  REQ: TECH-SEC-ACC-004", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
     await waitFor(() => {
@@ -161,7 +161,7 @@ describe("App", () => {
     });
   });
 
-  it("switches tabs while keeping visited section panels mounted  REQ: FUNC-TXN-001, FUNC-REP-001, FUNC-SET-001", async () => {
+  it("switches tabs while keeping visited section panels mounted  REQ: ACC-TXN-001, ACC-REP-001, ACC-SET-001", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
 
@@ -196,7 +196,7 @@ describe("App", () => {
     });
   });
 
-  it("does not refetch reports when returning to an already mounted reports tab  REQ: FUNC-REP-008", async () => {
+  it("does not refetch reports when returning to an already mounted reports tab  REQ: ACC-REP-008", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
 
@@ -215,7 +215,7 @@ describe("App", () => {
     expect(mockGetMonthlyOverview).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to dev proxy token when tauri runtime is unavailable  REQ: SEC-DATA-001", async () => {
+  it("falls back to dev proxy token when tauri runtime is unavailable  REQ: TECH-SEC-DATA-001", async () => {
     delete tauriWindow.__TAURI_INTERNALS__;
     mockInvoke.mockRejectedValue(new Error("No Tauri runtime"));
 
@@ -226,7 +226,7 @@ describe("App", () => {
     });
   });
 
-  it("renders budget-panel when token is present  REQ: FUNC-BUD-001", async () => {
+  it("renders budget-panel when token is present  REQ: ACC-BUD-001", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     render(<App />);
     await waitFor(() => screen.getByTestId("tab-reports"));
@@ -236,7 +236,7 @@ describe("App", () => {
     });
   });
 
-  it("preserves selected report trend categories across tab switches  REQ: FUNC-REP-004", async () => {
+  it("preserves selected report trend categories across tab switches  REQ: ACC-REP-004", async () => {
     mockInvoke.mockResolvedValue("test-token-abc");
     mockGetCategories.mockResolvedValue([
       { category_id: "food", name: "Food", parent_id: null, active: true },

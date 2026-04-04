@@ -1,7 +1,7 @@
 /**
  * Category helper functions shared by UI components.
  *
- * REQ: FUNC-CAT-001
+ * REQ: ACC-CAT-001
  */
 
 import type { Category } from "../api/types";

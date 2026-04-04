@@ -1,7 +1,7 @@
 /**
  * Tests for TransactionFilters component.
  *
- * REQ: FUNC-TXN-002
+ * REQ: ACC-TXN-002
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -36,7 +36,7 @@ const makeAccount = (id: string, name: string): Account => ({
 });
 
 describe("TransactionFilters", () => {
-  it("renders all filter inputs  REQ: FUNC-TXN-002", () => {
+  it("renders all filter inputs  REQ: ACC-TXN-002", () => {
     const onChange = vi.fn();
     render(
       <TransactionFilters
@@ -56,7 +56,7 @@ describe("TransactionFilters", () => {
     expect(screen.getByTestId("filter-category")).toBeInTheDocument();
   });
 
-  it("shows only leaf active categories in dropdown  REQ: FUNC-TXN-002", () => {
+  it("shows only leaf active categories in dropdown  REQ: ACC-TXN-002", () => {
     const onChange = vi.fn();
     const cats: Category[] = [
       makeCategory("food", "Food"),
@@ -80,7 +80,7 @@ describe("TransactionFilters", () => {
     expect(screen.getByRole("option", { name: "Income" })).toBeInTheDocument();
   });
 
-  it("calls onChange when merchant changes  REQ: FUNC-TXN-002", () => {
+  it("calls onChange when merchant changes  REQ: ACC-TXN-002", () => {
     const onChange = vi.fn();
     render(
       <TransactionFilters
@@ -99,7 +99,7 @@ describe("TransactionFilters", () => {
     );
   });
 
-  it("calls onReset when Reset is clicked  REQ: FUNC-TXN-002", () => {
+  it("calls onReset when Reset is clicked  REQ: ACC-TXN-002", () => {
     const onReset = vi.fn();
     render(
       <TransactionFilters
@@ -114,7 +114,7 @@ describe("TransactionFilters", () => {
     expect(onReset).toHaveBeenCalledOnce();
   });
 
-  it("calls onChange when account changes  REQ: FUNC-TXN-002", () => {
+  it("calls onChange when account changes  REQ: ACC-TXN-002", () => {
     const onChange = vi.fn();
     render(
       <TransactionFilters

@@ -1,7 +1,7 @@
 /**
  * TransactionFilters: controlled filter form for the transactions list.
  *
- * REQ: FUNC-TXN-002
+ * REQ: ACC-TXN-002
  */
 
 import type { ChangeEvent } from "react";

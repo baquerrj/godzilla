@@ -1,7 +1,7 @@
 /**
  * Authentication gate panel shown before sensitive data panels.
  *
- * REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003
+ * REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003
  */
 
 import { useEffect, useState } from "react";

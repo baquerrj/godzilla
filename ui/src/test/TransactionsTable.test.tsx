@@ -1,7 +1,7 @@
 /**
  * Tests for TransactionsTable: rendering, pagination, sorting, filters.
  *
- * REQ: FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003
+ * REQ: ACC-TXN-001, ACC-TXN-002, ACC-TXN-003
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -52,7 +52,7 @@ const makeTxn = (id: string, overrides: Partial<Transaction> = {}): Transaction 
 describe("TransactionsTable", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows empty state when no transactions  REQ: FUNC-TXN-001", async () => {
+  it("shows empty state when no transactions  REQ: ACC-TXN-001", async () => {
     mockGetTransactions.mockResolvedValue([]);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -60,7 +60,7 @@ describe("TransactionsTable", () => {
     });
   });
 
-  it("renders transaction rows  REQ: FUNC-TXN-001", async () => {
+  it("renders transaction rows  REQ: ACC-TXN-001", async () => {
     mockGetTransactions.mockResolvedValue([
       makeTxn("txn-1", {
         account_name: "Plaid Diamond 12.5% APR Interest Credit Card",
@@ -79,7 +79,7 @@ describe("TransactionsTable", () => {
     });
   });
 
-  it("shows error on fetch failure  REQ: FUNC-TXN-001", async () => {
+  it("shows error on fetch failure  REQ: ACC-TXN-001", async () => {
     mockGetTransactions.mockRejectedValue(new Error("DB error"));
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() => {
@@ -89,7 +89,7 @@ describe("TransactionsTable", () => {
     });
   });
 
-  it("next page is disabled when fewer rows than page size  REQ: FUNC-TXN-001", async () => {
+  it("next page is disabled when fewer rows than page size  REQ: ACC-TXN-001", async () => {
     mockGetTransactions.mockResolvedValue([makeTxn("t1")]);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
     await waitFor(() =>
@@ -98,7 +98,7 @@ describe("TransactionsTable", () => {
     expect(screen.getByTestId("prev-btn")).toBeDisabled();
   });
 
-  it("requests next page on Next click  REQ: FUNC-TXN-001", async () => {
+  it("requests next page on Next click  REQ: ACC-TXN-001", async () => {
     // Return a full page so Next is enabled
     const fullPage = Array.from({ length: 50 }, (_, i) => makeTxn(`t${i}`));
     mockGetTransactions.mockResolvedValue(fullPage);
@@ -116,7 +116,7 @@ describe("TransactionsTable", () => {
     });
   });
 
-  it("toggles sort order on repeated column click  REQ: FUNC-TXN-001", async () => {
+  it("toggles sort order on repeated column click  REQ: ACC-TXN-001", async () => {
     // Provide one row so the table (and its sortable headers) are rendered.
     mockGetTransactions.mockResolvedValue([makeTxn("t-sort")]);
     render(<TransactionsTable token={TOKEN} refreshKey={0} />);
@@ -141,7 +141,7 @@ describe("TransactionsTable", () => {
     );
   });
 
-  it("passes filter params to getTransactions  REQ: FUNC-TXN-002", async () => {
+  it("passes filter params to getTransactions  REQ: ACC-TXN-002", async () => {
     mockGetTransactions.mockResolvedValue([makeTxn("txn-filter")]);
     render(
       <TransactionsTable
@@ -166,7 +166,7 @@ describe("TransactionsTable", () => {
     });
   });
 
-  it("calls onSelectTransaction when a row is clicked  REQ: FUNC-TXN-003", async () => {
+  it("calls onSelectTransaction when a row is clicked  REQ: ACC-TXN-003", async () => {
     mockGetTransactions.mockResolvedValue([makeTxn("txn-choose")]);
     const onSelect = vi.fn();
     render(

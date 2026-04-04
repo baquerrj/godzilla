@@ -1,7 +1,7 @@
 /**
  * ConflictQueue: lists open field-level conflicts with resolution actions.
  *
- * REQ: FUNC-SYNC-006, FUNC-SYNC-007
+ * REQ: ACC-SYNC-006, ACC-SYNC-007
  */
 
 import { useEffect } from "react";

@@ -1,22 +1,22 @@
 """FastAPI application layer for UI integration.
 
-REQ: SYS-001, SYS-002, SYS-003,
-REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
-REQ: FUNC-ACCT-005, FUNC-ACCT-007, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001,
-REQ: FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005,
-REQ: FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
-REQ: FUNC-CAT-001, FUNC-CAT-002,
-REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
-REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
-REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
-REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
-REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
-REQ: FUNC-BKP-006,
-REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-REQ: FUNC-AUD-001, FUNC-AUD-003, FUNC-AUD-004,
-REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-DATA-003,
-REQ: SEC-NET-001
+REQ: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003,
+REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004,
+REQ: ACC-ACCT-005, ACC-ACCT-007, ACC-ACCT-008, ACC-SYNC-001, ACC-TXN-001,
+REQ: ACC-TXN-002, ACC-TXN-003, ACC-TXN-004, ACC-TXN-005,
+REQ: ACC-TXN-006, ACC-TXN-007, ACC-TXN-008,
+REQ: ACC-CAT-001, ACC-CAT-002,
+REQ: ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007,
+REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004,
+REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+REQ: ACC-REP-006, ACC-REP-007, ACC-REP-008,
+REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003,
+REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004,
+REQ: ACC-BKP-006,
+REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+REQ: ACC-AUD-001, ACC-AUD-003, ACC-AUD-004,
+REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-DATA-003,
+REQ: TECH-SEC-NET-001
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ _UNLOCK_SESSIONS_LOCK = Lock()
 class PlaidLinkRequest(BaseModel):
     """Request body for creating a sandbox Plaid item.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    REQ: ACC-ACCT-001, ACC-ACCT-002
     """
 
     institution_id: str | None = Field(default=None, min_length=3, max_length=64)
@@ -105,7 +105,7 @@ class PlaidLinkRequest(BaseModel):
     def _normalize_products(cls, value: list[str] | None) -> list[str] | None:
         """Normalize and validate requested Plaid products.
 
-        REQ: FUNC-ACCT-001
+        REQ: ACC-ACCT-001
         """
         if value is None:
             return None
@@ -126,7 +126,7 @@ class PlaidLinkRequest(BaseModel):
 class PlaidLinkResponse(BaseModel):
     """Response payload for successful link creation.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002
+    REQ: ACC-ACCT-001, ACC-ACCT-002
     """
 
     item_id: str
@@ -137,7 +137,7 @@ class PlaidLinkResponse(BaseModel):
 class PlaidSyncRequest(BaseModel):
     """Request body for triggering a manual sync.
 
-    REQ: FUNC-ACCT-005, FUNC-SYNC-001
+    REQ: ACC-ACCT-005, ACC-SYNC-001
     """
 
     item_id: str = Field(min_length=1, max_length=128)
@@ -147,7 +147,7 @@ class PlaidSyncRequest(BaseModel):
 class PlaidSyncResponse(BaseModel):
     """Response payload describing sync changes.
 
-    REQ: FUNC-ACCT-005, FUNC-SYNC-001
+    REQ: ACC-ACCT-005, ACC-SYNC-001
     """
 
     item_id: str
@@ -161,7 +161,7 @@ class PlaidSyncResponse(BaseModel):
 class UnlinkItemResponse(BaseModel):
     """Response payload for item unlink operation.
 
-    REQ: FUNC-ACCT-008
+    REQ: ACC-ACCT-008
     """
 
     item_id: str
@@ -175,7 +175,7 @@ class UnlinkItemResponse(BaseModel):
 class AccountResponse(BaseModel):
     """Account read model for UI listing.
 
-    REQ: FUNC-ACCT-003
+    REQ: ACC-ACCT-003
     """
 
     account_id: str
@@ -194,7 +194,7 @@ class AccountResponse(BaseModel):
 class TransactionResponse(BaseModel):
     """Transaction read model for list views.
 
-    REQ: FUNC-TXN-001, FUNC-TXN-002
+    REQ: ACC-TXN-001, ACC-TXN-002
     """
 
     transaction_id: str
@@ -216,7 +216,7 @@ class TransactionResponse(BaseModel):
 class TransactionSplitResponse(BaseModel):
     """Split portion of a transaction.
 
-    REQ: FUNC-TXN-008
+    REQ: ACC-TXN-008
     """
 
     split_id: str
@@ -228,7 +228,7 @@ class TransactionSplitResponse(BaseModel):
 class TransactionDetailResponse(BaseModel):
     """Full transaction detail including tags, splits, and raw provider payload.
 
-    REQ: FUNC-TXN-003
+    REQ: ACC-TXN-003
     """
 
     transaction_id: str
@@ -253,7 +253,7 @@ class TransactionDetailResponse(BaseModel):
 class CategoryResponse(BaseModel):
     """Category read model.
 
-    REQ: FUNC-CAT-001, FUNC-CAT-002
+    REQ: ACC-CAT-001, ACC-CAT-002
     """
 
     category_id: str
@@ -265,7 +265,7 @@ class CategoryResponse(BaseModel):
 class CreateCategoryRequest(BaseModel):
     """Request body for creating a category.
 
-    REQ: FUNC-CAT-002
+    REQ: ACC-CAT-002
     """
 
     name: str = Field(min_length=1, max_length=128)
@@ -275,7 +275,7 @@ class CreateCategoryRequest(BaseModel):
 class PatchCategoryRequest(BaseModel):
     """Request body for updating a category.
 
-    REQ: FUNC-CAT-002
+    REQ: ACC-CAT-002
     """
 
     name: str | None = Field(default=None, min_length=1, max_length=128)
@@ -285,7 +285,7 @@ class PatchCategoryRequest(BaseModel):
 class PatchTransactionRequest(BaseModel):
     """Request body for user overrides on a transaction.
 
-    REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007
+    REQ: ACC-TXN-004, ACC-TXN-005, ACC-TXN-006, ACC-TXN-007
     """
 
     category_id: str | None = Field(default=None)
@@ -300,7 +300,7 @@ class PatchTransactionRequest(BaseModel):
 class SplitItem(BaseModel):
     """One portion of a transaction split.
 
-    REQ: FUNC-TXN-008
+    REQ: ACC-TXN-008
     """
 
     amount: float
@@ -311,7 +311,7 @@ class SplitItem(BaseModel):
 class ConflictResponse(BaseModel):
     """Conflict read model for resolution queue.
 
-    REQ: FUNC-SYNC-006, FUNC-SYNC-007
+    REQ: ACC-SYNC-006, ACC-SYNC-007
     """
 
     conflict_id: str
@@ -327,7 +327,7 @@ class ConflictResponse(BaseModel):
 class ResolveConflictRequest(BaseModel):
     """Request body for resolving a conflict.
 
-    REQ: FUNC-SYNC-007
+    REQ: ACC-SYNC-007
     """
 
     resolution_choice: Literal["local", "provider"]
@@ -336,7 +336,7 @@ class ResolveConflictRequest(BaseModel):
 class BalanceResponse(BaseModel):
     """Balance snapshot read model.
 
-    REQ: FUNC-REP-006
+    REQ: ACC-REP-006
     """
 
     snapshot_id: str
@@ -351,7 +351,7 @@ class BalanceResponse(BaseModel):
 class SyncStateResponse(BaseModel):
     """Per-item sync state read model.
 
-    REQ: FUNC-ACCT-004
+    REQ: ACC-ACCT-004
     """
 
     item_id: str
@@ -367,7 +367,7 @@ class SyncStateResponse(BaseModel):
 class CreateBudgetRequest(BaseModel):
     """Request body for creating a monthly budget line.
 
-    REQ: FUNC-BUD-001
+    REQ: ACC-BUD-001
     """
 
     month: str = Field(pattern=r"^\d{4}-\d{2}$")
@@ -378,7 +378,7 @@ class CreateBudgetRequest(BaseModel):
 class BudgetLineResponse(BaseModel):
     """Per-category budget line with planned/actual/remaining.
 
-    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+    REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
     """
 
     budget_id: str
@@ -393,7 +393,7 @@ class BudgetLineResponse(BaseModel):
 class TopSpendingCategoryResponse(BaseModel):
     """Top expense category entry for monthly overview.
 
-    REQ: FUNC-REP-001
+    REQ: ACC-REP-001
     """
 
     category_id: str
@@ -404,7 +404,7 @@ class TopSpendingCategoryResponse(BaseModel):
 class MonthlyOverviewResponse(BaseModel):
     """Monthly roll-up metrics and top spending categories.
 
-    REQ: FUNC-REP-001, FUNC-REP-007, FUNC-REP-008
+    REQ: ACC-REP-001, ACC-REP-007, ACC-REP-008
     """
 
     month: str
@@ -422,7 +422,7 @@ class MonthlyOverviewResponse(BaseModel):
 class CashFlowPointResponse(BaseModel):
     """One month of cash-flow metrics.
 
-    REQ: FUNC-REP-003
+    REQ: ACC-REP-003
     """
 
     month: str
@@ -435,7 +435,7 @@ class CashFlowPointResponse(BaseModel):
 class CashFlowReportResponse(BaseModel):
     """Cash-flow report over a custom date range.
 
-    REQ: FUNC-REP-003, FUNC-REP-007, FUNC-REP-008
+    REQ: ACC-REP-003, ACC-REP-007, ACC-REP-008
     """
 
     start_date: str
@@ -448,7 +448,7 @@ class CashFlowReportResponse(BaseModel):
 class CategoryTrendPointResponse(BaseModel):
     """One month value in a category trend series.
 
-    REQ: FUNC-REP-004
+    REQ: ACC-REP-004
     """
 
     month: str
@@ -458,7 +458,7 @@ class CategoryTrendPointResponse(BaseModel):
 class CategoryTrendSeriesResponse(BaseModel):
     """Monthly spending trend for one category.
 
-    REQ: FUNC-REP-004
+    REQ: ACC-REP-004
     """
 
     category_id: str
@@ -469,7 +469,7 @@ class CategoryTrendSeriesResponse(BaseModel):
 class CategoryTrendsResponse(BaseModel):
     """Category trend report for selected categories.
 
-    REQ: FUNC-REP-004, FUNC-REP-007, FUNC-REP-008
+    REQ: ACC-REP-004, ACC-REP-007, ACC-REP-008
     """
 
     start_month: str
@@ -483,7 +483,7 @@ class CategoryTrendsResponse(BaseModel):
 class NetWorthPointResponse(BaseModel):
     """One date point for assets, liabilities, and net worth.
 
-    REQ: FUNC-REP-005
+    REQ: ACC-REP-005
     """
 
     date: str
@@ -495,7 +495,7 @@ class NetWorthPointResponse(BaseModel):
 class NetWorthReportResponse(BaseModel):
     """Net-worth report over a custom date range.
 
-    REQ: FUNC-REP-005, FUNC-REP-008
+    REQ: ACC-REP-005, ACC-REP-008
     """
 
     start_date: str
@@ -506,7 +506,7 @@ class NetWorthReportResponse(BaseModel):
 class BackupRequest(BaseModel):
     """Request body for encrypted backup creation.
 
-    REQ: FUNC-BKP-001
+    REQ: ACC-BKP-001
     """
 
     passphrase: str = Field(min_length=1, max_length=512)
@@ -516,7 +516,7 @@ class BackupRequest(BaseModel):
 class RestoreResponse(BaseModel):
     """Restore operation result.
 
-    REQ: FUNC-BKP-003
+    REQ: ACC-BKP-003
     """
 
     restored_database: bool
@@ -527,7 +527,7 @@ class RestoreResponse(BaseModel):
 class WipeRequest(BaseModel):
     """Request body for wipe confirmation.
 
-    REQ: FUNC-BKP-004
+    REQ: ACC-BKP-004
     """
 
     confirm: str = Field(min_length=1, max_length=64)
@@ -536,7 +536,7 @@ class WipeRequest(BaseModel):
 class WipeResponse(BaseModel):
     """Wipe operation result details.
 
-    REQ: FUNC-BKP-004
+    REQ: ACC-BKP-004
     """
 
     deleted_files: list[str]
@@ -547,7 +547,7 @@ class WipeResponse(BaseModel):
 class ReinitializeResponse(BaseModel):
     """Re-initialization operation result details.
 
-    REQ: FUNC-BKP-006
+    REQ: ACC-BKP-006
     """
 
     schema_version: int
@@ -556,7 +556,7 @@ class ReinitializeResponse(BaseModel):
 class RetentionSettingsResponse(BaseModel):
     """Retention policy settings payload.
 
-    REQ: FUNC-SET-002
+    REQ: ACC-SET-002
     """
 
     retain_raw_payloads: bool
@@ -566,7 +566,7 @@ class RetentionSettingsResponse(BaseModel):
 class ExportDefaultsResponse(BaseModel):
     """Export default settings payload.
 
-    REQ: FUNC-SET-005
+    REQ: ACC-SET-005
     """
 
     include_raw_payloads: bool
@@ -575,7 +575,7 @@ class ExportDefaultsResponse(BaseModel):
 class SecuritySettingsResponse(BaseModel):
     """Security settings payload persisted in M5.
 
-    REQ: FUNC-SET-003
+    REQ: ACC-SET-003
     """
 
     auto_lock_minutes: int
@@ -584,7 +584,7 @@ class SecuritySettingsResponse(BaseModel):
 class SyncSettingsResponse(BaseModel):
     """Sync settings payload persisted in M5.
 
-    REQ: FUNC-SET-004, FUNC-ACCT-006
+    REQ: ACC-SET-004, ACC-ACCT-006, TECH-ACCT-006-CONFIG
     """
 
     schedule_enabled: bool
@@ -595,7 +595,7 @@ class SyncSettingsResponse(BaseModel):
 class SettingsResponse(BaseModel):
     """Consolidated settings read model.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
     """
 
     timezone: str
@@ -609,7 +609,7 @@ class SettingsResponse(BaseModel):
 class RetentionSettingsPatch(BaseModel):
     """Partial update for retention settings.
 
-    REQ: FUNC-SET-002
+    REQ: ACC-SET-002
     """
 
     retain_raw_payloads: bool | None = None
@@ -619,7 +619,7 @@ class RetentionSettingsPatch(BaseModel):
 class ExportDefaultsPatch(BaseModel):
     """Partial update for export defaults.
 
-    REQ: FUNC-SET-005
+    REQ: ACC-SET-005
     """
 
     include_raw_payloads: bool | None = None
@@ -628,7 +628,7 @@ class ExportDefaultsPatch(BaseModel):
 class SecuritySettingsPatch(BaseModel):
     """Partial update for security settings.
 
-    REQ: FUNC-SET-003
+    REQ: ACC-SET-003
     """
 
     auto_lock_minutes: int | None = Field(default=None, ge=1, le=1440)
@@ -637,7 +637,7 @@ class SecuritySettingsPatch(BaseModel):
 class SyncSettingsPatch(BaseModel):
     """Partial update for sync settings.
 
-    REQ: FUNC-SET-004
+    REQ: ACC-SET-004
     """
 
     schedule_enabled: bool | None = None
@@ -647,7 +647,7 @@ class SyncSettingsPatch(BaseModel):
 class UpdateSettingsRequest(BaseModel):
     """Partial settings update payload.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
     """
 
     timezone: str | None = None
@@ -661,7 +661,7 @@ class UpdateSettingsRequest(BaseModel):
 class AuthStatusTlsResponse(BaseModel):
     """TLS status details returned by auth status endpoint.
 
-    REQ: SEC-NET-001
+    REQ: TECH-SEC-NET-001
     """
 
     enabled: bool
@@ -671,7 +671,7 @@ class AuthStatusTlsResponse(BaseModel):
 class AuthStatusResponse(BaseModel):
     """Authentication/lock status for UI bootstrap and gating.
 
-    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-NET-001
     """
 
     pin_configured: bool
@@ -686,7 +686,7 @@ class AuthStatusResponse(BaseModel):
 class SetupPinRequest(BaseModel):
     """Create or rotate the application PIN.
 
-    REQ: SEC-ACC-001, SEC-ACC-003
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-003
     """
 
     new_pin: str = Field(pattern=r"^\d{4,12}$")
@@ -696,7 +696,7 @@ class SetupPinRequest(BaseModel):
 class SetupPinResponse(BaseModel):
     """PIN setup result payload.
 
-    REQ: SEC-ACC-003
+    REQ: TECH-SEC-ACC-003
     """
 
     pin_configured: bool
@@ -705,7 +705,7 @@ class SetupPinResponse(BaseModel):
 class UnlockRequest(BaseModel):
     """Unlock request payload containing PIN.
 
-    REQ: SEC-ACC-001
+    REQ: TECH-SEC-ACC-001
     """
 
     pin: str = Field(pattern=r"^\d{4,12}$")
@@ -714,7 +714,7 @@ class UnlockRequest(BaseModel):
 class UnlockResponse(BaseModel):
     """Unlock response payload containing session token.
 
-    REQ: SEC-ACC-001, SEC-ACC-002
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002
     """
 
     unlock_token: str
@@ -724,7 +724,7 @@ class UnlockResponse(BaseModel):
 class AuditLogEntryResponse(BaseModel):
     """Audit log entry payload.
 
-    REQ: FUNC-AUD-001, FUNC-AUD-004
+    REQ: ACC-AUD-001, ACC-AUD-004
     """
 
     id: str
@@ -738,7 +738,7 @@ class AuditLogEntryResponse(BaseModel):
 class AuditLogResponse(BaseModel):
     """JSON audit log response with pagination metadata.
 
-    REQ: FUNC-AUD-004
+    REQ: ACC-AUD-004
     """
 
     entries: list[AuditLogEntryResponse]
@@ -749,7 +749,7 @@ class AuditLogResponse(BaseModel):
 def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
     """Write a structured log event after redacting sensitive content.
 
-    REQ: FUNC-AUD-001, FUNC-AUD-002, FUNC-AUD-003, SEC-DATA-002
+    REQ: ACC-AUD-001, ACC-AUD-002, ACC-AUD-003, TECH-SEC-DATA-002
 
     Args:
         level: Logging level to emit.
@@ -786,7 +786,7 @@ def _log_event(level: int, event: str, payload: dict[str, Any]) -> None:
 def _expand_path(path_value: str) -> Path:
     """Expand environment variables and user-home references in a path string.
 
-    REQ: SEC-DATA-003
+    REQ: TECH-SEC-DATA-003
 
     Args:
         path_value: Raw path value from environment.
@@ -801,7 +801,7 @@ def _expand_path(path_value: str) -> Path:
 def _read_database_settings() -> tuple[str, str]:
     """Read encrypted database settings from environment variables.
 
-    REQ: SEC-DATA-003
+    REQ: TECH-SEC-DATA-003
 
     Returns:
         Tuple of database path and encryption key.
@@ -816,7 +816,7 @@ def _read_database_settings() -> tuple[str, str]:
 def _connect_encrypted_db() -> sqlcipher.Connection:
     """Open an encrypted SQLCipher database connection.
 
-    REQ: SEC-DATA-003
+    REQ: TECH-SEC-DATA-003
 
     Returns:
         SQLCipher connection with foreign keys enabled.
@@ -836,7 +836,7 @@ def _connect_encrypted_db() -> sqlcipher.Connection:
 def _db_connection() -> Iterator[sqlcipher.Connection]:
     """Yield a managed encrypted database connection.
 
-    REQ: SEC-DATA-003
+    REQ: TECH-SEC-DATA-003
 
     Yields:
         Open SQLCipher connection.
@@ -851,7 +851,7 @@ def _db_connection() -> Iterator[sqlcipher.Connection]:
 def _parse_owner_names(value: str | None) -> list[Any]:
     """Deserialize owner metadata JSON from persisted account rows.
 
-    REQ: FUNC-ACCT-003
+    REQ: ACC-ACCT-003
 
     Args:
         value: Serialized owner payload string.
@@ -871,7 +871,7 @@ def _upsert_linked_item_metadata(
 ) -> None:
     """Persist linked item/institution metadata in the main DB.
 
-    REQ: FUNC-ACCT-004
+    REQ: ACC-ACCT-004
 
     Args:
         conn: Open encrypted database connection.
@@ -937,7 +937,7 @@ def _upsert_linked_item_metadata(
 def _pin_bypass_enabled() -> bool:
     """Return whether dev PIN bypass mode is enabled.
 
-    REQ: SEC-ACC-001
+    REQ: TECH-SEC-ACC-001
     """
     value = os.environ.get("GODZILLA_DEV_BYPASS_PIN", "0").strip().lower()
     return value in {"1", "true", "yes", "on"}
@@ -946,7 +946,7 @@ def _pin_bypass_enabled() -> bool:
 def _load_pin_material() -> tuple[str, str] | None:
     """Load persisted PIN hash/salt from secure storage.
 
-    REQ: SEC-ACC-003
+    REQ: TECH-SEC-ACC-003
     """
     store = store_from_env()
     pin_hash = store.get_secret(_PIN_HASH_SECRET_KEY)
@@ -959,7 +959,7 @@ def _load_pin_material() -> tuple[str, str] | None:
 def _save_pin_material(pin_hash: str, pin_salt: str) -> None:
     """Persist PIN hash/salt into secure storage.
 
-    REQ: SEC-ACC-003
+    REQ: TECH-SEC-ACC-003
     """
     store = store_from_env()
     store.set_secret(_PIN_HASH_SECRET_KEY, pin_hash)
@@ -971,7 +971,7 @@ def _save_pin_material(pin_hash: str, pin_salt: str) -> None:
 def _current_auto_lock_minutes() -> int:
     """Load active auto-lock timeout from settings.
 
-    REQ: SEC-ACC-002, FUNC-SET-003
+    REQ: TECH-SEC-ACC-002, ACC-SET-003
     """
     try:
         with _db_connection() as conn:
@@ -983,7 +983,7 @@ def _current_auto_lock_minutes() -> int:
 def _register_unlock_session() -> tuple[str, datetime]:
     """Create and store a new unlock session token.
 
-    REQ: SEC-ACC-001, SEC-ACC-002
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002
     """
     now = datetime.now(timezone.utc)
     token = str(uuid4())
@@ -998,7 +998,7 @@ def _touch_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
 
     Returns expiry timestamp when valid, otherwise None.
 
-    REQ: SEC-ACC-001, SEC-ACC-002
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002
     """
     now = datetime.now(timezone.utc)
     with _UNLOCK_SESSIONS_LOCK:
@@ -1015,7 +1015,7 @@ def _touch_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
 def _peek_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
     """Validate unlock session without mutating activity timestamp.
 
-    REQ: SEC-ACC-001, SEC-ACC-002
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002
     """
     now = datetime.now(timezone.utc)
     with _UNLOCK_SESSIONS_LOCK:
@@ -1031,7 +1031,7 @@ def _peek_unlock_session(token: str, timeout_minutes: int) -> datetime | None:
 def _tls_status() -> AuthStatusTlsResponse:
     """Return current TLS enablement and certificate fingerprint.
 
-    REQ: SEC-NET-001
+    REQ: TECH-SEC-NET-001
     """
     cert_env = os.environ.get("GODZILLA_TLS_CERT")
     key_env = os.environ.get("GODZILLA_TLS_KEY")
@@ -1060,7 +1060,7 @@ async def require_api_key(
 ) -> None:
     """Validate API token and enforce unlock gate for sensitive routes.
 
-    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-ACC-004
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004
     """
     expected = os.environ.get("GODZILLA_API_TOKEN")
     if not expected:
@@ -1088,7 +1088,7 @@ async def require_api_key(
 def _register_auth_routes(app: FastAPI) -> None:
     """Register authentication and lock-state endpoints.
 
-    REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001, SEC-ACC-004
+    REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-NET-001, TECH-SEC-ACC-004
     """
 
     @app.get(
@@ -1101,7 +1101,7 @@ def _register_auth_routes(app: FastAPI) -> None:
     ) -> AuthStatusResponse:
         """Return lock/setup/TLS status used by app bootstrap.
 
-        REQ: SEC-ACC-001, SEC-ACC-002, SEC-ACC-003, SEC-NET-001
+        REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-NET-001
         """
         bypass_enabled = _pin_bypass_enabled()
         auto_lock_minutes = _current_auto_lock_minutes()
@@ -1142,7 +1142,7 @@ def _register_auth_routes(app: FastAPI) -> None:
     async def setup_pin(request: SetupPinRequest) -> SetupPinResponse:
         """Create or rotate app PIN in secure storage.
 
-        REQ: SEC-ACC-001, SEC-ACC-003
+        REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-003
         """
         try:
             existing = _load_pin_material()
@@ -1174,7 +1174,7 @@ def _register_auth_routes(app: FastAPI) -> None:
     async def unlock_app(request: UnlockRequest) -> UnlockResponse:
         """Unlock app session with PIN verification.
 
-        REQ: SEC-ACC-001, SEC-ACC-002
+        REQ: TECH-SEC-ACC-001, TECH-SEC-ACC-002
         """
         if _pin_bypass_enabled():
             token, expires_at = _register_unlock_session()
@@ -1206,8 +1206,8 @@ def _register_auth_routes(app: FastAPI) -> None:
 def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register Plaid endpoints on the FastAPI application.
 
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004, FUNC-ACCT-005,
-    REQ: FUNC-SYNC-001, SEC-ACC-004
+    REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-004, ACC-ACCT-005,
+    REQ: ACC-SYNC-001, TECH-SEC-ACC-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -1221,7 +1221,7 @@ def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def plaid_link(request: PlaidLinkRequest) -> PlaidLinkResponse:
         """Create a sandbox Plaid item and persist its token.
 
-        REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-004
+        REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-004
         """
         _log_event(
             logging.INFO,
@@ -1297,7 +1297,7 @@ def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def plaid_sync(request: PlaidSyncRequest) -> PlaidSyncResponse:
         """Run manual incremental sync for one Plaid item.
 
-        REQ: FUNC-ACCT-005, FUNC-SYNC-001
+        REQ: ACC-ACCT-005, ACC-SYNC-001
         """
         _log_event(
             logging.INFO,
@@ -1346,7 +1346,7 @@ def _register_plaid_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> UnlinkItemResponse:
         """Unlink an institution item and revoke/delete credentials.
 
-        REQ: FUNC-ACCT-008, SEC-CRY-004
+        REQ: ACC-ACCT-008, TECH-SEC-CRY-004
         """
         _log_event(logging.INFO, "unlink_started", {"item_id": item_id, "mode": mode})
         try:
@@ -1434,7 +1434,7 @@ def _validate_category_assignment(conn: sqlcipher.Connection, category_id: str) 
     Raises HTTPException(422) if the category does not exist, is not active,
     or is a parent category (leaf-only assignment enforced).
 
-    REQ: FUNC-CAT-002, FUNC-TXN-004
+    REQ: ACC-CAT-002, ACC-TXN-004
 
     Args:
         conn: Open database connection.
@@ -1462,7 +1462,7 @@ def _validate_category_assignment(conn: sqlcipher.Connection, category_id: str) 
 def _row_to_transaction_response(row: tuple[Any, ...]) -> TransactionResponse:
     """Build a TransactionResponse from a SELECT result row.
 
-    REQ: FUNC-TXN-001, FUNC-TXN-002
+    REQ: ACC-TXN-001, ACC-TXN-002
 
     Args:
         row: Columns: id, account_id, provider_account_id, account_name, date,
@@ -1500,7 +1500,7 @@ def _build_transaction_filter_clause(  # noqa: PLR0913
 ) -> tuple[str, list[Any]]:
     """Build WHERE clause and bind parameters for transaction filters.
 
-    REQ: FUNC-TXN-002, FUNC-EXP-001
+    REQ: ACC-TXN-002, ACC-EXP-001
     """
     conditions: list[str] = []
     params: list[Any] = []
@@ -1555,7 +1555,7 @@ _TXN_SELECT = (
 #   - split-aware: when a transaction has splits, the parent's amount/category
 #     is ignored; only split rows contribute.
 # The LIKE pattern is safe because `month` is validated to ^\d{4}-\d{2}$ by Pydantic.
-# REQ: FUNC-BUD-002, FUNC-BUD-004
+# REQ: ACC-BUD-002, ACC-BUD-004
 _BUDGET_ACTUALS_CTE = """
 WITH line_items AS (
   SELECT tr.category_id, tr.amount AS subtotal
@@ -1584,7 +1584,7 @@ _REPORT_INCLUSION_NOTE = (
 
 # Shared CTE for report metrics that use budget inclusion rules.
 # Bind params: start_date, end_date, start_date, end_date.
-# REQ: FUNC-REP-007
+# REQ: ACC-REP-007
 _REPORT_LINE_ITEMS_RANGE_CTE = """
 WITH line_items AS (
   SELECT tr.id AS transaction_id, tr.date AS date,
@@ -1609,7 +1609,7 @@ WITH line_items AS (
 def _parse_month_start(month: str) -> date:
     """Parse YYYY-MM into a month-start date object.
 
-    REQ: FUNC-REP-008
+    REQ: ACC-REP-008
     """
     try:
         return datetime.strptime(f"{month}-01", "%Y-%m-%d").date()
@@ -1620,7 +1620,7 @@ def _parse_month_start(month: str) -> date:
 def _month_bounds(month: str) -> tuple[str, str]:
     """Return first and last day (YYYY-MM-DD) for a YYYY-MM month.
 
-    REQ: FUNC-REP-008
+    REQ: ACC-REP-008
     """
     start = _parse_month_start(month)
     last_day = calendar.monthrange(start.year, start.month)[1]
@@ -1631,7 +1631,7 @@ def _month_bounds(month: str) -> tuple[str, str]:
 def _shift_month(month_start: date, delta_months: int) -> date:
     """Shift a month-start date by `delta_months`.
 
-    REQ: FUNC-REP-008
+    REQ: ACC-REP-008
     """
     month_index = (month_start.year * 12 + (month_start.month - 1)) + delta_months
     year = month_index // 12
@@ -1642,7 +1642,7 @@ def _shift_month(month_start: date, delta_months: int) -> date:
 def _iter_month_keys(start_date: date, end_date: date) -> list[str]:
     """Build inclusive list of month keys (YYYY-MM) between two dates.
 
-    REQ: FUNC-REP-008
+    REQ: ACC-REP-008
     """
     cursor = date(start_date.year, start_date.month, 1)
     end_month = date(end_date.year, end_date.month, 1)
@@ -1656,7 +1656,7 @@ def _iter_month_keys(start_date: date, end_date: date) -> list[str]:
 def _parse_date_range(start: str, end: str) -> tuple[date, date]:
     """Parse and validate an inclusive ISO date range.
 
-    REQ: FUNC-REP-008
+    REQ: ACC-REP-008
     """
     try:
         start_date = datetime.strptime(start, "%Y-%m-%d").date()
@@ -1671,7 +1671,7 @@ def _parse_date_range(start: str, end: str) -> tuple[date, date]:
 def _parse_csv_categories(categories: str) -> list[str]:
     """Parse a comma-separated category list.
 
-    REQ: FUNC-REP-004
+    REQ: ACC-REP-004
     """
     parsed = [item.strip() for item in categories.split(",") if item.strip()]
     if not parsed:
@@ -1689,7 +1689,7 @@ def _parse_csv_categories(categories: str) -> list[str]:
 def _latest_included_transaction_date(conn: sqlcipher.Connection) -> date:
     """Return most recent transaction date that participates in report totals.
 
-    REQ: FUNC-REP-007
+    REQ: ACC-REP-007
     """
     row = conn.execute(
         "SELECT MAX(date) FROM transaction_record tr "
@@ -1711,7 +1711,7 @@ def _csv_attachment_response(
 ) -> Response:
     """Create a CSV attachment response from row dictionaries.
 
-    REQ: FUNC-EXP-001, FUNC-EXP-002
+    REQ: ACC-EXP-001, ACC-EXP-002
     """
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=fieldnames, extrasaction="ignore")
@@ -1729,7 +1729,7 @@ def _csv_attachment_response(
 def _export_default_include_raw_payloads(conn: sqlcipher.Connection) -> bool:
     """Return default setting for raw payload inclusion in exports.
 
-    REQ: FUNC-EXP-003
+    REQ: ACC-EXP-003
     """
     row = conn.execute(
         "SELECT include_raw_payloads FROM export_defaults "
@@ -1743,7 +1743,7 @@ def _export_default_include_raw_payloads(conn: sqlcipher.Connection) -> bool:
 def _sqlite_related_paths(database_path: Path) -> list[Path]:
     """Return SQLite database path and sidecar paths.
 
-    REQ: FUNC-BKP-004
+    REQ: ACC-BKP-004
     """
     return [database_path, Path(f"{database_path}-wal"), Path(f"{database_path}-shm")]
 
@@ -1751,7 +1751,7 @@ def _sqlite_related_paths(database_path: Path) -> list[Path]:
 def _read_file_bytes(path: Path) -> bytes:
     """Read all bytes from a file path.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-003
+    REQ: ACC-BKP-001, ACC-BKP-003
     """
     return path.read_bytes()
 
@@ -1759,7 +1759,7 @@ def _read_file_bytes(path: Path) -> bytes:
 def _write_file_bytes_atomic(path: Path, content: bytes) -> None:
     """Atomically replace file content using a temporary path.
 
-    REQ: FUNC-BKP-003
+    REQ: ACC-BKP-003
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_name(f".{path.name}.tmp-{uuid4().hex}")
@@ -1770,7 +1770,7 @@ def _write_file_bytes_atomic(path: Path, content: bytes) -> None:
 def _best_effort_wipe(path: Path) -> bool:
     """Best-effort overwrite and unlink for local data wipe.
 
-    REQ: FUNC-BKP-004, SEC-DATA-006
+    REQ: ACC-BKP-004, TECH-SEC-DATA-006
     """
     if not path.exists():
         return False
@@ -1799,7 +1799,7 @@ def _best_effort_wipe(path: Path) -> bool:
 def _validate_timezone_name(timezone_name: str) -> None:
     """Validate IANA timezone name.
 
-    REQ: FUNC-SET-001
+    REQ: ACC-SET-001
     """
     try:
         ZoneInfo(timezone_name)
@@ -1810,8 +1810,8 @@ def _validate_timezone_name(timezone_name: str) -> None:
 def _default_settings_payload() -> SettingsResponse:
     """Return default settings payload used for bootstrap reads.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-    REQ: FUNC-ACCT-006
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+    REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
     """
     return SettingsResponse(
         timezone="UTC",
@@ -1833,7 +1833,7 @@ def _default_settings_payload() -> SettingsResponse:
 def _load_retain_logs_days(conn: sqlcipher.Connection) -> int:
     """Return configured audit-log retention days.
 
-    REQ: FUNC-SET-002, FUNC-AUD-003
+    REQ: ACC-SET-002, ACC-AUD-003
     """
     row = conn.execute(
         "SELECT retain_logs_days FROM retention_policy "
@@ -1847,7 +1847,7 @@ def _load_retain_logs_days(conn: sqlcipher.Connection) -> int:
 def _prune_audit_log(conn: sqlcipher.Connection, retain_logs_days: int) -> int:
     """Prune audit rows older than configured retention window.
 
-    REQ: FUNC-AUD-003
+    REQ: ACC-AUD-003
     """
     cutoff = datetime.now(timezone.utc) - timedelta(days=retain_logs_days)
     cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S")
@@ -1860,8 +1860,8 @@ def _prune_audit_log(conn: sqlcipher.Connection, retain_logs_days: int) -> int:
 def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     """Load consolidated settings from DB, falling back to defaults.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-    REQ: FUNC-ACCT-006
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+    REQ: ACC-ACCT-006, TECH-ACCT-006-CONFIG
     """
     default = _default_settings_payload()
     settings_row = conn.execute(
@@ -1912,7 +1912,7 @@ def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
 def _upsert_settings_row(conn: sqlcipher.Connection, settings: SettingsResponse) -> None:
     """Persist consolidated settings across singleton settings tables.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
     """
     utc, tz, offset = local_timestamp_metadata()
     settings_row = conn.execute(
@@ -2015,7 +2015,7 @@ def _apply_retention_pruning(
 ) -> dict[str, int]:
     """Apply configured retention pruning to raw payloads and audit log rows.
 
-    REQ: FUNC-SET-002, FUNC-AUD-003, SEC-DATA-005
+    REQ: ACC-SET-002, ACC-AUD-003, TECH-SEC-DATA-005
     """
     purged_raw = 0
     if not retain_raw_payloads:
@@ -2028,14 +2028,14 @@ def _apply_retention_pruning(
 def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register read/query endpoints on the FastAPI application.
 
-    REQ: FUNC-ACCT-003, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003,
-    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
-    REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008, FUNC-ACCT-004, FUNC-CAT-001,
-    REQ: FUNC-SYNC-006, SEC-ACC-004,
-    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004,
-    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-    REQ: FUNC-AUD-001, FUNC-AUD-004
+    REQ: ACC-ACCT-003, ACC-TXN-001, ACC-TXN-002, ACC-TXN-003,
+    REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+    REQ: ACC-REP-006, ACC-REP-007, ACC-REP-008, ACC-ACCT-004, ACC-CAT-001,
+    REQ: ACC-SYNC-006, TECH-SEC-ACC-004,
+    REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004,
+    REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003,
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+    REQ: ACC-AUD-001, ACC-AUD-004
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -2049,7 +2049,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_accounts() -> list[AccountResponse]:
         """List linked accounts.
 
-        REQ: FUNC-ACCT-003, FUNC-ACCT-009
+        REQ: ACC-ACCT-003, ACC-ACCT-009, TECH-ACCT-009-API
         """
         with _db_connection() as conn:
             rows = conn.execute(
@@ -2100,7 +2100,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> list[TransactionResponse]:
         """List transactions with pagination, sorting, and optional filters.
 
-        REQ: FUNC-TXN-001, FUNC-TXN-002
+        REQ: ACC-TXN-001, ACC-TXN-002
         """
         sort_direction = "ASC" if sort_order == "asc" else "DESC"
         sort_field = _SORT_FIELDS[sort_by]
@@ -2137,7 +2137,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> TransactionDetailResponse:
         """Fetch full detail for a single transaction.
 
-        REQ: FUNC-TXN-003
+        REQ: ACC-TXN-003
         """
         with _db_connection() as conn:
             row = conn.execute(
@@ -2217,7 +2217,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> list[BalanceResponse]:
         """List balance snapshots for net worth views.
 
-        REQ: FUNC-REP-006
+        REQ: ACC-REP-006
         """
         where_clause = ""
         params: list[Any] = []
@@ -2272,7 +2272,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> Response:
         """Export transactions as CSV using the same filter semantics as /transactions.
 
-        REQ: FUNC-EXP-001, FUNC-EXP-003
+        REQ: ACC-EXP-001, ACC-EXP-003
         """
         sort_direction = "ASC" if sort_order == "asc" else "DESC"
         sort_field = "tr.date" if sort_by == "date" else "tr.amount"
@@ -2430,7 +2430,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> Response | dict[str, list[dict[str, Any]]]:
         """Export categories and budgets in CSV or JSON format.
 
-        REQ: FUNC-EXP-002
+        REQ: ACC-EXP-002
         """
         with _db_connection() as conn:
             category_rows = conn.execute(
@@ -2534,7 +2534,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_settings() -> SettingsResponse:
         """Return consolidated application settings.
 
-        REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+        REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
         """
         with _db_connection() as conn:
             return _load_settings(conn)
@@ -2554,7 +2554,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> Response | AuditLogResponse:
         """Fetch audit log entries with optional filters and CSV export.
 
-        REQ: FUNC-AUD-001, FUNC-AUD-004
+        REQ: ACC-AUD-001, ACC-AUD-004
         """
         conditions: list[str] = []
         params: list[Any] = []
@@ -2631,7 +2631,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_sync_state() -> list[SyncStateResponse]:
         """List per-item sync status for UI refresh state.
 
-        REQ: FUNC-ACCT-004
+        REQ: ACC-ACCT-004
         """
         with _db_connection() as conn:
             rows = conn.execute(
@@ -2669,7 +2669,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_categories() -> list[CategoryResponse]:
         """List all categories as a flat list (client builds tree).
 
-        REQ: FUNC-CAT-001
+        REQ: ACC-CAT-001
         """
         with _db_connection() as conn:
             rows = conn.execute(
@@ -2696,7 +2696,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> list[ConflictResponse]:
         """List conflicts filtered by status.
 
-        REQ: FUNC-SYNC-006
+        REQ: ACC-SYNC-006
         """
         with _db_connection() as conn:
             rows = conn.execute(
@@ -2730,7 +2730,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> list[BudgetLineResponse]:
         """List budget lines with planned/actual/remaining for the given month.
 
-        REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004
+        REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004
         """
         with _db_connection() as conn:
             budget_rows = conn.execute(
@@ -2769,7 +2769,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> MonthlyOverviewResponse:
         """Return monthly overview totals and top spending categories.
 
-        REQ: FUNC-REP-001, FUNC-REP-007, FUNC-REP-008
+        REQ: ACC-REP-001, ACC-REP-007, ACC-REP-008
         """
         start_date, end_date = _month_bounds(month)
         params = (start_date, end_date, start_date, end_date)
@@ -2830,7 +2830,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> CashFlowReportResponse:
         """Return monthly cash-flow metrics over a custom date range.
 
-        REQ: FUNC-REP-003, FUNC-REP-007, FUNC-REP-008
+        REQ: ACC-REP-003, ACC-REP-007, ACC-REP-008
         """
         start_dt, end_dt = _parse_date_range(start, end)
         params = (start, end, start, end)
@@ -2881,7 +2881,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> CategoryTrendsResponse:
         """Return monthly category spend trends for one or more categories.
 
-        REQ: FUNC-REP-004, FUNC-REP-007, FUNC-REP-008
+        REQ: ACC-REP-004, ACC-REP-007, ACC-REP-008
         """
         category_ids = _parse_csv_categories(categories)
         with _db_connection() as conn:
@@ -2962,7 +2962,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> NetWorthReportResponse:
         """Return net-worth time series from balance snapshots.
 
-        REQ: FUNC-REP-005, FUNC-REP-008
+        REQ: ACC-REP-005, ACC-REP-008
         """
         _parse_date_range(start, end)
         with _db_connection() as conn:
@@ -2996,11 +2996,11 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
 def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     """Register mutating endpoints for categories, transactions, conflicts, and budgets.
 
-    REQ: FUNC-CAT-002, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007,
-    REQ: FUNC-TXN-008, FUNC-SYNC-004, FUNC-SYNC-007, SEC-ACC-004,
-    REQ: FUNC-BUD-001, FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004,
-    REQ: FUNC-BKP-006,
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: ACC-CAT-002, ACC-TXN-004, ACC-TXN-005, ACC-TXN-006, ACC-TXN-007,
+    REQ: ACC-TXN-008, ACC-SYNC-004, ACC-SYNC-007, TECH-SEC-ACC-004,
+    REQ: ACC-BUD-001, ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004,
+    REQ: ACC-BKP-006,
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
 
     Args:
         app: FastAPI app instance to attach routes to.
@@ -3015,7 +3015,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def create_category(request: CreateCategoryRequest) -> CategoryResponse:
         """Create a new category.
 
-        REQ: FUNC-CAT-002
+        REQ: ACC-CAT-002
         """
         with _db_connection() as conn:
             if request.parent_id is not None:
@@ -3068,7 +3068,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> CategoryResponse:
         """Rename or deactivate a category.
 
-        REQ: FUNC-CAT-002
+        REQ: ACC-CAT-002
         """
         with _db_connection() as conn:
             row = conn.execute(
@@ -3120,7 +3120,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> TransactionDetailResponse:
         """Apply user overrides to a transaction and record provenance.
 
-        REQ: FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-SYNC-004
+        REQ: ACC-TXN-004, ACC-TXN-005, ACC-TXN-006, ACC-TXN-007, ACC-SYNC-004
         """
         utc, tz, offset = local_timestamp_metadata()
 
@@ -3230,7 +3230,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> TransactionDetailResponse:
         """Replace splits for a transaction.
 
-        REQ: FUNC-TXN-008
+        REQ: ACC-TXN-008
         """
         with _db_connection() as conn:
             txn_row = conn.execute(
@@ -3284,7 +3284,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> ConflictResponse:
         """Resolve a conflict by choosing local or provider value.
 
-        REQ: FUNC-SYNC-007
+        REQ: ACC-SYNC-007
         """
         utc, tz, offset = local_timestamp_metadata()
 
@@ -3348,7 +3348,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def create_budget(request: CreateBudgetRequest) -> BudgetLineResponse:
         """Create a monthly budget line for a leaf category.
 
-        REQ: FUNC-BUD-001
+        REQ: ACC-BUD-001
         """
         with _db_connection() as conn:
             _validate_category_assignment(conn, request.category_id)
@@ -3404,7 +3404,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> None:
         """Delete a budget line by ID.
 
-        REQ: FUNC-BUD-001
+        REQ: ACC-BUD-001
         """
         with _db_connection() as conn:
             row = conn.execute("SELECT id FROM budget WHERE id = ?", (budget_id,)).fetchone()
@@ -3422,7 +3422,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def create_backup(request: BackupRequest) -> Response:
         """Create encrypted backup of local database and optional secrets store.
 
-        REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-005, SEC-CRY-003
+        REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-005, TECH-SEC-CRY-003, TECH-SEC-CRY-003-ENVELOPE
         """
         db_path_raw, _ = _read_database_settings()
         db_path = _expand_path(db_path_raw)
@@ -3469,7 +3469,8 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> RestoreResponse:
         """Restore local state from an encrypted backup file.
 
-        REQ: FUNC-BKP-002, FUNC-BKP-003, SEC-CRY-003
+        REQ: ACC-BKP-002, ACC-BKP-003, TECH-SEC-CRY-003, TECH-SEC-CRY-003-INTEGRITY,
+        REQ: TECH-SEC-CRY-003-RESTORE
         """
         _log_event(logging.INFO, "restore_started", {"filename": backup_file.filename})
         payload_bytes = await backup_file.read()
@@ -3548,7 +3549,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def wipe_local_data(request: WipeRequest) -> WipeResponse:
         """Wipe local DB and secrets files with best-effort secure deletion.
 
-        REQ: FUNC-BKP-004, SEC-DATA-006
+        REQ: ACC-BKP-004, TECH-SEC-DATA-006
         """
         if request.confirm != "WIPE_LOCAL_DATA":
             raise HTTPException(status_code=422, detail="Invalid wipe confirmation token")
@@ -3604,7 +3605,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def reinitialize_local_database() -> ReinitializeResponse:
         """Recreate local encrypted DB schema in place after wipe.
 
-        REQ: FUNC-BKP-006
+        REQ: ACC-BKP-006
         """
         db_path_raw, db_key = _read_database_settings()
         db_path = _expand_path(db_path_raw)
@@ -3628,7 +3629,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def update_settings(request: UpdateSettingsRequest) -> SettingsResponse:
         """Partially update consolidated settings and apply retention pruning.
 
-        REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+        REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005
         """
         with _db_connection() as conn:
             current = _load_settings(conn)
@@ -3693,7 +3694,7 @@ async def get_transaction_detail_internal(
 ) -> TransactionDetailResponse:
     """Fetch a full TransactionDetailResponse by transaction ID.
 
-    REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-008
+    REQ: ACC-TXN-003, ACC-TXN-004, ACC-TXN-008
 
     Args:
         conn_factory: Context manager that yields a DB connection.
@@ -3769,18 +3770,18 @@ async def get_transaction_detail_internal(
 def create_app() -> FastAPI:
     """Build and return the FastAPI application.
 
-    REQ: SYS-001, SYS-002, SYS-003,
-    REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
-    REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004,
-    REQ: FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,
-    REQ: FUNC-CAT-001, FUNC-CAT-002, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-SYNC-007,
-    REQ: FUNC-REP-001, FUNC-REP-002, FUNC-REP-003, FUNC-REP-004, FUNC-REP-005,
-    REQ: FUNC-REP-006, FUNC-REP-007, FUNC-REP-008,
-    REQ: FUNC-EXP-001, FUNC-EXP-002, FUNC-EXP-003,
-    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-004, FUNC-BKP-006,
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
-    REQ: FUNC-BUD-001, FUNC-BUD-002, FUNC-BUD-003, FUNC-BUD-004, SEC-ACC-001,
-    REQ: SEC-ACC-002, SEC-ACC-003, SEC-ACC-004, SEC-NET-001
+    REQ: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003,
+    REQ: ACC-ACCT-001, ACC-ACCT-002, ACC-ACCT-003, ACC-ACCT-004, ACC-ACCT-005,
+    REQ: ACC-SYNC-001, ACC-TXN-001, ACC-TXN-002, ACC-TXN-003, ACC-TXN-004,
+    REQ: ACC-TXN-005, ACC-TXN-006, ACC-TXN-007, ACC-TXN-008,
+    REQ: ACC-CAT-001, ACC-CAT-002, ACC-SYNC-005, ACC-SYNC-006, ACC-SYNC-007,
+    REQ: ACC-REP-001, ACC-REP-002, ACC-REP-003, ACC-REP-004, ACC-REP-005,
+    REQ: ACC-REP-006, ACC-REP-007, ACC-REP-008,
+    REQ: ACC-EXP-001, ACC-EXP-002, ACC-EXP-003,
+    REQ: ACC-BKP-001, ACC-BKP-002, ACC-BKP-003, ACC-BKP-004, ACC-BKP-006,
+    REQ: ACC-SET-001, ACC-SET-002, ACC-SET-003, ACC-SET-004, ACC-SET-005,
+    REQ: ACC-BUD-001, ACC-BUD-002, ACC-BUD-003, ACC-BUD-004, TECH-SEC-ACC-001,
+    REQ: TECH-SEC-ACC-002, TECH-SEC-ACC-003, TECH-SEC-ACC-004, TECH-SEC-NET-001
     """
     app = FastAPI(title="Godzilla Core API", version="0.1.0")
     _register_auth_routes(app)

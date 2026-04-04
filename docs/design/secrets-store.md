@@ -1,6 +1,6 @@
 # Secrets Store Design (MVP)
 
-Requirements: SEC-CRY-002, SEC-DATA-001, FUNC-ACCT-002, SYS-003
+Requirements: TECH-SEC-CRY-002, TECH-SEC-DATA-001, ACC-ACCT-002, ACC-SYS-003
 
 ## Problem statement
 Provider access tokens and encryption keys must be stored in a protected local store and never embedded in client artifacts or logs. The secrets store must be encrypted, local-only, and used by the Python core for Plaid access tokens.
@@ -29,9 +29,9 @@ Table: `secrets`
 - `store_from_env()` uses `GODZILLA_SECRETS_PATH` and `GODZILLA_SECRETS_KEY`
 
 ## Security considerations
-- Secrets are stored only in the encrypted secrets DB (SEC-CRY-002).
-- No secrets are logged or embedded in client artifacts (SEC-DATA-001).
-- Access tokens are not stored in the main application DB (FUNC-ACCT-002).
+- Secrets are stored only in the encrypted secrets DB (TECH-SEC-CRY-002).
+- No secrets are logged or embedded in client artifacts (TECH-SEC-DATA-001).
+- Access tokens are not stored in the main application DB (ACC-ACCT-002).
 
 ## Tradeoffs and alternatives
 - Alternative: OS keychain. Deferred to post-MVP for portability and simplicity.

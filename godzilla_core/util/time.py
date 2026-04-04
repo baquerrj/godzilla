@@ -1,6 +1,6 @@
 """Time utilities for UTC and local timestamp metadata.
 
-REQ: SYS-004
+REQ: TECH-SYS-004
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def local_timestamp_metadata(
 ) -> Tuple[str, str, int]:
     """Return (utc_iso, tz_name, offset_minutes) for the local timezone.
 
-    REQ: SYS-004
+    REQ: TECH-SYS-004
     """
     now = now_utc or datetime.now(timezone.utc)
     tz = tz_name or os.environ.get("GODZILLA_LOCAL_TZ", DEFAULT_LOCAL_TZ)
@@ -32,7 +32,7 @@ def local_timestamp_metadata(
 def local_date(now_utc: datetime | None = None, tz_name: str | None = None) -> str:
     """Return the local date (YYYY-MM-DD) for the configured timezone.
 
-    REQ: SYS-004
+    REQ: TECH-SYS-004
     """
     now = now_utc or datetime.now(timezone.utc)
     tz = tz_name or os.environ.get("GODZILLA_LOCAL_TZ", DEFAULT_LOCAL_TZ)
