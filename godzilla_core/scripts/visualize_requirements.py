@@ -253,6 +253,36 @@ def _counter_items(counter: Counter[str]) -> list[dict[str, Any]]:
     ]
 
 
+def _find_cycles(entries: list[RequirementEntry]) -> list[list[str]]:
+    """Return any cycles found in the requirement parent graph."""
+    parent_by_id = {
+        entry.requirement_id: entry.parent_requirement_id
+        for entry in entries
+        if entry.parent_requirement_id
+    }
+    visited: set[str] = set()
+    cycles: list[list[str]] = []
+
+    for requirement_id in parent_by_id:
+        if requirement_id in visited:
+            continue
+        path: list[str] = []
+        path_index: dict[str, int] = {}
+        current = requirement_id
+        while current in parent_by_id:
+            if current in path_index:
+                cycles.append(path[path_index[current] :] + [current])
+                break
+            if current in visited:
+                break
+            path_index[current] = len(path)
+            path.append(current)
+            current = parent_by_id[current]
+        visited.update(path)
+
+    return cycles
+
+
 def build_view_model(entries: list[RequirementEntry], source_path: Path) -> dict[str, Any]:
     """Build the view model consumed by the static HTML page."""
     requirement_type_counts = Counter(entry.requirement_type for entry in entries)
@@ -279,6 +309,9 @@ def build_view_model(entries: list[RequirementEntry], source_path: Path) -> dict
         },
         "requirements": [entry.to_view_model() for entry in entries],
         "hierarchy": _build_hierarchy(entries),
+        "graph_issues": {
+            "cycles": _find_cycles(entries),
+        },
     }
 
 
@@ -1092,22 +1125,51 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
         return;
       }}
 
-      const depths = new Map();
-      const computeDepth = (requirementId) => {{
-        if (depths.has(requirementId)) {{
-          return depths.get(requirementId);
-        }}
-        const entry = requirementsById.get(requirementId);
-        let depth = 0;
-        if (entry?.parent_requirement_id && requirementsById.has(entry.parent_requirement_id)) {{
-          depth = computeDepth(entry.parent_requirement_id) + 1;
-        }}
-        depths.set(requirementId, depth);
-        return depth;
-      }};
+      const depths = new Map(
+        data.requirements.map((entry) => [entry.requirement_id, 0])
+      );
+      const indegree = new Map(
+        data.requirements.map((entry) => [entry.requirement_id, 0])
+      );
 
       data.requirements.forEach((entry) => {{
-        computeDepth(entry.requirement_id);
+        if (entry.parent_requirement_id && indegree.has(entry.requirement_id)) {{
+          indegree.set(entry.requirement_id, indegree.get(entry.requirement_id) + 1);
+        }}
+      }});
+
+      const queue = data.requirements
+        .filter((entry) => indegree.get(entry.requirement_id) === 0)
+        .map((entry) => entry.requirement_id);
+      const processed = new Set();
+
+      while (queue.length) {{
+        const requirementId = queue.shift();
+        processed.add(requirementId);
+        const childIds = childrenByParentId.get(requirementId) || [];
+        childIds.forEach((childId) => {{
+          if (!indegree.has(childId)) {{
+            return;
+          }}
+          const nextDepth = Math.max(
+            depths.get(childId) || 0,
+            (depths.get(requirementId) || 0) + 1
+          );
+          depths.set(childId, nextDepth);
+          indegree.set(childId, indegree.get(childId) - 1);
+          if (indegree.get(childId) === 0) {{
+            queue.push(childId);
+          }}
+        }});
+      }}
+
+      const cycleIds = data.requirements
+        .map((entry) => entry.requirement_id)
+        .filter((requirementId) => !processed.has(requirementId));
+      const fallbackDepthBase =
+        processed.size > 0 ? Math.max(...depths.values()) + 1 : 0;
+      cycleIds.forEach((requirementId, index) => {{
+        depths.set(requirementId, fallbackDepthBase + index);
       }});
 
       const layers = new Map();
@@ -1257,7 +1319,10 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       }});
 
       const focusedLabel = focusState.requirementId || "None";
-      status.textContent = `Focused: ${{focusedLabel}}`;
+      const cycleText = data.graph_issues.cycles.length
+        ? ` | Cycle detected: ${{data.graph_issues.cycles[0].join(" -> ")}}`
+        : "";
+      status.textContent = `Focused: ${{focusedLabel}}${{cycleText}}`;
     }};
 
     const setFocusRequirement = (requirementId) => {{

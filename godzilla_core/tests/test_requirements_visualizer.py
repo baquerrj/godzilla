@@ -192,6 +192,10 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
         self.assertIn("relationship-graph", html)
         self.assertIn("All requirements are visible in one view.", html)
         self.assertIn(
+            '"cycles": [["ACC-TXN-006", "ACC-BUD-004", "ACC-TXN-006"]]',
+            html,
+        )
+        self.assertIn(
             "godzilla_core/tests/test_requirement_traceability.py:"
             "test_sys_001_system_trace_stub",
             html,

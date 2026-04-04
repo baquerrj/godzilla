@@ -59,6 +59,7 @@ Behavior:
 - Parses the YAML trace file as a top-level list of requirement entries.
 - Writes a standalone HTML artifact next to the YAML input using the derived path `trace/requirements.visualization.html`.
 - Renders overview metrics, a nested hierarchy, an all-at-once scaled SVG relationship map with focus highlighting, and client-side search/filter controls for requirement metadata and references.
+- If the trace file contains parent-cycle mistakes, the relationship map stays renderable and surfaces the detected cycle in the graph status instead of failing blank.
 
 ## Security considerations
 - The container image excludes application secrets; sensitive environment variables are injected at runtime.
