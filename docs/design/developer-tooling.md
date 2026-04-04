@@ -43,6 +43,22 @@ None.
 - Add `docker-compose.dev.ssh-agent.yml` as an optional SSH agent forwarding overlay for Git SSH workflows.
 - Add `.devcontainer/devcontainer.json` so VS Code can attach to the running containerized environment.
 - Add `.dockerignore` to keep the build context minimal and deterministic.
+- Add `visualize-requirements <path-to-yml>` as a backend CLI that renders a self-contained HTML report beside the input trace file using the derived path `<input-stem>.visualization.html`.
+
+## Requirements trace visualization
+The repository includes a lightweight Python visualizer for machine-readable requirement trace files such as `trace/requirements.yml`. The tool is intended for local inspection and review of trace coverage without requiring a running web service or external assets.
+
+Usage:
+
+```bash
+. venv/bin/activate
+visualize-requirements trace/requirements.yml
+```
+
+Behavior:
+- Parses the YAML trace file as a top-level list of requirement entries.
+- Writes a standalone HTML artifact next to the YAML input using the derived path `trace/requirements.visualization.html`.
+- Renders overview metrics, parent/child hierarchy, and client-side search/filter controls for requirement metadata and references.
 
 ## Security considerations
 - The container image excludes application secrets; sensitive environment variables are injected at runtime.
