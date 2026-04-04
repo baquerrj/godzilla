@@ -77,6 +77,8 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
             self.assertIn("parent_requirement_id", html)
             self.assertIn("Relationship Tree", html)
             self.assertIn("focus-requirement-select", html)
+            self.assertIn("relationship-graph", html)
+            self.assertIn("focus-summary", html)
             self.assertIn("Focused Requirement", html)
             self.assertIn("godzilla_core/util/time.py:local_timestamp_metadata", html)
 
@@ -187,15 +189,16 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
         self.assertIn("ACC-SYS-003", html)
         self.assertIn("ACC-ACCT-006", html)
         self.assertIn("Focused Requirement", html)
-        self.assertIn("descendant-tree-root", html)
+        self.assertIn("relationship-graph", html)
+        self.assertIn("All requirements are visible in one view.", html)
         self.assertIn(
-            "skip: godzilla_core/tests/test_requirement_traceability.py:"
-            "test_func_acct_006_scheduled_refresh_trace_stub",
+            "godzilla_core/tests/test_requirement_traceability.py:"
+            "test_sys_001_system_trace_stub",
             html,
         )
         self.assertIn(
-            "xfail: godzilla_core/tests/test_requirement_traceability.py:"
-            "test_func_acct_009_owner_display_trace_stub",
+            "godzilla_core/tests/test_plaid_client.py:"
+            "PlaidClientPostTests.test_post_retries_429_and_honors_retry_after",
             html,
         )
         self.assertIn('"parent_requirement_id": "ACC-SYS-001"', html)

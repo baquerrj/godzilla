@@ -565,142 +565,111 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       gap: 12px;
       margin-bottom: 20px;
     }}
-    .focus-tree-shell {{
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }}
-    .focus-tree-canvas {{
-      min-width: max-content;
+    .relationship-map-shell {{
       display: grid;
-      justify-items: center;
       gap: 16px;
-      padding: 8px 12px 20px;
     }}
-    .ancestor-chain {{
-      display: grid;
-      justify-items: center;
-      gap: 10px;
+    .relationship-map-panel {{
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 241, 232, 0.88));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }}
-    .ancestor-step {{
-      display: grid;
-      justify-items: center;
-      gap: 10px;
-    }}
-    .tree-connector-vertical {{
-      width: 2px;
-      height: 18px;
-      background: #d4c3aa;
-    }}
-    .focus-stage {{
-      display: grid;
-      justify-items: center;
-      gap: 10px;
-    }}
-    .focus-label {{
-      font-size: 0.82rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .relationship-map-meta {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
       color: var(--muted);
+      font-size: 0.92rem;
+    }}
+    .relationship-map-viewport {{
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(216, 237, 240, 0.2), rgba(255, 250, 243, 0.95));
+    }}
+    .relationship-map-svg {{
+      display: block;
+      width: 100%;
+      height: auto;
+    }}
+    .relationship-edge {{
+      fill: none;
+      stroke: #cfbba0;
+      stroke-width: 2;
+      opacity: 0.75;
+    }}
+    .relationship-edge.is-highlighted {{
+      stroke: var(--accent);
+      stroke-width: 3;
+      opacity: 1;
     }}
     .relationship-node {{
-      min-width: 240px;
-      max-width: 340px;
-      padding: 14px 16px;
+      cursor: pointer;
+    }}
+    .relationship-node-card {{
+      fill: rgba(255, 252, 247, 0.98);
+      stroke: #cdb99b;
+      stroke-width: 1.5;
+      filter: drop-shadow(0 8px 14px rgba(42, 29, 14, 0.08));
+    }}
+    .relationship-node.is-focus .relationship-node-card {{
+      fill: #eef8f9;
+      stroke: var(--accent);
+      stroke-width: 3;
+    }}
+    .relationship-node.is-related .relationship-node-card {{
+      fill: #faf4ea;
+      stroke: #b9955a;
+      stroke-width: 2;
+    }}
+    .relationship-node.type-acceptance .relationship-node-band {{
+      fill: #dcecf0;
+    }}
+    .relationship-node.type-technical .relationship-node-band {{
+      fill: #efe4cf;
+    }}
+    .relationship-node-title {{
+      font-size: 14px;
+      font-weight: 700;
+      fill: var(--text);
+    }}
+    .relationship-node-subtitle {{
+      font-size: 11px;
+      fill: var(--muted);
+    }}
+    .focus-summary {{
+      display: grid;
+      gap: 14px;
+      padding: 16px 18px;
       border: 1px solid var(--border);
       border-radius: 16px;
       background: var(--surface-strong);
-      box-shadow: 0 10px 24px var(--shadow);
-      text-align: left;
     }}
-    .relationship-node:hover {{
-      border-color: #b59d78;
-      transform: translateY(-1px);
-    }}
-    .relationship-node.is-focus {{
-      min-width: 300px;
-      border-width: 2px;
-      border-color: var(--accent);
-      background: linear-gradient(180deg, #fdfcf8, #eef8f9);
-    }}
-    .relationship-node.is-path {{
-      background: #faf4ea;
-    }}
-    .relationship-node-title {{
-      display: block;
-      font-size: 1rem;
-      font-weight: 700;
-      line-height: 1.3;
-    }}
-    .relationship-node-subtitle {{
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.4;
-    }}
-    .descendant-tree,
-    .descendant-tree ul {{
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 16px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      position: relative;
-    }}
-    .descendant-tree ul {{
-      padding-top: 24px;
-    }}
-    .descendant-tree ul::before {{
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 50%;
-      width: 2px;
-      height: 18px;
-      background: #d4c3aa;
-      transform: translateX(-50%);
-    }}
-    .descendant-tree li {{
-      position: relative;
+    .focus-summary-grid {{
       display: grid;
-      justify-items: center;
-      gap: 10px;
-      padding: 0 8px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
     }}
-    .descendant-tree li::before,
-    .descendant-tree li::after {{
-      content: "";
-      position: absolute;
-      top: 0;
-      width: 50%;
-      height: 2px;
-      background: #d4c3aa;
+    .focus-summary-card {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--surface);
     }}
-    .descendant-tree li::before {{
-      right: 50%;
+    .focus-summary-card h3 {{
+      font-size: 0.9rem;
+      margin-bottom: 8px;
     }}
-    .descendant-tree li::after {{
-      left: 50%;
-    }}
-    .descendant-tree li:only-child::before,
-    .descendant-tree li:only-child::after {{
-      display: none;
-    }}
-    .descendant-tree li:first-child::before {{
-      display: none;
-    }}
-    .descendant-tree li:last-child::after {{
-      display: none;
-    }}
-    .descendant-tree-root {{
-      padding-top: 0;
-    }}
-    .descendant-tree-root::before,
-    .descendant-tree-root > li::before,
-    .descendant-tree-root > li::after {{
-      display: none;
+    .focus-summary-list {{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      display: grid;
+      gap: 4px;
     }}
     .empty-tree-state {{
       padding: 18px 20px;
@@ -787,14 +756,29 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     <section class="section">
       <h2>Relationship Tree</h2>
       <p class="results-label">
-        Center any requirement to see parent nodes flowing in above it and child
-        requirements branching out below it.
+        All requirement relationships are shown in one scaled map. Select or click
+        a node to highlight its parent and child path without horizontal scrolling.
       </p>
       <div class="relationship-controls">
         <select id="focus-requirement-select"></select>
       </div>
-      <div class="focus-tree-shell">
-        <div class="focus-tree-canvas" id="focus-tree-root"></div>
+      <div class="relationship-map-shell">
+        <div class="relationship-map-panel">
+          <div class="relationship-map-meta">
+            <span>All requirements are visible in one view.</span>
+            <span id="relationship-map-status"></span>
+          </div>
+          <div class="relationship-map-viewport">
+            <svg
+              id="relationship-graph"
+              class="relationship-map-svg"
+              viewBox="0 0 1200 700"
+              preserveAspectRatio="xMidYMin meet"
+              aria-label="Requirement relationship graph"
+            ></svg>
+          </div>
+        </div>
+        <div class="focus-summary" id="focus-summary"></div>
       </div>
     </section>
 
@@ -854,41 +838,6 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       span.className = `badge ${{className}}`.trim();
       span.textContent = label;
       return span;
-    }};
-
-    const createRequirementNode = (entry, variant = "") => {{
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `relationship-node ${{variant}}`.trim();
-      button.dataset.requirementId = entry.requirement_id;
-      button.addEventListener("click", () => setFocusRequirement(entry.requirement_id));
-
-      const title = document.createElement("span");
-      title.className = "relationship-node-title";
-      title.textContent = entry.requirement_id;
-      button.appendChild(title);
-
-      const subtitle = document.createElement("span");
-      subtitle.className = "relationship-node-subtitle";
-      subtitle.textContent = entry.title;
-      button.appendChild(subtitle);
-
-      const badges = document.createElement("div");
-      badges.className = "badge-row";
-      badges.appendChild(
-        createBadge(entry.requirement_type, `type-${{entry.requirement_type}}`)
-      );
-      badges.appendChild(
-        createBadge(
-          entry.implementation_status || "unspecified",
-          `status-${{(entry.implementation_status || "unspecified").replaceAll(" ", "-")}}`
-        )
-      );
-      badges.appendChild(
-        createBadge(entry.verification_method || "unspecified", "method")
-      );
-      button.appendChild(badges);
-      return button;
     }};
 
     const populateOverview = () => {{
@@ -972,6 +921,13 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       data.hierarchy.forEach((node) => renderTreeNode(node, root));
     }};
 
+    const createSummaryBadge = (label, className = "") => {{
+      const badge = document.createElement("span");
+      badge.className = `badge ${{className}}`.trim();
+      badge.textContent = label;
+      return badge;
+    }};
+
     const getAncestorEntries = (requirementId) => {{
       const ancestors = [];
       let current = requirementsById.get(requirementId);
@@ -989,77 +945,111 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       return ancestors;
     }};
 
-    const renderDescendantBranch = (requirementId) => {{
-      const branchItem = document.createElement("li");
-      const entry = requirementsById.get(requirementId);
-      branchItem.appendChild(createRequirementNode(entry));
-
-      const childIds = childrenByParentId.get(requirementId) || [];
-      if (childIds.length) {{
-        const childList = document.createElement("ul");
-        childIds.forEach((childId) => {{
-          childList.appendChild(renderDescendantBranch(childId));
-        }});
-        branchItem.appendChild(childList);
+    const getDescendantIds = (requirementId) => {{
+      const descendants = [];
+      const stack = [...(childrenByParentId.get(requirementId) || [])];
+      const visited = new Set();
+      while (stack.length) {{
+        const currentId = stack.pop();
+        if (visited.has(currentId)) {{
+          continue;
+        }}
+        visited.add(currentId);
+        descendants.push(currentId);
+        const childIds = childrenByParentId.get(currentId) || [];
+        for (let index = childIds.length - 1; index >= 0; index -= 1) {{
+          stack.push(childIds[index]);
+        }}
       }}
-      return branchItem;
+      descendants.sort((leftId, rightId) => leftId.localeCompare(rightId));
+      return descendants;
     }};
 
-    const renderFocusTree = () => {{
-      const root = document.getElementById("focus-tree-root");
+    const renderFocusSummary = () => {{
+      const root = document.getElementById("focus-summary");
       root.innerHTML = "";
       if (!focusState.requirementId || !requirementsById.has(focusState.requirementId)) {{
         const emptyState = document.createElement("div");
         emptyState.className = "empty-tree-state";
-        emptyState.textContent = "No requirement is available to center in the tree.";
+        emptyState.textContent = "No requirement is available to summarize.";
         root.appendChild(emptyState);
         return;
       }}
 
       const focusEntry = requirementsById.get(focusState.requirementId);
       const ancestors = getAncestorEntries(focusEntry.requirement_id);
-      if (ancestors.length) {{
-        const ancestorChain = document.createElement("div");
-        ancestorChain.className = "ancestor-chain";
-        ancestors.forEach((entry, index) => {{
-          if (index > 0) {{
-            const connector = document.createElement("div");
-            connector.className = "tree-connector-vertical";
-            ancestorChain.appendChild(connector);
-          }}
-          const step = document.createElement("div");
-          step.className = "ancestor-step";
-          step.appendChild(createRequirementNode(entry, "is-path"));
-          ancestorChain.appendChild(step);
+      const directChildIds = childrenByParentId.get(focusEntry.requirement_id) || [];
+      const descendantIds = getDescendantIds(focusEntry.requirement_id);
+
+      const heading = document.createElement("div");
+      heading.className = "focus-summary-card";
+      const title = document.createElement("h3");
+      title.textContent = "Focused Requirement";
+      heading.appendChild(title);
+      const titleText = document.createElement("p");
+      titleText.innerHTML =
+        `<strong>${{focusEntry.requirement_id}}</strong>: ${{focusEntry.title}}`;
+      heading.appendChild(titleText);
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "badge-row";
+      badgeRow.appendChild(
+        createSummaryBadge(
+          focusEntry.requirement_type,
+          `type-${{focusEntry.requirement_type}}`
+        )
+      );
+      badgeRow.appendChild(
+        createSummaryBadge(
+          focusEntry.implementation_status || "unspecified",
+          `status-${{(focusEntry.implementation_status || "unspecified").replaceAll(" ", "-")}}`
+        )
+      );
+      badgeRow.appendChild(
+        createSummaryBadge(focusEntry.verification_method || "unspecified", "method")
+      );
+      heading.appendChild(badgeRow);
+      root.appendChild(heading);
+
+      const grid = document.createElement("div");
+      grid.className = "focus-summary-grid";
+
+      const createListCard = (titleText, items, emptyLabel = "None") => {{
+        const card = document.createElement("section");
+        card.className = "focus-summary-card";
+        const heading = document.createElement("h3");
+        heading.textContent = titleText;
+        card.appendChild(heading);
+        if (!items.length) {{
+          const empty = document.createElement("p");
+          empty.className = "muted";
+          empty.textContent = emptyLabel;
+          card.appendChild(empty);
+          return card;
+        }}
+        const list = document.createElement("ul");
+        list.className = "focus-summary-list";
+        items.forEach((item) => {{
+          const listItem = document.createElement("li");
+          listItem.textContent = item;
+          list.appendChild(listItem);
         }});
-        const connector = document.createElement("div");
-        connector.className = "tree-connector-vertical";
-        ancestorChain.appendChild(connector);
-        root.appendChild(ancestorChain);
-      }}
+        card.appendChild(list);
+        return card;
+      }};
 
-      const focusStage = document.createElement("div");
-      focusStage.className = "focus-stage";
-      const focusLabel = document.createElement("div");
-      focusLabel.className = "focus-label";
-      focusLabel.textContent = "Focused Requirement";
-      focusStage.appendChild(focusLabel);
-      focusStage.appendChild(createRequirementNode(focusEntry, "is-focus"));
-      root.appendChild(focusStage);
-
-      const childIds = childrenByParentId.get(focusEntry.requirement_id) || [];
-      if (childIds.length) {{
-        const connector = document.createElement("div");
-        connector.className = "tree-connector-vertical";
-        root.appendChild(connector);
-
-        const descendantList = document.createElement("ul");
-        descendantList.className = "descendant-tree descendant-tree-root";
-        childIds.forEach((childId) => {{
-          descendantList.appendChild(renderDescendantBranch(childId));
-        }});
-        root.appendChild(descendantList);
-      }}
+      grid.appendChild(
+        createListCard(
+          "Ancestor Path",
+          ancestors.map((entry) => entry.requirement_id),
+        )
+      );
+      grid.appendChild(
+        createListCard("Direct Children", directChildIds, "No direct children")
+      );
+      grid.appendChild(
+        createListCard("All Descendants", descendantIds, "No descendants")
+      );
+      root.appendChild(grid);
     }};
 
     const populateFocusSelect = () => {{
@@ -1078,6 +1068,198 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       }});
     }};
 
+    const createSvgElement = (tagName) => {{
+      return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+    }};
+
+    const renderRelationshipGraph = () => {{
+      const svg = document.getElementById("relationship-graph");
+      const status = document.getElementById("relationship-map-status");
+      while (svg.firstChild) {{
+        svg.removeChild(svg.firstChild);
+      }}
+
+      if (!data.requirements.length) {{
+        status.textContent = "No requirements loaded";
+        svg.setAttribute("viewBox", "0 0 1200 300");
+        const text = createSvgElement("text");
+        text.setAttribute("x", "600");
+        text.setAttribute("y", "150");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("class", "relationship-node-subtitle");
+        text.textContent = "No requirements available";
+        svg.appendChild(text);
+        return;
+      }}
+
+      const depths = new Map();
+      const computeDepth = (requirementId) => {{
+        if (depths.has(requirementId)) {{
+          return depths.get(requirementId);
+        }}
+        const entry = requirementsById.get(requirementId);
+        let depth = 0;
+        if (entry?.parent_requirement_id && requirementsById.has(entry.parent_requirement_id)) {{
+          depth = computeDepth(entry.parent_requirement_id) + 1;
+        }}
+        depths.set(requirementId, depth);
+        return depth;
+      }};
+
+      data.requirements.forEach((entry) => {{
+        computeDepth(entry.requirement_id);
+      }});
+
+      const layers = new Map();
+      data.requirements.forEach((entry) => {{
+        const depth = depths.get(entry.requirement_id);
+        if (!layers.has(depth)) {{
+          layers.set(depth, []);
+        }}
+        layers.get(depth).push(entry);
+      }});
+
+      layers.forEach((entries) => {{
+        entries.sort((left, right) => left.requirement_id.localeCompare(right.requirement_id));
+      }});
+
+      const orderedDepths = [...layers.keys()].sort((left, right) => left - right);
+      const nodeWidth = 220;
+      const nodeHeight = 76;
+      const horizontalGap = 28;
+      const verticalGap = 58;
+      const paddingX = 28;
+      const paddingY = 28;
+      const maxNodesInLayer = Math.max(...orderedDepths.map((depth) => layers.get(depth).length));
+      const width =
+        paddingX * 2 +
+        maxNodesInLayer * nodeWidth +
+        Math.max(0, maxNodesInLayer - 1) * horizontalGap;
+      const height =
+        paddingY * 2 +
+        orderedDepths.length * nodeHeight +
+        Math.max(0, orderedDepths.length - 1) * verticalGap;
+      svg.setAttribute("viewBox", `0 0 ${{width}} ${{height}}`);
+
+      const positions = new Map();
+      orderedDepths.forEach((depth, rowIndex) => {{
+        const entries = layers.get(depth);
+        const rowWidth =
+          entries.length * nodeWidth + Math.max(0, entries.length - 1) * horizontalGap;
+        let x = (width - rowWidth) / 2;
+        const y = paddingY + rowIndex * (nodeHeight + verticalGap);
+        entries.forEach((entry) => {{
+          positions.set(entry.requirement_id, {{
+            x,
+            y,
+            centerX: x + nodeWidth / 2,
+            centerY: y + nodeHeight / 2,
+          }});
+          x += nodeWidth + horizontalGap;
+        }});
+      }});
+
+      const ancestorIds = new Set(
+        getAncestorEntries(focusState.requirementId || "").map((entry) => entry.requirement_id)
+      );
+      const descendantIds = new Set(getDescendantIds(focusState.requirementId || ""));
+      const relatedIds = new Set([
+        ...(focusState.requirementId ? [focusState.requirementId] : []),
+        ...ancestorIds,
+        ...descendantIds,
+      ]);
+
+      data.requirements.forEach((entry) => {{
+        if (!entry.parent_requirement_id || !positions.has(entry.parent_requirement_id)) {{
+          return;
+        }}
+        const parentPosition = positions.get(entry.parent_requirement_id);
+        const childPosition = positions.get(entry.requirement_id);
+        const path = createSvgElement("path");
+        const startX = parentPosition.centerX;
+        const startY = parentPosition.y + nodeHeight;
+        const endX = childPosition.centerX;
+        const endY = childPosition.y;
+        const midY = startY + (endY - startY) / 2;
+        path.setAttribute(
+          "d",
+          `M ${{startX}} ${{startY}} ` +
+          `C ${{startX}} ${{midY}}, ${{endX}} ${{midY}}, ${{endX}} ${{endY}}`
+        );
+        const isHighlighted =
+          relatedIds.has(entry.requirement_id) &&
+          relatedIds.has(entry.parent_requirement_id);
+        path.setAttribute(
+          "class",
+          `relationship-edge${{isHighlighted ? " is-highlighted" : ""}}`
+        );
+        svg.appendChild(path);
+      }});
+
+      data.requirements.forEach((entry) => {{
+        const position = positions.get(entry.requirement_id);
+        const group = createSvgElement("g");
+        const isFocus = entry.requirement_id === focusState.requirementId;
+        const isRelated = !isFocus && relatedIds.has(entry.requirement_id);
+        group.setAttribute(
+          "class",
+          [
+            "relationship-node",
+            `type-${{entry.requirement_type}}`,
+            isFocus ? "is-focus" : "",
+            isRelated ? "is-related" : "",
+          ].filter(Boolean).join(" ")
+        );
+        group.setAttribute("tabindex", "0");
+        group.setAttribute("role", "button");
+        group.setAttribute("aria-label", `${{entry.requirement_id}} ${{entry.title}}`);
+        group.addEventListener("click", () => setFocusRequirement(entry.requirement_id));
+        group.addEventListener("keydown", (event) => {{
+          if (event.key === "Enter" || event.key === " ") {{
+            event.preventDefault();
+            setFocusRequirement(entry.requirement_id);
+          }}
+        }});
+
+        const card = createSvgElement("rect");
+        card.setAttribute("x", String(position.x));
+        card.setAttribute("y", String(position.y));
+        card.setAttribute("width", String(nodeWidth));
+        card.setAttribute("height", String(nodeHeight));
+        card.setAttribute("rx", "18");
+        card.setAttribute("class", "relationship-node-card");
+        group.appendChild(card);
+
+        const band = createSvgElement("rect");
+        band.setAttribute("x", String(position.x));
+        band.setAttribute("y", String(position.y));
+        band.setAttribute("width", String(nodeWidth));
+        band.setAttribute("height", "14");
+        band.setAttribute("rx", "18");
+        band.setAttribute("class", "relationship-node-band");
+        group.appendChild(band);
+
+        const title = createSvgElement("text");
+        title.setAttribute("x", String(position.x + 14));
+        title.setAttribute("y", String(position.y + 34));
+        title.setAttribute("class", "relationship-node-title");
+        title.textContent = entry.requirement_id;
+        group.appendChild(title);
+
+        const subtitle = createSvgElement("text");
+        subtitle.setAttribute("x", String(position.x + 14));
+        subtitle.setAttribute("y", String(position.y + 54));
+        subtitle.setAttribute("class", "relationship-node-subtitle");
+        subtitle.textContent = entry.title.slice(0, 30);
+        group.appendChild(subtitle);
+
+        svg.appendChild(group);
+      }});
+
+      const focusedLabel = focusState.requirementId || "None";
+      status.textContent = `Focused: ${{focusedLabel}}`;
+    }};
+
     const setFocusRequirement = (requirementId) => {{
       if (!requirementsById.has(requirementId)) {{
         return;
@@ -1087,7 +1269,8 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       if (select && select.value !== requirementId) {{
         select.value = requirementId;
       }}
-      renderFocusTree();
+      renderRelationshipGraph();
+      renderFocusSummary();
     }};
 
     const buildSelectOptions = (elementId, label, options) => {{
@@ -1225,7 +1408,8 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     populateOverview();
     populateHierarchy();
     populateFocusSelect();
-    renderFocusTree();
+    renderRelationshipGraph();
+    renderFocusSummary();
     populateTable();
     buildSelectOptions("type-filter", "types", data.filter_options.requirement_types);
     buildSelectOptions(
