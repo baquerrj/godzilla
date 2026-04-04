@@ -125,6 +125,7 @@ The Python FastAPI binary will be bundled as a Tauri sidecar via `externalBin` i
 - UI perf harness:
   - `cd ui && npm run perf`
   - install browser runtime once if needed: `cd ui && npx playwright install chromium`
+  - canonical end-to-end rerun procedure: [docs/test-strategy/performance-benchmarking.md](../test-strategy/performance-benchmarking.md)
 - Lint: `nox -s lint` (or `python3 -m ruff check godzilla_core`)
 - Tests: `nox -s tests` (or `python3 -m pytest`)
 - Build wheel: `nox -s build` (or `python3 -m build --wheel`)
