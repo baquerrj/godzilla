@@ -16,7 +16,7 @@ import yaml
 
 REQUIREMENT_ID_RE = re.compile(r"\b(?:ACC|TECH)-[A-Z0-9-]+\b")
 REQ_TAG_RE = re.compile(r"REQ:\s*([A-Z0-9,\- ]+)")
-AUTOMATED_TRACES_COLUMN = 6
+TEST_EVIDENCE_HEADER = "Test Evidence"
 VALID_REQUIREMENT_TYPES = {"acceptance", "technical"}
 VALID_IMPLEMENTATION_STATUSES = {
     "implemented",
@@ -65,22 +65,33 @@ def _repo_root() -> Path:
 
 def _load_requirements_markdown(path: Path) -> dict[str, MarkdownRequirement]:
     requirements: dict[str, MarkdownRequirement] = {}
+    test_evidence_column: int | None = None
     for line in path.read_text().splitlines():
         if not line.startswith("| "):
             continue
         cells = [cell.strip() for cell in line.split("|")[1:-1]]
         if not cells:
             continue
+        if cells[0] == "ID":
+            try:
+                test_evidence_column = cells.index(TEST_EVIDENCE_HEADER)
+            except ValueError as exc:
+                raise ValidationError(
+                    f"requirements.md table is missing the {TEST_EVIDENCE_HEADER!r} column."
+                ) from exc
+            continue
         requirement_id = cells[0]
         if not REQUIREMENT_ID_RE.fullmatch(requirement_id):
             continue
+        if test_evidence_column is None:
+            raise ValidationError(
+                "requirements.md requirement rows appeared before a table header was parsed."
+            )
         automated_traces = (
             tuple(
-                trace.strip()
-                for trace in cells[AUTOMATED_TRACES_COLUMN].split(";")
-                if trace.strip()
+                trace.strip() for trace in cells[test_evidence_column].split(";") if trace.strip()
             )
-            if len(cells) > AUTOMATED_TRACES_COLUMN
+            if len(cells) > test_evidence_column
             else ()
         )
         requirements[requirement_id] = MarkdownRequirement(
