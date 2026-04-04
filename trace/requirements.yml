@@ -1,32 +1,60 @@
-# Trace index for requirements. Update as code/tests/docs evolve.
 - requirement_id: SYS-001
   title: System purpose
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:create_app
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_requirement_traceability.py:test_sys_001_system_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/vite-vs-tauri.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: system
+  verification_notes: Verified through a tracked system-level trace stub because no single automated test can prove the full
+    MVP workflow end to end.
+  gap_notes: No single unit test can prove the full MVP workflow; system-level verification remains the honest primary methodology.
 - requirement_id: SYS-002
   title: Single-user scope
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:create_app
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_requirement_traceability.py:test_sys_002_single_user_scope_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: static_analysis
+  verification_notes: Verified primarily by static analysis of the single-profile local architecture and a tracked trace stub
+    for absence-of-feature scope.
+  gap_notes: Single-user scope is validated structurally; there is no meaningful isolated unit test for the absence of multi-user
+    features.
 - requirement_id: SYS-003
   title: Secure-by-design baseline
   parent_requirement_id: SYS-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:create_app
+  - ui/src/App.tsx:App
+  test_refs:
+  - godzilla_core/tests/test_requirement_traceability.py:test_sys_003_secure_baseline_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: security_review
+  verification_notes: Verified through aggregated security-focused tests plus a tracked security-review trace stub for the
+    umbrella baseline requirement.
+  gap_notes: This umbrella security baseline is distributed across auth, crypto, transport, redaction, and secret-handling
+    controls rather than one unit test.
 - requirement_id: SYS-004
   title: Timestamp metadata
   code_refs:
@@ -40,6 +68,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_secrets.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-001
   title: Plaid Link initiation
   parent_requirement_id: SYS-001
@@ -64,6 +97,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_client.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-002
   title: Token exchange and storage
   parent_requirement_id: SYS-003
@@ -90,6 +128,11 @@
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_client.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-003
   title: Account metadata retrieval
   parent_requirement_id: FUNC-ACCT-001
@@ -113,6 +156,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-004
   title: Connection state tracking
   parent_requirement_id: FUNC-ACCT-003
@@ -135,6 +183,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-005
   title: Manual refresh
   parent_requirement_id: FUNC-ACCT-004
@@ -154,15 +207,34 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/SyncStatePanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-ACCT-006
   title: Scheduled refresh (optional deployment)
   parent_requirement_id: FUNC-ACCT-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:SyncSettingsResponse
+  - godzilla_core/api/app.py:_default_settings_payload
+  - godzilla_core/api/app.py:_load_settings
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_updates_and_persists
+  - ui/src/test/SettingsPanel.test.tsx:loads settings values on mount
+  - godzilla_core/tests/test_requirement_traceability.py:test_func_acct_006_scheduled_refresh_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: optional_deployment
+  verification_method: manual
+  verification_notes: Current implementation exposes scheduler-related sync settings and scheduler_supported=false state,
+    but not an active scheduler runtime.
+  gap_notes: Scheduler runtime is not enabled in the current deployment shape, so only configuration and manual methodology
+    are traceable today.
 - requirement_id: FUNC-ACCT-007
   title: Error handling and messaging
   parent_requirement_id: SYS-003
@@ -177,6 +249,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-ACCT-008
   title: Unlink institution
   parent_requirement_id: SYS-003
@@ -198,15 +275,31 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_client.py.
+  gap_notes: null
 - requirement_id: FUNC-ACCT-009
   title: Identity owner display
   parent_requirement_id: FUNC-ACCT-003
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_upsert_account
+  - godzilla_core/api/app.py:get_accounts
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_get_accounts_returns_expected_payload
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_account_metadata_upsert
+  - godzilla_core/tests/test_requirement_traceability.py:test_func_acct_009_owner_display_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: partial
+  verification_method: component
+  verification_notes: Owner names are ingested and returned by the accounts API; a tracked xfail stub records the missing
+    Accounts UI rendering.
+  gap_notes: Account owner names are persisted and exposed by the API, but the Accounts UI does not currently render them.
 - requirement_id: FUNC-SYNC-001
   title: Incremental transaction sync
   parent_requirement_id: FUNC-ACCT-004
@@ -229,6 +322,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-002
   title: Idempotent ingestion
   parent_requirement_id: FUNC-SYNC-001
@@ -241,6 +339,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-003
   title: Pending vs posted handling
   parent_requirement_id: FUNC-SYNC-001
@@ -253,6 +356,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-004
   title: Provider provenance
   parent_requirement_id: SYS-001
@@ -268,6 +376,11 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_plaid_sync.py, godzilla_core/tests/test_api_layer.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-005
   title: Offline edits
   parent_requirement_id: FUNC-SYNC-004
@@ -281,6 +394,11 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-006
   title: Conflict detection
   parent_requirement_id: FUNC-SYNC-005
@@ -303,6 +421,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_plaid_sync.py, godzilla_core/tests/test_api_layer.py.
+  gap_notes: null
 - requirement_id: FUNC-SYNC-007
   title: Conflict resolution queue
   parent_requirement_id: FUNC-SYNC-006
@@ -320,6 +443,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ConflictQueue.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-001
   title: Transaction list
   parent_requirement_id: SYS-001
@@ -339,6 +467,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionsTable.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-002
   title: Search and filters
   parent_requirement_id: FUNC-TXN-001
@@ -358,6 +491,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionFilters.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-003
   title: Transaction detail view
   parent_requirement_id: FUNC-TXN-001
@@ -378,6 +516,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-004
   title: Category override
   parent_requirement_id: FUNC-SYNC-004
@@ -395,6 +538,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-005
   title: Notes and tags
   parent_requirement_id: FUNC-TXN-002
@@ -410,6 +558,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-006
   title: Mark transfer
   parent_requirement_id: FUNC-BUD-004
@@ -425,6 +578,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-007
   title: Exclude from budget
   parent_requirement_id: FUNC-BUD-004
@@ -440,6 +598,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-008
   title: Split transactions
   parent_requirement_id: FUNC-TXN-003
@@ -457,15 +620,33 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionDetailPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-TXN-009
   title: Deduplication heuristic fallback
   parent_requirement_id: FUNC-SYNC-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_fallback_transaction_id
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_fallback_transaction_id_is_deterministic
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_fallback_transaction_id_differs_by_account
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_fallback_id_no_provider_id
+  - godzilla_core/tests/test_requirement_traceability.py:test_func_txn_009_conflict_review_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: partial
+  verification_method: unit
+  verification_notes: Unit tests cover deterministic fallback ID behavior, while a tracked xfail stub records the missing
+    conflict-for-review evidence.
+  gap_notes: Deterministic fallback deduplication exists, but duplicates without provider IDs are not evidenced as being flagged
+    for review conflicts.
 - requirement_id: FUNC-CAT-001
   title: Category hierarchy
   parent_requirement_id: SYS-001
@@ -484,6 +665,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/TransactionFilters.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-CAT-002
   title: Category management
   parent_requirement_id: FUNC-CAT-001
@@ -499,6 +685,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-CAT-003
   title: Provider category mapping
   parent_requirement_id: FUNC-SYNC-004
@@ -515,6 +706,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-BUD-001
   title: Monthly budgets
   parent_requirement_id: SYS-001
@@ -554,6 +750,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/BudgetPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BUD-002
   title: Budget performance
   parent_requirement_id: FUNC-BUD-001
@@ -573,6 +774,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/BudgetPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BUD-003
   title: Overspend highlighting
   parent_requirement_id: FUNC-BUD-002
@@ -590,6 +796,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/BudgetPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BUD-004
   title: Budget inclusion rules
   parent_requirement_id: FUNC-TXN-006
@@ -605,6 +816,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-001
   title: Monthly overview dashboard
   parent_requirement_id: SYS-001
@@ -623,6 +839,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-002
   title: Drill-down from metrics
   parent_requirement_id: FUNC-TXN-002
@@ -638,6 +859,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-003
   title: Cash flow report
   parent_requirement_id: FUNC-REP-001
@@ -656,6 +882,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-004
   title: Category trend report
   parent_requirement_id: FUNC-REP-002
@@ -676,6 +907,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-005
   title: Net worth time series
   parent_requirement_id: SYS-001
@@ -694,6 +930,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-006
   title: Balance snapshotting
   parent_requirement_id: FUNC-ACCT-005
@@ -715,6 +956,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, godzilla_core/tests/test_plaid_sync.py.
+  gap_notes: null
 - requirement_id: FUNC-REP-007
   title: Inclusion rules consistency
   parent_requirement_id: FUNC-BUD-004
@@ -734,6 +980,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ReportsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-REP-008
   title: Date navigation
   parent_requirement_id: FUNC-REP-001
@@ -758,6 +1009,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/App.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-EXP-001
   title: Transaction export CSV
   parent_requirement_id: FUNC-TXN-002
@@ -779,6 +1035,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ExportPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-EXP-002
   title: Category and budget export
   parent_requirement_id: SYS-001
@@ -799,6 +1060,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ExportPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-EXP-003
   title: Export privacy controls
   parent_requirement_id: SYS-003
@@ -819,6 +1085,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ExportPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BKP-001
   title: Encrypted backup creation
   parent_requirement_id: SYS-003
@@ -838,6 +1109,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/DataManagementPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BKP-002
   title: Backup integrity check
   parent_requirement_id: FUNC-BKP-001
@@ -853,6 +1129,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BKP-003
   title: Restore workflow
   parent_requirement_id: FUNC-SYNC-004
@@ -871,6 +1152,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/DataManagementPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BKP-004
   title: Wipe local data
   parent_requirement_id: SYS-003
@@ -889,15 +1175,30 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/DataManagementPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-BKP-005
   title: Backup scheduling (optional)
   parent_requirement_id: FUNC-BKP-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/security/backup.py:create_backup_blob
+  - godzilla_core/api/app.py:create_backup
+  test_refs:
+  - godzilla_core/tests/test_requirement_traceability.py:test_func_bkp_005_backup_scheduling_trace_stub
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: optional_deployment
+  verification_method: manual
+  verification_notes: Backup creation exists, but scheduled execution and retention-count orchestration are not implemented
+    in the current deployment.
+  gap_notes: Scheduled backup orchestration and retention-count enforcement are not implemented in the current deployment
+    shape.
 - requirement_id: FUNC-BKP-006
   title: Database re-initialization
   parent_requirement_id: FUNC-BKP-004
@@ -916,6 +1217,11 @@
   - docs/test-strategy/m5-export-backup-settings-audit.md
   - docs/requirements/requirements.md
   - docs/plan.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/DataManagementPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-SET-001
   title: Timezone and currency
   parent_requirement_id: SYS-001
@@ -938,6 +1244,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/SettingsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-SET-002
   title: Retention settings
   parent_requirement_id: SYS-003
@@ -954,6 +1265,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/SettingsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-SET-003
   title: Auto-lock and timeout
   parent_requirement_id: SEC-ACC-003
@@ -978,6 +1294,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/AuthGatePanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-SET-004
   title: Sync configuration
   parent_requirement_id: FUNC-ACCT-006
@@ -996,6 +1317,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/SettingsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-SET-005
   title: Export defaults
   parent_requirement_id: FUNC-EXP-003
@@ -1015,6 +1341,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/SettingsPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-AUD-001
   title: Event audit log
   parent_requirement_id: SYS-003
@@ -1031,6 +1362,11 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-AUD-002
   title: Log redaction
   parent_requirement_id: SYS-003
@@ -1046,6 +1382,11 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-AUD-003
   title: Log retention
   parent_requirement_id: FUNC-SET-002
@@ -1062,6 +1403,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: FUNC-AUD-004
   title: Audit export (optional)
   parent_requirement_id: FUNC-AUD-002
@@ -1080,6 +1426,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ExportPanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-CRY-001
   title: Encryption at rest
   parent_requirement_id: SYS-003
@@ -1092,6 +1443,11 @@
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_migrations.py.
+  gap_notes: null
 - requirement_id: SEC-CRY-002
   title: Key storage
   parent_requirement_id: SYS-003
@@ -1106,15 +1462,33 @@
   - docs/design/database-schema.md
   - docs/design/secrets-store.md
   - docs/design/plaid-integration.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_secrets.py, godzilla_core/tests/test_plaid_client.py.
+  gap_notes: null
 - requirement_id: SEC-CRY-003
   title: Encrypted backups
   parent_requirement_id: FUNC-BKP-001
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/security/backup.py:create_backup_blob
+  - godzilla_core/security/backup.py:decrypt_backup_blob
+  - godzilla_core/api/app.py:create_backup
+  - godzilla_core/api/app.py:restore_backup
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_backup_returns_encrypted_blob
+  - godzilla_core/tests/test_api_layer.py:test_restore_rejects_tampered_backup
+  - godzilla_core/tests/test_api_layer.py:test_restore_recovers_database_and_secrets
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Backup encryption and authenticated restore are verified through API-level backup and restore tests
+    and the backup crypto helper module.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-CRY-004
   title: Secret rotation and revocation
   parent_requirement_id: SYS-003
@@ -1129,6 +1503,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-ACC-001
   title: App access gate
   parent_requirement_id: SYS-003
@@ -1149,6 +1528,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/AuthGatePanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-ACC-002
   title: Session timeout
   parent_requirement_id: SEC-ACC-001
@@ -1167,6 +1551,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/App.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-ACC-003
   title: Unlock configuration
   parent_requirement_id: SEC-ACC-001
@@ -1183,6 +1572,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/AuthGatePanel.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-ACC-004
   title: Authorization boundaries
   parent_requirement_id: SYS-003
@@ -1202,6 +1596,11 @@
   - docs/design/database-schema.md
   - docs/design/ui-frontend-scaffold.md
   - docs/design/vite-vs-tauri.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/App.test.tsx.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-NET-001
   title: TLS enforcement
   parent_requirement_id: SYS-003
@@ -1226,6 +1625,11 @@
   - docs/design/plaid-integration.md
   - docs/design/vite-vs-tauri.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ApiClientTransport.test.ts.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-NET-002
   title: Secure local endpoints
   parent_requirement_id: SEC-ACC-004
@@ -1244,6 +1648,11 @@
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
   - docs/design/vite-vs-tauri.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ApiClientTransport.test.ts.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-NET-003
   title: Rate limiting and backoff
   parent_requirement_id: FUNC-ACCT-007
@@ -1261,6 +1670,11 @@
   - docs/design/database-schema.md
   - docs/design/plaid-integration.md
   - docs/design/m6-security-review-pass.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Primary evidence comes from focused unit tests in godzilla_core/tests/test_plaid_client.py.
+  gap_notes: null
 - requirement_id: SEC-DATA-001
   title: No secrets in client
   parent_requirement_id: SYS-003
@@ -1277,6 +1691,12 @@
   - docs/design/secrets-store.md
   - docs/design/plaid-integration.md
   - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: static_analysis
+  verification_notes: Verified primarily by static analysis of runtime token loading and the absence of embedded provider
+    secrets in shipped client code.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified through static analysis.
 - requirement_id: SEC-DATA-002
   title: Logging policy
   parent_requirement_id: FUNC-AUD-002
@@ -1291,6 +1711,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-DATA-003
   title: Input validation
   parent_requirement_id: SYS-003
@@ -1304,6 +1729,11 @@
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-DATA-004
   title: Dependency hygiene
   parent_requirement_id: SYS-003
@@ -1333,31 +1763,72 @@
   - docs/setup/dependencies.md
   - docs/setup/docker-development.md
   - docs/design/vite-vs-tauri.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: static_analysis
+  verification_notes: Verified primarily by tooling configuration and dependency-scan setup rather than application runtime
+    behavior.
+  gap_notes: null
 - requirement_id: SEC-DATA-005
   title: Data minimization
   parent_requirement_id: FUNC-SET-002
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_load_settings
+  - godzilla_core/api/app.py:_apply_retention_pruning
+  - godzilla_core/integrations/plaid_sync.py:_retention_enabled
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_put_settings_applies_retention_pruning
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_retention_enabled_reads_policy
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_no_raw_payload_when_disabled
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Retention configuration and provider_raw pruning are verified through API retention tests and sync-layer
+    raw-payload suppression tests.
+  gap_notes: null
 - requirement_id: SEC-DATA-006
   title: Data deletion
   parent_requirement_id: FUNC-BKP-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/api/app.py:_best_effort_wipe
+  - godzilla_core/api/app.py:wipe_local_data
+  test_refs:
+  - godzilla_core/tests/test_api_layer.py:test_wipe_removes_database_and_secrets_files
+  - godzilla_core/tests/test_api_layer.py:test_backup_restore_wipe_auth_and_validation
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: component
+  verification_notes: Secure local data deletion is verified through wipe endpoint tests and best-effort secure deletion helpers.
+  gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
 - requirement_id: SEC-DATA-007
   title: Provenance integrity
   parent_requirement_id: FUNC-SYNC-004
-  code_refs: []
-  test_refs: []
+  code_refs:
+  - godzilla_core/integrations/plaid_sync.py:_upsert_provider_override
+  - godzilla_core/integrations/plaid_sync.py:_preserved_value
+  - godzilla_core/integrations/plaid_sync.py:_detect_and_queue_conflict
+  - godzilla_core/integrations/plaid_sync.py:_apply_transaction
+  test_refs:
+  - godzilla_core/tests/test_plaid_sync.py:PlaidSyncIngestionTests.test_apply_transaction_writes_provider_override
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_detect_conflict_creates_open_conflict_row
+  - godzilla_core/tests/test_plaid_sync.py:ConflictDetectionTests.test_apply_transaction_update_preserves_user_override_on_conflict
   doc_refs:
   - docs/design/architecture-overview.md
   - docs/design/conflict-resolution.md
   - docs/design/architecture-components.md
   - docs/design/database-schema.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  implementation_status: implemented
+  verification_method: unit
+  verification_notes: Provenance preservation is verified through sync override and conflict tests that ensure user-edited
+    values are retained.
+  gap_notes: null

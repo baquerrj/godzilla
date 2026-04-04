@@ -1,7 +1,8 @@
 """Plaid sync ingestion for transactions and balances.
 
-REQ: FUNC-ACCT-003, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-REP-006,
-REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-ACCT-008
+REQ: FUNC-ACCT-003, FUNC-ACCT-009, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003,
+REQ: FUNC-TXN-009, FUNC-REP-006, FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005,
+REQ: FUNC-SYNC-006, FUNC-ACCT-008, SEC-DATA-005, SEC-DATA-007
 """
 
 from __future__ import annotations
@@ -92,7 +93,7 @@ def _timestamp_meta(prefix: str) -> Dict[str, Any]:
 def _retention_enabled(conn: sqlcipher.Connection) -> bool:
     """Return whether raw provider payload retention is enabled.
 
-    REQ: FUNC-SYNC-003
+    REQ: FUNC-SYNC-003, SEC-DATA-005
     """
     row = conn.execute(
         "SELECT retain_raw_payloads FROM retention_policy "
@@ -255,7 +256,7 @@ def _set_item_last_sync(conn: sqlcipher.Connection, item_id: str) -> None:
 def _upsert_account(conn: sqlcipher.Connection, item_id: str, payload: Dict[str, Any]) -> str:
     """Create or update an account record from provider payload.
 
-    REQ: FUNC-ACCT-003
+    REQ: FUNC-ACCT-003, FUNC-ACCT-009
     """
     provider_account_id = payload["account_id"]
     name = payload.get("official_name") or payload.get("name") or provider_account_id
@@ -340,7 +341,7 @@ def _insert_balance_snapshot(
 def _fallback_transaction_id(account_id: str, payload: Dict[str, Any]) -> str:
     """Generate a deterministic fallback transaction ID.
 
-    REQ: FUNC-SYNC-002
+    REQ: FUNC-SYNC-002, FUNC-TXN-009
     """
     key = "|".join(
         [
@@ -368,7 +369,7 @@ def _apply_transaction(  # noqa: PLR0912
     merchant_name against any existing user overrides before applying provider values.
 
     REQ: FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003, FUNC-CAT-003, FUNC-SYNC-004,
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006, FUNC-TXN-009, SEC-DATA-005, SEC-DATA-007
     """
     provider_transaction_id = payload.get("transaction_id")
     pending_transaction_id = payload.get("pending_transaction_id")
@@ -659,7 +660,7 @@ def _preserved_value(
     Used during sync UPDATE to prevent overwriting user-set field values when a
     user override is in place.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
 
     Args:
         conn: Open database connection.
@@ -693,7 +694,7 @@ def _detect_and_queue_conflict(
     The field in ``transaction_record`` is NOT updated; the user's value is preserved.
     An 'open' conflict row is upserted into the ``conflict`` table.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
 
     Args:
         conn: Open database connection.

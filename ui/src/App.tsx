@@ -4,6 +4,7 @@
  * Reads the API token from the Tauri runtime, gates the UI on its
  * presence, and orchestrates data refresh across all panels.
  *
+ * REQ: SYS-001, SYS-002, SYS-003,
  * REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
  * REQ: FUNC-ACCT-005, FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002,
  * REQ: FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005, FUNC-TXN-006,

@@ -1,6 +1,6 @@
 """Encrypted backup helpers for database and secrets snapshots.
 
-REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, SEC-CRY-003
+REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-003, FUNC-BKP-005, SEC-CRY-003
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ def create_backup_blob(
 ) -> bytes:
     """Create an encrypted, authenticated backup envelope.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-002, SEC-CRY-003
+    REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-005, SEC-CRY-003
     """
     if not db_bytes:
         raise BackupFormatError("Database backup payload is empty")

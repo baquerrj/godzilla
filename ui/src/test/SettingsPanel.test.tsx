@@ -1,7 +1,8 @@
 /**
  * Tests for SettingsPanel component.
  *
- * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+ * REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+ * REQ: FUNC-ACCT-006
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -55,7 +56,7 @@ describe("SettingsPanel", () => {
     });
   });
 
-  it("loads settings values on mount  REQ: FUNC-SET-001", async () => {
+  it("loads settings values on mount  REQ: FUNC-SET-001, FUNC-ACCT-006", async () => {
     render(<SettingsPanel token={TOKEN} refreshKey={0} onSaved={vi.fn()} />);
 
     await waitFor(() => {

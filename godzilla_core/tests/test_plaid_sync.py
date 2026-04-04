@@ -1,7 +1,8 @@
 """Plaid sync ingestion tests.
 
-REQ: FUNC-ACCT-003, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002, FUNC-SYNC-003,
-REQ: FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005, FUNC-SYNC-006, FUNC-ACCT-008
+REQ: FUNC-ACCT-003, FUNC-ACCT-009, FUNC-REP-006, FUNC-SYNC-001, FUNC-SYNC-002,
+REQ: FUNC-SYNC-003, FUNC-TXN-009, FUNC-CAT-003, FUNC-SYNC-004, FUNC-SYNC-005,
+REQ: FUNC-SYNC-006, FUNC-ACCT-008, SEC-DATA-005, SEC-DATA-007
 """
 
 import json
@@ -201,7 +202,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_account_metadata_upsert(self) -> None:
         """Verify account metadata is inserted with provider details.
 
-        REQ: FUNC-ACCT-003
+        REQ: FUNC-ACCT-003, FUNC-ACCT-009
         """
         payload = {
             "account_id": "acct-2",
@@ -242,7 +243,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_fallback_transaction_id_is_deterministic(self) -> None:
         """_fallback_transaction_id produces the same ID for identical inputs.
 
-        REQ: FUNC-SYNC-002
+        REQ: FUNC-SYNC-002, FUNC-TXN-009
         """
         payload = {"date": "2026-01-02", "amount": 15.0, "name": "Grocery", "merchant_name": None}
         id1 = _fallback_transaction_id("acc-1", payload)
@@ -252,7 +253,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_fallback_transaction_id_differs_by_account(self) -> None:
         """_fallback_transaction_id produces different IDs for different accounts.
 
-        REQ: FUNC-SYNC-002
+        REQ: FUNC-SYNC-002, FUNC-TXN-009
         """
         payload = {"date": "2026-01-02", "amount": 15.0, "name": "Grocery"}
         id1 = _fallback_transaction_id("acc-1", payload)
@@ -335,7 +336,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_retention_enabled_reads_policy(self) -> None:
         """_retention_enabled reflects the retain_raw_payloads column value.
 
-        REQ: FUNC-SYNC-003
+        REQ: FUNC-SYNC-003, SEC-DATA-005
         """
         self.conn.execute(
             "INSERT INTO retention_policy ("
@@ -423,7 +424,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_no_raw_payload_when_disabled(self) -> None:
         """_apply_transaction skips provider_raw when retention is disabled.
 
-        REQ: FUNC-SYNC-003
+        REQ: FUNC-SYNC-003, SEC-DATA-005
         """
         txn = {
             "transaction_id": "tx-no-retain",
@@ -441,7 +442,7 @@ class PlaidSyncIngestionTests(unittest.TestCase):
     def test_apply_transaction_fallback_id_no_provider_id(self) -> None:
         """_apply_transaction uses fallback heuristic ID when no provider ID present.
 
-        REQ: FUNC-SYNC-002
+        REQ: FUNC-SYNC-002, FUNC-TXN-009
         """
         txn = {
             "date": "2026-01-07",
@@ -1032,7 +1033,7 @@ class CategoryMappingTests(unittest.TestCase):
     def test_apply_transaction_writes_provider_override(self) -> None:
         """INSERT path writes a provider-sourced override for category_id.
 
-        REQ: FUNC-SYNC-004
+        REQ: FUNC-SYNC-004, SEC-DATA-007
         """
         payload = {
             "transaction_id": "txn-ov-1",
@@ -1065,7 +1066,7 @@ class CategoryMappingTests(unittest.TestCase):
 class ConflictDetectionTests(unittest.TestCase):
     """Tests for conflict detection during sync update path.
 
-    REQ: FUNC-SYNC-005, FUNC-SYNC-006
+    REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
     """
 
     def setUp(self) -> None:
@@ -1183,7 +1184,7 @@ class ConflictDetectionTests(unittest.TestCase):
     def test_apply_transaction_update_preserves_user_override_on_conflict(self) -> None:
         """On UPDATE, a conflicted field is not overwritten in transaction_record.
 
-        REQ: FUNC-SYNC-005, FUNC-SYNC-006
+        REQ: FUNC-SYNC-005, FUNC-SYNC-006, SEC-DATA-007
         """
         payload = {
             "transaction_id": "provider-c1",

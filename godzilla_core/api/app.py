@@ -1,5 +1,6 @@
 """FastAPI application layer for UI integration.
 
+REQ: SYS-001, SYS-002, SYS-003,
 REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004,
 REQ: FUNC-ACCT-005, FUNC-ACCT-007, FUNC-ACCT-008, FUNC-SYNC-001, FUNC-TXN-001,
 REQ: FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004, FUNC-TXN-005,
@@ -583,7 +584,7 @@ class SecuritySettingsResponse(BaseModel):
 class SyncSettingsResponse(BaseModel):
     """Sync settings payload persisted in M5.
 
-    REQ: FUNC-SET-004
+    REQ: FUNC-SET-004, FUNC-ACCT-006
     """
 
     schedule_enabled: bool
@@ -1809,7 +1810,8 @@ def _validate_timezone_name(timezone_name: str) -> None:
 def _default_settings_payload() -> SettingsResponse:
     """Return default settings payload used for bootstrap reads.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+    REQ: FUNC-ACCT-006
     """
     return SettingsResponse(
         timezone="UTC",
@@ -1858,7 +1860,8 @@ def _prune_audit_log(conn: sqlcipher.Connection, retain_logs_days: int) -> int:
 def _load_settings(conn: sqlcipher.Connection) -> SettingsResponse:
     """Load consolidated settings from DB, falling back to defaults.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+    REQ: FUNC-ACCT-006
     """
     default = _default_settings_payload()
     settings_row = conn.execute(
@@ -2046,7 +2049,7 @@ def _register_read_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def get_accounts() -> list[AccountResponse]:
         """List linked accounts.
 
-        REQ: FUNC-ACCT-003
+        REQ: FUNC-ACCT-003, FUNC-ACCT-009
         """
         with _db_connection() as conn:
             rows = conn.execute(
@@ -3419,7 +3422,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def create_backup(request: BackupRequest) -> Response:
         """Create encrypted backup of local database and optional secrets store.
 
-        REQ: FUNC-BKP-001, FUNC-BKP-002
+        REQ: FUNC-BKP-001, FUNC-BKP-002, FUNC-BKP-005, SEC-CRY-003
         """
         db_path_raw, _ = _read_database_settings()
         db_path = _expand_path(db_path_raw)
@@ -3466,7 +3469,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     ) -> RestoreResponse:
         """Restore local state from an encrypted backup file.
 
-        REQ: FUNC-BKP-002, FUNC-BKP-003
+        REQ: FUNC-BKP-002, FUNC-BKP-003, SEC-CRY-003
         """
         _log_event(logging.INFO, "restore_started", {"filename": backup_file.filename})
         payload_bytes = await backup_file.read()
@@ -3545,7 +3548,7 @@ def _register_write_routes(app: FastAPI) -> None:  # noqa: PLR0915
     async def wipe_local_data(request: WipeRequest) -> WipeResponse:
         """Wipe local DB and secrets files with best-effort secure deletion.
 
-        REQ: FUNC-BKP-004
+        REQ: FUNC-BKP-004, SEC-DATA-006
         """
         if request.confirm != "WIPE_LOCAL_DATA":
             raise HTTPException(status_code=422, detail="Invalid wipe confirmation token")
@@ -3766,6 +3769,7 @@ async def get_transaction_detail_internal(
 def create_app() -> FastAPI:
     """Build and return the FastAPI application.
 
+    REQ: SYS-001, SYS-002, SYS-003,
     REQ: FUNC-ACCT-001, FUNC-ACCT-002, FUNC-ACCT-003, FUNC-ACCT-004, FUNC-ACCT-005,
     REQ: FUNC-SYNC-001, FUNC-TXN-001, FUNC-TXN-002, FUNC-TXN-003, FUNC-TXN-004,
     REQ: FUNC-TXN-005, FUNC-TXN-006, FUNC-TXN-007, FUNC-TXN-008,

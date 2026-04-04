@@ -554,7 +554,7 @@ async def test_input_validation_rejects_invalid_payloads(api_client: httpx.Async
 async def test_get_accounts_returns_expected_payload(api_client: httpx.AsyncClient) -> None:
     """Verify the accounts endpoint returns mapped account read models.
 
-    REQ: FUNC-ACCT-003
+    REQ: FUNC-ACCT-003, FUNC-ACCT-009
     """
     response = await api_client.get("/accounts", headers={"X-API-Key": "test-api-token"})
     assert response.status_code == 200
@@ -1958,7 +1958,7 @@ async def test_export_endpoints_auth_and_validation(report_client: httpx.AsyncCl
 async def test_backup_returns_encrypted_blob(backup_client: httpx.AsyncClient) -> None:
     """Verify /backup returns encrypted backup bytes and attachment metadata.
 
-    REQ: FUNC-BKP-001, FUNC-BKP-002
+    REQ: FUNC-BKP-001, FUNC-BKP-002, SEC-CRY-003
     """
     resp = await backup_client.post(
         "/backup",
@@ -1978,7 +1978,7 @@ async def test_backup_returns_encrypted_blob(backup_client: httpx.AsyncClient) -
 async def test_restore_rejects_tampered_backup(backup_client: httpx.AsyncClient) -> None:
     """Verify tampered backup payload fails restore integrity checks.
 
-    REQ: FUNC-BKP-002
+    REQ: FUNC-BKP-002, SEC-CRY-003
     """
     backup_resp = await backup_client.post(
         "/backup",
@@ -2005,7 +2005,7 @@ async def test_restore_rejects_tampered_backup(backup_client: httpx.AsyncClient)
 async def test_restore_recovers_database_and_secrets(backup_client: httpx.AsyncClient) -> None:
     """Verify restoring a valid backup recovers DB rows and secrets.
 
-    REQ: FUNC-BKP-003
+    REQ: FUNC-BKP-003, SEC-CRY-003
     """
     backup_resp = await backup_client.post(
         "/backup",
@@ -2049,7 +2049,7 @@ async def test_restore_recovers_database_and_secrets(backup_client: httpx.AsyncC
 async def test_wipe_removes_database_and_secrets_files(backup_client: httpx.AsyncClient) -> None:
     """Verify wipe removes DB/secrets files and sidecars.
 
-    REQ: FUNC-BKP-004
+    REQ: FUNC-BKP-004, SEC-DATA-006
     """
     db_path = os.environ["GODZILLA_DB_PATH"]
     secrets_path = os.environ["GODZILLA_SECRETS_PATH"]
@@ -2164,7 +2164,8 @@ async def test_get_settings_returns_bootstrap_defaults(api_client: httpx.AsyncCl
 async def test_put_settings_updates_and_persists(api_client: httpx.AsyncClient) -> None:
     """Verify PUT /settings applies updates across all persisted groups.
 
-    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005
+    REQ: FUNC-SET-001, FUNC-SET-002, FUNC-SET-003, FUNC-SET-004, FUNC-SET-005,
+    REQ: FUNC-ACCT-006
     """
     payload = {
         "timezone": "America/New_York",
@@ -2230,7 +2231,7 @@ async def test_put_settings_rejects_invalid_values(api_client: httpx.AsyncClient
 async def test_put_settings_applies_retention_pruning(api_client: httpx.AsyncClient) -> None:
     """Verify retention updates prune raw payload and old audit rows.
 
-    REQ: FUNC-SET-002
+    REQ: FUNC-SET-002, SEC-DATA-005
     """
     old_ts = (datetime.now(timezone.utc) - timedelta(days=120)).strftime("%Y-%m-%dT%H:%M:%S")
     fresh_ts = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S")
