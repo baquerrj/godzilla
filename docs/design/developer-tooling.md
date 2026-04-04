@@ -58,8 +58,9 @@ visualize-requirements trace/requirements.yml
 Behavior:
 - Parses the YAML trace file as a top-level list of requirement entries.
 - Writes a standalone HTML artifact next to the YAML input using the derived path `trace/requirements.visualization.html`.
-- Renders overview metrics, a nested hierarchy, an all-at-once scaled SVG relationship map with focus highlighting, and client-side search/filter controls for requirement metadata and references.
-- If the trace file contains parent-cycle mistakes, the relationship map stays renderable and surfaces the detected cycle in the graph status instead of failing blank.
+- Renders overview metrics, a nested hierarchy, a focused relationship tree with ancestors and expandable descendant branches, and client-side search/filter controls for requirement metadata and references.
+- The relationship tree expands direct children and grandchildren by default and uses explicit branch toggles for deeper descendants.
+- If the trace file contains parent-cycle mistakes, the relationship tree stays renderable and surfaces the detected cycle in a warning banner while truncating cyclic branches.
 
 ## Security considerations
 - The container image excludes application secrets; sensitive environment variables are injected at runtime.

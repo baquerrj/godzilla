@@ -598,11 +598,22 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       gap: 12px;
       margin-bottom: 20px;
     }}
-    .relationship-map-shell {{
+    .relationship-tree-shell {{
       display: grid;
       gap: 16px;
     }}
-    .relationship-map-panel {{
+    .relationship-cycle-warning {{
+      padding: 12px 14px;
+      border: 1px solid #d6be8b;
+      border-radius: 14px;
+      background: #f7ecd3;
+      color: #6f5313;
+      line-height: 1.5;
+    }}
+    .relationship-cycle-warning.hidden {{
+      display: none;
+    }}
+    .relationship-tree-panel {{
       padding: 12px;
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -610,70 +621,155 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
         linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 241, 232, 0.88));
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }}
-    .relationship-map-meta {{
+    .relationship-tree-root {{
+      display: grid;
+      gap: 16px;
+    }}
+    .relationship-stage {{
+      display: grid;
+      gap: 12px;
+    }}
+    .relationship-stage-label {{
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }}
+    .relationship-ancestor-list,
+    .relationship-descendant-list {{
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }}
+    .relationship-ancestor-item {{
+      display: grid;
+      gap: 12px;
+      justify-items: start;
+    }}
+    .relationship-vertical-connector {{
+      width: 2px;
+      height: 18px;
+      margin-left: 22px;
+      background: #d4c3aa;
+    }}
+    .relationship-descendant-list {{
+      padding-left: 0;
+    }}
+    .relationship-descendant-item {{
+      position: relative;
+      display: grid;
+      gap: 10px;
+    }}
+    .relationship-descendant-item.depth-1 {{
+      margin-left: 0;
+    }}
+    .relationship-descendant-item.depth-2,
+    .relationship-descendant-item.depth-3,
+    .relationship-descendant-item.depth-4,
+    .relationship-descendant-item.depth-5,
+    .relationship-descendant-item.depth-6 {{
+      margin-left: 24px;
+    }}
+    .relationship-descendant-body {{
+      position: relative;
+      display: grid;
+      gap: 10px;
+    }}
+    .relationship-descendant-body::before {{
+      content: "";
+      position: absolute;
+      left: -18px;
+      top: 24px;
+      width: 18px;
+      border-top: 2px solid #d4c3aa;
+    }}
+    .relationship-descendant-body.depth-1::before {{
+      display: none;
+    }}
+    .relationship-descendant-children {{
+      margin-left: 18px;
+      padding-left: 18px;
+      border-left: 2px solid #d4c3aa;
+      display: grid;
+      gap: 12px;
+    }}
+    .relationship-node-button {{
+      width: 100%;
+      max-width: 760px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: var(--surface-strong);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 10px 24px var(--shadow);
+      font: inherit;
+    }}
+    .relationship-node-button:hover,
+    .relationship-node-button:focus-visible {{
+      border-color: #b9955a;
+      outline: none;
+      transform: translateY(-1px);
+    }}
+    .relationship-node-button.is-focus {{
+      border-width: 2px;
+      border-color: var(--accent);
+      background: linear-gradient(180deg, #fdfcf8, #eef8f9);
+    }}
+    .relationship-node-button.is-cyclic {{
+      border-style: dashed;
+      border-color: #c78a8a;
+      background: #fff3f0;
+      cursor: default;
+    }}
+    .relationship-node-header {{
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 12px;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }}
-    .relationship-map-viewport {{
-      width: 100%;
-      overflow: hidden;
-      border-radius: 14px;
-      background:
-        linear-gradient(180deg, rgba(216, 237, 240, 0.2), rgba(255, 250, 243, 0.95));
-    }}
-    .relationship-map-svg {{
-      display: block;
-      width: 100%;
-      height: auto;
-    }}
-    .relationship-edge {{
-      fill: none;
-      stroke: #cfbba0;
-      stroke-width: 2;
-      opacity: 0.75;
-    }}
-    .relationship-edge.is-highlighted {{
-      stroke: var(--accent);
-      stroke-width: 3;
-      opacity: 1;
-    }}
-    .relationship-node {{
-      cursor: pointer;
-    }}
-    .relationship-node-card {{
-      fill: rgba(255, 252, 247, 0.98);
-      stroke: #cdb99b;
-      stroke-width: 1.5;
-      filter: drop-shadow(0 8px 14px rgba(42, 29, 14, 0.08));
-    }}
-    .relationship-node.is-focus .relationship-node-card {{
-      fill: #eef8f9;
-      stroke: var(--accent);
-      stroke-width: 3;
-    }}
-    .relationship-node.is-related .relationship-node-card {{
-      fill: #faf4ea;
-      stroke: #b9955a;
-      stroke-width: 2;
-    }}
-    .relationship-node.type-acceptance .relationship-node-band {{
-      fill: #dcecf0;
-    }}
-    .relationship-node.type-technical .relationship-node-band {{
-      fill: #efe4cf;
+      align-items: flex-start;
     }}
     .relationship-node-title {{
-      font-size: 14px;
+      display: block;
+      font-size: 1rem;
       font-weight: 700;
-      fill: var(--text);
+      line-height: 1.3;
     }}
     .relationship-node-subtitle {{
-      font-size: 11px;
-      fill: var(--muted);
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }}
+    .relationship-node-depth {{
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }}
+    .relationship-expand-toggle {{
+      justify-self: start;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fffdf9;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.9rem;
+    }}
+    .relationship-expand-toggle:hover,
+    .relationship-expand-toggle:focus-visible {{
+      border-color: #b9955a;
+      outline: none;
+    }}
+    .relationship-branch-note {{
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding-left: 4px;
     }}
     .focus-summary {{
       display: grid;
@@ -720,6 +816,9 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     @media (max-width: 900px) {{
       .controls {{
         grid-template-columns: 1fr;
+      }}
+      .relationship-node-header {{
+        display: grid;
       }}
       table, thead, tbody, tr, th, td {{
         display: block;
@@ -789,27 +888,16 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     <section class="section">
       <h2>Relationship Tree</h2>
       <p class="results-label">
-        All requirement relationships are shown in one scaled map. Select or click
-        a node to highlight its parent and child path without horizontal scrolling.
+        Select a requirement to see its ancestor chain and a readable descendant
+        tree. Direct children and grandchildren are expanded by default.
       </p>
       <div class="relationship-controls">
         <select id="focus-requirement-select"></select>
       </div>
-      <div class="relationship-map-shell">
-        <div class="relationship-map-panel">
-          <div class="relationship-map-meta">
-            <span>All requirements are visible in one view.</span>
-            <span id="relationship-map-status"></span>
-          </div>
-          <div class="relationship-map-viewport">
-            <svg
-              id="relationship-graph"
-              class="relationship-map-svg"
-              viewBox="0 0 1200 700"
-              preserveAspectRatio="xMidYMin meet"
-              aria-label="Requirement relationship graph"
-            ></svg>
-          </div>
+      <div class="relationship-tree-shell">
+        <div id="relationship-cycle-warning" class="relationship-cycle-warning hidden"></div>
+        <div class="relationship-tree-panel">
+          <div id="relationship-tree-root" class="relationship-tree-root"></div>
         </div>
         <div class="focus-summary" id="focus-summary"></div>
       </div>
@@ -961,6 +1049,67 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       return badge;
     }};
 
+    const expandedBranchIds = new Set();
+
+    const createRelationshipNodeButton = (
+      entry,
+      depthLabel,
+      variant = "",
+      {{isInteractive = true}} = {{}}
+    ) => {{
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `relationship-node-button ${{variant}}`.trim();
+      if (!isInteractive) {{
+        button.disabled = true;
+      }} else {{
+        button.addEventListener("click", () => setFocusRequirement(entry.requirement_id));
+      }}
+
+      const header = document.createElement("div");
+      header.className = "relationship-node-header";
+
+      const titleGroup = document.createElement("div");
+      const title = document.createElement("span");
+      title.className = "relationship-node-title";
+      title.textContent = entry.requirement_id;
+      titleGroup.appendChild(title);
+
+      const subtitle = document.createElement("span");
+      subtitle.className = "relationship-node-subtitle";
+      subtitle.textContent = entry.title;
+      titleGroup.appendChild(subtitle);
+
+      header.appendChild(titleGroup);
+
+      if (depthLabel) {{
+        const depth = document.createElement("span");
+        depth.className = "relationship-node-depth";
+        depth.textContent = depthLabel;
+        header.appendChild(depth);
+      }}
+
+      button.appendChild(header);
+
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "badge-row";
+      badgeRow.appendChild(
+        createSummaryBadge(entry.requirement_type, `type-${{entry.requirement_type}}`)
+      );
+      badgeRow.appendChild(
+        createSummaryBadge(
+          entry.implementation_status || "unspecified",
+          `status-${{(entry.implementation_status || "unspecified").replaceAll(" ", "-")}}`
+        )
+      );
+      badgeRow.appendChild(
+        createSummaryBadge(entry.verification_method || "unspecified", "method")
+      );
+      button.appendChild(badgeRow);
+
+      return button;
+    }};
+
     const getAncestorEntries = (requirementId) => {{
       const ancestors = [];
       let current = requirementsById.get(requirementId);
@@ -978,10 +1127,10 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       return ancestors;
     }};
 
-    const getDescendantIds = (requirementId) => {{
+    const getDescendantIds = (requirementId, path = new Set()) => {{
       const descendants = [];
       const stack = [...(childrenByParentId.get(requirementId) || [])];
-      const visited = new Set();
+      const visited = new Set(path);
       while (stack.length) {{
         const currentId = stack.pop();
         if (visited.has(currentId)) {{
@@ -996,6 +1145,186 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       }}
       descendants.sort((leftId, rightId) => leftId.localeCompare(rightId));
       return descendants;
+    }};
+
+    const countHiddenDescendants = (requirementId, path = new Set()) => {{
+      return getDescendantIds(requirementId, path).length;
+    }};
+
+    const renderCycleWarning = () => {{
+      const root = document.getElementById("relationship-cycle-warning");
+      root.textContent = "";
+      if (!data.graph_issues.cycles.length) {{
+        root.classList.add("hidden");
+        return;
+      }}
+
+      root.classList.remove("hidden");
+      const primaryCycle = data.graph_issues.cycles[0].join(" -> ");
+      root.textContent =
+        `Cycle detected in requirements trace: ${{primaryCycle}}. ` +
+        "Cyclic branches are shown as truncated nodes in the relationship tree.";
+    }};
+
+    const buildDescendantBranch = (requirementId, depth, path = new Set()) => {{
+      const entry = requirementsById.get(requirementId);
+      const item = document.createElement("li");
+      item.className = `relationship-descendant-item depth-${{Math.min(depth, 6)}}`;
+
+      const body = document.createElement("div");
+      body.className = `relationship-descendant-body depth-${{Math.min(depth, 6)}}`;
+      body.appendChild(
+        createRelationshipNodeButton(entry, `Depth ${{depth}}`)
+      );
+
+      const childIds = childrenByParentId.get(requirementId) || [];
+      if (!childIds.length) {{
+        item.appendChild(body);
+        return item;
+      }}
+
+      const nextPath = new Set(path);
+      nextPath.add(requirementId);
+      const expandableByDefault = depth <= 1;
+      const isExpanded = expandableByDefault || expandedBranchIds.has(requirementId);
+      const childContainer = document.createElement("ul");
+      childContainer.className = "relationship-descendant-children relationship-descendant-list";
+
+      childIds.forEach((childId) => {{
+        if (nextPath.has(childId)) {{
+          const cycleItem = document.createElement("li");
+          cycleItem.className = "relationship-descendant-item";
+          const cycleEntry = requirementsById.get(childId) || {{
+            requirement_id: childId,
+            title: "Cyclic relationship",
+            requirement_type: "technical",
+            implementation_status: "unspecified",
+            verification_method: "unspecified",
+          }};
+          cycleItem.appendChild(
+            createRelationshipNodeButton(
+              cycleEntry,
+              "Cycle",
+              "is-cyclic",
+              {{isInteractive: false}}
+            )
+          );
+          childContainer.appendChild(cycleItem);
+          return;
+        }}
+        childContainer.appendChild(buildDescendantBranch(childId, depth + 1, nextPath));
+      }});
+
+      if (isExpanded) {{
+        body.appendChild(childContainer);
+      }} else {{
+        childContainer.hidden = true;
+      }}
+
+      const hiddenCount = countHiddenDescendants(requirementId, nextPath);
+      if (!expandableByDefault) {{
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "relationship-expand-toggle";
+        toggle.textContent = isExpanded
+          ? "Hide deeper descendants"
+          : `Show ${{hiddenCount}} deeper descendant${{hiddenCount === 1 ? "" : "s"}}`;
+        toggle.addEventListener("click", () => {{
+          if (expandedBranchIds.has(requirementId)) {{
+            expandedBranchIds.delete(requirementId);
+          }} else {{
+            expandedBranchIds.add(requirementId);
+          }}
+          renderRelationshipTree();
+        }});
+        body.appendChild(toggle);
+      }} else if (depth === 1 && childIds.length > 0) {{
+        const note = document.createElement("div");
+        note.className = "relationship-branch-note";
+        note.textContent =
+          "Grandchildren are expanded by default. Deeper branches can be expanded below.";
+        body.appendChild(note);
+      }}
+
+      item.appendChild(body);
+      return item;
+    }};
+
+    const renderRelationshipTree = () => {{
+      const root = document.getElementById("relationship-tree-root");
+      root.innerHTML = "";
+      if (!focusState.requirementId || !requirementsById.has(focusState.requirementId)) {{
+        const emptyState = document.createElement("div");
+        emptyState.className = "empty-tree-state";
+        emptyState.textContent = "No requirement is available to render.";
+        root.appendChild(emptyState);
+        return;
+      }}
+
+      const focusEntry = requirementsById.get(focusState.requirementId);
+      const ancestors = getAncestorEntries(focusEntry.requirement_id);
+      const directChildIds = childrenByParentId.get(focusEntry.requirement_id) || [];
+
+      if (ancestors.length) {{
+        const ancestorStage = document.createElement("section");
+        ancestorStage.className = "relationship-stage";
+        const label = document.createElement("div");
+        label.className = "relationship-stage-label";
+        label.textContent = "Ancestor Path";
+        ancestorStage.appendChild(label);
+
+        const list = document.createElement("div");
+        list.className = "relationship-ancestor-list";
+        ancestors.forEach((entry, index) => {{
+          const item = document.createElement("div");
+          item.className = "relationship-ancestor-item";
+          item.appendChild(
+            createRelationshipNodeButton(entry, index === 0 ? "Root" : `Level ${{index}}`)
+          );
+          if (index < ancestors.length - 1) {{
+            const connector = document.createElement("div");
+            connector.className = "relationship-vertical-connector";
+            item.appendChild(connector);
+          }}
+          list.appendChild(item);
+        }});
+        ancestorStage.appendChild(list);
+        root.appendChild(ancestorStage);
+      }}
+
+      const focusStage = document.createElement("section");
+      focusStage.className = "relationship-stage";
+      const focusLabel = document.createElement("div");
+      focusLabel.className = "relationship-stage-label";
+      focusLabel.textContent = "Focused Requirement";
+      focusStage.appendChild(focusLabel);
+      focusStage.appendChild(
+        createRelationshipNodeButton(focusEntry, "Selected", "is-focus")
+      );
+      root.appendChild(focusStage);
+
+      const descendantStage = document.createElement("section");
+      descendantStage.className = "relationship-stage";
+      const descendantLabel = document.createElement("div");
+      descendantLabel.className = "relationship-stage-label";
+      descendantLabel.textContent = "Descendant Tree";
+      descendantStage.appendChild(descendantLabel);
+
+      if (!directChildIds.length) {{
+        const empty = document.createElement("div");
+        empty.className = "empty-tree-state";
+        empty.textContent = "No direct children";
+        descendantStage.appendChild(empty);
+      }} else {{
+        const list = document.createElement("ul");
+        list.className = "relationship-descendant-list";
+        directChildIds.forEach((childId) => {{
+          list.appendChild(buildDescendantBranch(childId, 1, new Set([focusEntry.requirement_id])));
+        }});
+        descendantStage.appendChild(list);
+      }}
+
+      root.appendChild(descendantStage);
     }};
 
     const renderFocusSummary = () => {{
@@ -1101,240 +1430,18 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
       }});
     }};
 
-    const createSvgElement = (tagName) => {{
-      return document.createElementNS("http://www.w3.org/2000/svg", tagName);
-    }};
-
-    const renderRelationshipGraph = () => {{
-      const svg = document.getElementById("relationship-graph");
-      const status = document.getElementById("relationship-map-status");
-      while (svg.firstChild) {{
-        svg.removeChild(svg.firstChild);
-      }}
-
-      if (!data.requirements.length) {{
-        status.textContent = "No requirements loaded";
-        svg.setAttribute("viewBox", "0 0 1200 300");
-        const text = createSvgElement("text");
-        text.setAttribute("x", "600");
-        text.setAttribute("y", "150");
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("class", "relationship-node-subtitle");
-        text.textContent = "No requirements available";
-        svg.appendChild(text);
-        return;
-      }}
-
-      const depths = new Map(
-        data.requirements.map((entry) => [entry.requirement_id, 0])
-      );
-      const indegree = new Map(
-        data.requirements.map((entry) => [entry.requirement_id, 0])
-      );
-
-      data.requirements.forEach((entry) => {{
-        if (entry.parent_requirement_id && indegree.has(entry.requirement_id)) {{
-          indegree.set(entry.requirement_id, indegree.get(entry.requirement_id) + 1);
-        }}
-      }});
-
-      const queue = data.requirements
-        .filter((entry) => indegree.get(entry.requirement_id) === 0)
-        .map((entry) => entry.requirement_id);
-      const processed = new Set();
-
-      while (queue.length) {{
-        const requirementId = queue.shift();
-        processed.add(requirementId);
-        const childIds = childrenByParentId.get(requirementId) || [];
-        childIds.forEach((childId) => {{
-          if (!indegree.has(childId)) {{
-            return;
-          }}
-          const nextDepth = Math.max(
-            depths.get(childId) || 0,
-            (depths.get(requirementId) || 0) + 1
-          );
-          depths.set(childId, nextDepth);
-          indegree.set(childId, indegree.get(childId) - 1);
-          if (indegree.get(childId) === 0) {{
-            queue.push(childId);
-          }}
-        }});
-      }}
-
-      const cycleIds = data.requirements
-        .map((entry) => entry.requirement_id)
-        .filter((requirementId) => !processed.has(requirementId));
-      const fallbackDepthBase =
-        processed.size > 0 ? Math.max(...depths.values()) + 1 : 0;
-      cycleIds.forEach((requirementId, index) => {{
-        depths.set(requirementId, fallbackDepthBase + index);
-      }});
-
-      const layers = new Map();
-      data.requirements.forEach((entry) => {{
-        const depth = depths.get(entry.requirement_id);
-        if (!layers.has(depth)) {{
-          layers.set(depth, []);
-        }}
-        layers.get(depth).push(entry);
-      }});
-
-      layers.forEach((entries) => {{
-        entries.sort((left, right) => left.requirement_id.localeCompare(right.requirement_id));
-      }});
-
-      const orderedDepths = [...layers.keys()].sort((left, right) => left - right);
-      const nodeWidth = 220;
-      const nodeHeight = 76;
-      const horizontalGap = 28;
-      const verticalGap = 58;
-      const paddingX = 28;
-      const paddingY = 28;
-      const maxNodesInLayer = Math.max(...orderedDepths.map((depth) => layers.get(depth).length));
-      const width =
-        paddingX * 2 +
-        maxNodesInLayer * nodeWidth +
-        Math.max(0, maxNodesInLayer - 1) * horizontalGap;
-      const height =
-        paddingY * 2 +
-        orderedDepths.length * nodeHeight +
-        Math.max(0, orderedDepths.length - 1) * verticalGap;
-      svg.setAttribute("viewBox", `0 0 ${{width}} ${{height}}`);
-
-      const positions = new Map();
-      orderedDepths.forEach((depth, rowIndex) => {{
-        const entries = layers.get(depth);
-        const rowWidth =
-          entries.length * nodeWidth + Math.max(0, entries.length - 1) * horizontalGap;
-        let x = (width - rowWidth) / 2;
-        const y = paddingY + rowIndex * (nodeHeight + verticalGap);
-        entries.forEach((entry) => {{
-          positions.set(entry.requirement_id, {{
-            x,
-            y,
-            centerX: x + nodeWidth / 2,
-            centerY: y + nodeHeight / 2,
-          }});
-          x += nodeWidth + horizontalGap;
-        }});
-      }});
-
-      const ancestorIds = new Set(
-        getAncestorEntries(focusState.requirementId || "").map((entry) => entry.requirement_id)
-      );
-      const descendantIds = new Set(getDescendantIds(focusState.requirementId || ""));
-      const relatedIds = new Set([
-        ...(focusState.requirementId ? [focusState.requirementId] : []),
-        ...ancestorIds,
-        ...descendantIds,
-      ]);
-
-      data.requirements.forEach((entry) => {{
-        if (!entry.parent_requirement_id || !positions.has(entry.parent_requirement_id)) {{
-          return;
-        }}
-        const parentPosition = positions.get(entry.parent_requirement_id);
-        const childPosition = positions.get(entry.requirement_id);
-        const path = createSvgElement("path");
-        const startX = parentPosition.centerX;
-        const startY = parentPosition.y + nodeHeight;
-        const endX = childPosition.centerX;
-        const endY = childPosition.y;
-        const midY = startY + (endY - startY) / 2;
-        path.setAttribute(
-          "d",
-          `M ${{startX}} ${{startY}} ` +
-          `C ${{startX}} ${{midY}}, ${{endX}} ${{midY}}, ${{endX}} ${{endY}}`
-        );
-        const isHighlighted =
-          relatedIds.has(entry.requirement_id) &&
-          relatedIds.has(entry.parent_requirement_id);
-        path.setAttribute(
-          "class",
-          `relationship-edge${{isHighlighted ? " is-highlighted" : ""}}`
-        );
-        svg.appendChild(path);
-      }});
-
-      data.requirements.forEach((entry) => {{
-        const position = positions.get(entry.requirement_id);
-        const group = createSvgElement("g");
-        const isFocus = entry.requirement_id === focusState.requirementId;
-        const isRelated = !isFocus && relatedIds.has(entry.requirement_id);
-        group.setAttribute(
-          "class",
-          [
-            "relationship-node",
-            `type-${{entry.requirement_type}}`,
-            isFocus ? "is-focus" : "",
-            isRelated ? "is-related" : "",
-          ].filter(Boolean).join(" ")
-        );
-        group.setAttribute("tabindex", "0");
-        group.setAttribute("role", "button");
-        group.setAttribute("aria-label", `${{entry.requirement_id}} ${{entry.title}}`);
-        group.addEventListener("click", () => setFocusRequirement(entry.requirement_id));
-        group.addEventListener("keydown", (event) => {{
-          if (event.key === "Enter" || event.key === " ") {{
-            event.preventDefault();
-            setFocusRequirement(entry.requirement_id);
-          }}
-        }});
-
-        const card = createSvgElement("rect");
-        card.setAttribute("x", String(position.x));
-        card.setAttribute("y", String(position.y));
-        card.setAttribute("width", String(nodeWidth));
-        card.setAttribute("height", String(nodeHeight));
-        card.setAttribute("rx", "18");
-        card.setAttribute("class", "relationship-node-card");
-        group.appendChild(card);
-
-        const band = createSvgElement("rect");
-        band.setAttribute("x", String(position.x));
-        band.setAttribute("y", String(position.y));
-        band.setAttribute("width", String(nodeWidth));
-        band.setAttribute("height", "14");
-        band.setAttribute("rx", "18");
-        band.setAttribute("class", "relationship-node-band");
-        group.appendChild(band);
-
-        const title = createSvgElement("text");
-        title.setAttribute("x", String(position.x + 14));
-        title.setAttribute("y", String(position.y + 34));
-        title.setAttribute("class", "relationship-node-title");
-        title.textContent = entry.requirement_id;
-        group.appendChild(title);
-
-        const subtitle = createSvgElement("text");
-        subtitle.setAttribute("x", String(position.x + 14));
-        subtitle.setAttribute("y", String(position.y + 54));
-        subtitle.setAttribute("class", "relationship-node-subtitle");
-        subtitle.textContent = entry.title.slice(0, 30);
-        group.appendChild(subtitle);
-
-        svg.appendChild(group);
-      }});
-
-      const focusedLabel = focusState.requirementId || "None";
-      const cycleText = data.graph_issues.cycles.length
-        ? ` | Cycle detected: ${{data.graph_issues.cycles[0].join(" -> ")}}`
-        : "";
-      status.textContent = `Focused: ${{focusedLabel}}${{cycleText}}`;
-    }};
-
     const setFocusRequirement = (requirementId) => {{
       if (!requirementsById.has(requirementId)) {{
         return;
       }}
       focusState.requirementId = requirementId;
+      expandedBranchIds.clear();
       const select = document.getElementById("focus-requirement-select");
       if (select && select.value !== requirementId) {{
         select.value = requirementId;
       }}
-      renderRelationshipGraph();
+      renderCycleWarning();
+      renderRelationshipTree();
       renderFocusSummary();
     }};
 
@@ -1473,7 +1580,8 @@ def render_html(entries: list[RequirementEntry], source_path: Path) -> str:
     populateOverview();
     populateHierarchy();
     populateFocusSelect();
-    renderRelationshipGraph();
+    renderCycleWarning();
+    renderRelationshipTree();
     renderFocusSummary();
     populateTable();
     buildSelectOptions("type-filter", "types", data.filter_options.requirement_types);

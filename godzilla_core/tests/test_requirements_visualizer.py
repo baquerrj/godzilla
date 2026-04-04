@@ -77,9 +77,11 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
             self.assertIn("parent_requirement_id", html)
             self.assertIn("Relationship Tree", html)
             self.assertIn("focus-requirement-select", html)
-            self.assertIn("relationship-graph", html)
+            self.assertIn("relationship-tree-root", html)
+            self.assertIn("relationship-expand-toggle", html)
             self.assertIn("focus-summary", html)
             self.assertIn("Focused Requirement", html)
+            self.assertNotIn("relationship-graph", html)
             self.assertIn("godzilla_core/util/time.py:local_timestamp_metadata", html)
 
     def test_main_returns_error_for_missing_file(self) -> None:
@@ -189,8 +191,9 @@ class RequirementsVisualizerCliTests(unittest.TestCase):
         self.assertIn("ACC-SYS-003", html)
         self.assertIn("ACC-ACCT-006", html)
         self.assertIn("Focused Requirement", html)
-        self.assertIn("relationship-graph", html)
-        self.assertIn("All requirements are visible in one view.", html)
+        self.assertIn("relationship-tree-root", html)
+        self.assertIn("Show ${hiddenCount} deeper descendant", html)
+        self.assertIn("Grandchildren are expanded by default.", html)
         self.assertIn(
             '"cycles": [["ACC-TXN-006", "ACC-BUD-004", "ACC-TXN-006"]]',
             html,
