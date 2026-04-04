@@ -18,6 +18,8 @@ A personal budgeting and net-worth app for a single user that aggregates financi
 - Track trends over time (spend by category, income vs expenses, savings rate).
 - Strong privacy and security for financial data.
 - Clear provenance of imported vs user-edited data.
+- Highly responsive desktop UI for common workflows.
+- Resizable interface that maintains layout integrity across supported window sizes.
 
 ## Non-goals
 
@@ -40,6 +42,10 @@ Single user.
 - Data freshness aligns with Plaid-supported update cadence; manual refresh works.
 - No plaintext storage of tokens or secrets, no secrets in logs, and encryption at rest enabled.
 - Backups and restores succeed reliably and are verifiable.
+- Primary views load within 1.0 second on the reference MVP dataset.
+- Common filter, search, and sort interactions complete within 500 ms.
+- Dashboard and view switches complete within 500 ms when data is already loaded.
+- UI remains intact and usable at supported desktop sizes of 1024x700 and above.
 
 ## Assumptions and Constraints
 

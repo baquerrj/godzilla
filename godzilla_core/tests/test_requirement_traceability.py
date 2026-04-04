@@ -1,7 +1,8 @@
 """Traceability stubs for requirements without honest unit-level automation.
 
 REQ: ACC-SYS-001, ACC-SYS-002, ACC-SYS-003, ACC-ACCT-006, TECH-ACCT-006-RUNTIME,
-REQ: ACC-ACCT-009, TECH-ACCT-009-UI, ACC-TXN-009, TECH-TXN-009-CONFLICT, ACC-BKP-005
+REQ: ACC-ACCT-009, TECH-ACCT-009-UI, ACC-TXN-009, TECH-TXN-009-CONFLICT, ACC-BKP-005,
+REQ: ACC-UX-001, ACC-UX-002, ACC-UX-003, ACC-UX-004
 """
 
 from __future__ import annotations
@@ -83,4 +84,48 @@ def test_func_bkp_005_backup_scheduling_trace_stub() -> None:
     pytest.skip(
         "SKIP(TASK-TRACE-ACC-BKP-005): scheduled backup orchestration is not implemented in "
         "the current deployment shape; manual verification required when added."
+    )
+
+
+def test_acc_ux_001_primary_view_responsiveness_trace_stub() -> None:
+    """Tracked stub for primary view responsiveness benchmarking.
+
+    REQ: ACC-UX-001
+    """
+    pytest.skip(
+        "SKIP(TASK-TRACE-ACC-UX-001): primary view load timing remains a manual benchmark "
+        "exercise until a repeatable performance harness exists."
+    )
+
+
+def test_acc_ux_002_filter_and_search_responsiveness_trace_stub() -> None:
+    """Tracked stub for filter, search, and sort responsiveness benchmarking.
+
+    REQ: ACC-UX-002
+    """
+    pytest.skip(
+        "SKIP(TASK-TRACE-ACC-UX-002): filter, search, and sort timing remains a manual "
+        "benchmark exercise until a repeatable performance harness exists."
+    )
+
+
+def test_acc_ux_003_dashboard_switch_responsiveness_trace_stub() -> None:
+    """Tracked stub for dashboard and report switching responsiveness benchmarking.
+
+    REQ: ACC-UX-003
+    """
+    pytest.skip(
+        "SKIP(TASK-TRACE-ACC-UX-003): dashboard and view-switch timing remains a manual "
+        "benchmark exercise until a repeatable performance harness exists."
+    )
+
+
+def test_acc_ux_004_resizable_layout_integrity_trace_stub() -> None:
+    """Tracked stub for minimum window-size layout verification.
+
+    REQ: ACC-UX-004
+    """
+    pytest.skip(
+        "SKIP(TASK-TRACE-ACC-UX-004): resize and layout integrity verification remains a "
+        "manual desktop exercise until supported window-size checks are automated."
     )

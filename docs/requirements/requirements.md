@@ -133,6 +133,17 @@ Audit logs are local or system logs intended to record significant events withou
 | ACC-AUD-003 | acceptance | MVP | Log retention | The system shall enforce log retention settings and shall rotate/prune logs automatically. | Configure retention; generate logs; verify rotation/pruning occurs. | component | godzilla_core/tests/test_api_layer.py:test_put_settings_applies_retention_pruning | ACC-SET-002 |
 | ACC-AUD-004 | acceptance | MVP | Audit export (optional) | The system shall support exporting the audit log for troubleshooting, with secrets redacted. | Export audit log; verify format and absence of secrets. | component | godzilla_core/tests/test_api_layer.py:test_audit_log_csv_export | ACC-AUD-002 |
 
+## Responsiveness and Layout
+
+These requirements define the MVP responsiveness targets for the desktop UI and the minimum supported window size for layout integrity.
+
+| ID | Type | Status | Title | Requirement Body | Verification Plan | Primary Verification Level | Test Evidence | Parent ID |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ACC-UX-001 | acceptance | not implemented | Primary view responsiveness | Primary views such as Accounts, Transactions, Budgets, Reports, and Settings shall render within 1.0 second on the reference MVP dataset and reference desktop environment after authentication. | Measure authenticated view loads on the reference MVP dataset and confirm the target is met on the reference desktop environment. | manual | skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_001_primary_view_responsiveness_trace_stub | ACC-SYS-001 |
+| ACC-UX-002 | acceptance | not implemented | Filter and search responsiveness | Common transaction filters, search terms, and sort changes shall apply within 500 ms on the reference MVP dataset. | Measure common filter, search, and sort interactions against the reference MVP dataset and confirm the target is met. | manual | skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_002_filter_and_search_responsiveness_trace_stub | ACC-TXN-002 |
+| ACC-UX-003 | acceptance | not implemented | Dashboard and view-switch responsiveness | Switching between primary dashboards or reports shall complete within 500 ms when the target data is already loaded and within 1.0 second when a fresh local query is required. | Measure dashboard and report switches with and without cached data and confirm both targets are met. | manual | skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_003_dashboard_switch_responsiveness_trace_stub | ACC-SYS-001 |
+| ACC-UX-004 | acceptance | not implemented | Resizable layout integrity | The UI shall remain readable, non-overlapping, and functionally usable for desktop window sizes at or above 1024x700. | Resize the desktop window across supported sizes and confirm layout integrity for navigation, tables, filters, and dashboards. | manual | skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_004_resizable_layout_integrity_trace_stub | ACC-SYS-001 |
+
 ## Secrets Management and Cryptography
 
 | ID | Type | Status | Title | Requirement Body | Verification Plan | Primary Verification Level | Test Evidence | Parent ID |

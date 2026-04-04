@@ -1432,6 +1432,92 @@
   verification_method: component
   verification_notes: Primary evidence comes from API/UI component tests in godzilla_core/tests/test_api_layer.py, ui/src/test/ExportPanel.test.tsx.
   gap_notes: No dedicated unit test is tracked; this requirement is currently verified at the API/UI component level.
+- requirement_id: ACC-UX-001
+  title: Primary view responsiveness
+  requirement_type: acceptance
+  parent_requirement_id: ACC-SYS-001
+  code_refs:
+  - ui/src/App.tsx:App
+  - ui/src/components/AccountsTable.tsx:AccountsTable
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
+  - ui/src/components/BudgetPanel.tsx:BudgetPanel
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  - ui/src/components/SettingsPanel.tsx:SettingsPanel
+  test_refs:
+  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_001_primary_view_responsiveness_trace_stub'
+  doc_refs:
+  - docs/vision.md
+  - docs/design/architecture-overview.md
+  - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  - docs/requirements/requirements.md
+  implementation_status: not_implemented
+  verification_method: manual
+  verification_notes: Verified initially through manual benchmarking of authenticated primary view loads on a local desktop runtime with a reference dataset of about 10 linked accounts and 15,000 transactions on a modern 4-core CPU, SSD, and 16 GB RAM.
+  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so primary view responsiveness remains a tracked manual verification gap.
+- requirement_id: ACC-UX-002
+  title: Filter and search responsiveness
+  requirement_type: acceptance
+  parent_requirement_id: ACC-TXN-002
+  code_refs:
+  - ui/src/App.tsx:App
+  - ui/src/components/TransactionFilters.tsx:TransactionFilters
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
+  test_refs:
+  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_002_filter_and_search_responsiveness_trace_stub'
+  doc_refs:
+  - docs/vision.md
+  - docs/design/architecture-overview.md
+  - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  - docs/requirements/requirements.md
+  implementation_status: not_implemented
+  verification_method: manual
+  verification_notes: Verified initially through manual benchmarking of common transaction filter, search, and sort interactions on the reference MVP dataset in the local desktop runtime.
+  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so filter and search responsiveness remains a tracked manual verification gap.
+- requirement_id: ACC-UX-003
+  title: Dashboard and view-switch responsiveness
+  requirement_type: acceptance
+  parent_requirement_id: ACC-SYS-001
+  code_refs:
+  - ui/src/App.tsx:App
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  - ui/src/components/BudgetPanel.tsx:BudgetPanel
+  - ui/src/components/SyncStatePanel.tsx:SyncStatePanel
+  test_refs:
+  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_003_dashboard_switch_responsiveness_trace_stub'
+  doc_refs:
+  - docs/vision.md
+  - docs/design/architecture-overview.md
+  - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  - docs/requirements/requirements.md
+  implementation_status: not_implemented
+  verification_method: manual
+  verification_notes: Verified initially through manual benchmarking of dashboard and report switches in the local desktop runtime, separating cached view switches from switches that require a fresh local query.
+  gap_notes: No repeatable performance harness or benchmark instrumentation exists yet, so dashboard and view-switch responsiveness remains a tracked manual verification gap.
+- requirement_id: ACC-UX-004
+  title: Resizable layout integrity
+  requirement_type: acceptance
+  parent_requirement_id: ACC-SYS-001
+  code_refs:
+  - ui/src/App.tsx:App
+  - ui/src/App.css
+  - ui/src/components/TransactionFilters.tsx:TransactionFilters
+  - ui/src/components/TransactionsTable.tsx:TransactionsTable
+  - ui/src/components/ReportsPanel.tsx:ReportsPanel
+  test_refs:
+  - 'skip: godzilla_core/tests/test_requirement_traceability.py:test_acc_ux_004_resizable_layout_integrity_trace_stub'
+  doc_refs:
+  - docs/vision.md
+  - docs/design/architecture-overview.md
+  - docs/design/ui-frontend-scaffold.md
+  - docs/test-strategy/requirements-traceability-gap-analysis.md
+  - docs/requirements/requirements.md
+  implementation_status: not_implemented
+  verification_method: manual
+  verification_notes: Verified initially through manual desktop resizing checks at and above 1024x700 across navigation, tables, filters, and dashboards in the local desktop runtime.
+  gap_notes: No automated desktop layout integrity checks exist yet for the supported minimum window size, so resize integrity remains a tracked manual verification gap.
 - requirement_id: TECH-SEC-CRY-001
   title: Encryption at rest
   requirement_type: technical
