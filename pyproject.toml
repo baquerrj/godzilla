@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=82,<83", "wheel>=0.46,<0.47"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,10 +9,12 @@ description = "Core services for the Godzilla personal budgeting app."
 readme = "docs/vision.md"
 requires-python = ">=3.12"
 dependencies = [
-  "cryptography>=43.0.0",
-  "fastapi[standard]>=0.128.0",
-  "PyYAML>=6.0.0",
-  "sqlcipher3-binary>=0.6.0",
+  "cryptography>=46,<47",
+  "fastapi>=0.135,<0.136",
+  "python-multipart>=0.0.20,<0.1",
+  "PyYAML>=6,<7",
+  "sqlcipher3-binary==0.6.0",
+  "uvicorn>=0.44,<0.45",
 ]
 
 [project.scripts]
@@ -25,10 +27,11 @@ seed-benchmark-dataset = "godzilla_core.scripts.seed_benchmark_dataset:main"
 
 [project.optional-dependencies]
 dev = [
-  "black>=24.0.0",
-  "pytest>=8.0.0",
-  "pytest-cov>=5.0.0",
-  "ruff>=0.6.0",
+  "black>=24.10,<25",
+  "httpx>=0.28,<0.29",
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.3,<7",
+  "ruff>=0.15,<0.16",
 ]
 
 [tool.setuptools]
